@@ -49,6 +49,9 @@
 #include "usb_host_audio.h"
 #include "hidkeyboard.h"
 #include "usb_host_hid.h"
+#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
+#include "fsl_debug_console.h"
+#endif
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
 
@@ -62,6 +65,15 @@
 #endif
 
 #define KEYBOARD_EVENT_MASK (USB_Keyboard_Event_CTRL | USB_Keyboard_Event_DATA)
+
+/*The user should change the different device audio speaker key MACRO to different number,
+For EDIFIER_R18USB: MUTE_VOLUME = 4; INCREASE_VOLUME = 1; DECREASE_VOLUME = 2;
+For LOGITECH_S150:  MUTE_VOLUME = 1; INCREASE_VOLUME = 2; DECREASE_VOLUME = 4;
+For LOGITECH_Z305:  MUTE_VOLUME = 1; INCREASE_VOLUME = 2; DECREASE_VOLUME = 4;
+The default device is EDIFIER_R18USB*/
+#define MUTE_VOLUME       (4)
+#define INCREASE_VOLUME   (1)
+#define DECREASE_VOLUME   (2)
 /***************************************
 **
 ** Globals
@@ -73,9 +85,7 @@ device_struct_t g_kbd_hid_device = { 0 };
 extern void keyboard_task(uint32_t param);
 void process_kbd_buffer(unsigned char *buffer);
 uint8_t                 g_interface_number = 0;
-uint8_t                 g_interface_keyboard_number = 0;
-
-
+//uint8_t                 g_interface_keyboard_number = 0;
 
 usb_device_interface_struct_t*   g_interface_info[USBCFG_HOST_MAX_INTERFACE_PER_CONFIGURATION];
 usb_interface_descriptor_handle hid_get_interface()
@@ -103,7 +113,7 @@ void keyboard_task(uint32_t param)
         g_hid_com = (hid_command_t*) OS_Mem_alloc_zero(sizeof(hid_command_t));
         buffer = (unsigned char *)OS_Mem_alloc_uncached(HID_KEYBOARD_BUFFER_SIZE);
         if (buffer == NULL) {
-            printf("\r\nMemory allocation failed. STATUS: %x", status);
+            USB_PRINTF("\r\nMemory allocation failed. STATUS: %x", status);
             //fflush(stdout);
             return;
         }
@@ -116,14 +126,23 @@ void keyboard_task(uint32_t param)
         switch (g_kbd_hid_device.dev_state) {
             case USB_DEVICE_CONFIGURED:
                 status = usb_host_open_dev_interface(host_handle, g_kbd_hid_device.dev_handle, g_kbd_hid_device.intf_handle, (void *) & g_kbd_hid_device.class_handle);
-				g_interface_keyboard_number++;
+        //g_interface_keyboard_number++;
                 if(status != USB_OK) {
-                printf("\r\nError in _usb_hostdev_select_interface: %x", status);
+                USB_PRINTF("\r\nError in _usb_hostdev_select_interface: %x", status);
                 //fflush(stdout);
                 return;
                 }
                 break;
             case USB_DEVICE_IDLE:
+        //g_interface_keyboard_number = 0;
+                status = usb_host_close_dev_interface(host_handle, g_kbd_hid_device.dev_handle, g_kbd_hid_device.intf_handle,  g_kbd_hid_device.class_handle);
+            
+        if (status != USB_OK)
+                {
+                  USB_PRINTF("error in _usb_hostdev_close_interface %x\r\n", status);
+                }
+                g_kbd_hid_device.dev_handle = NULL;
+                g_kbd_hid_device.intf_handle = NULL;
                 break;
             case USB_DEVICE_INTERFACED:
                 g_hid_com->class_ptr = g_kbd_hid_device.class_handle;
@@ -132,7 +151,7 @@ void keyboard_task(uint32_t param)
                 OS_Event_clear(usb_keyboard_event, USB_Keyboard_Event_DATA);
                 status = usb_class_hid_recv_data(g_hid_com, (unsigned char *) buffer, HID_KEYBOARD_BUFFER_SIZE);
                 if(status != USB_OK) {
-                    printf("\r\nError in _usb_host_recv_data: %x", status);
+                    USB_PRINTF("\r\nError in _usb_host_recv_data: %x", status);
                 //fflush(stdout);
                 }
                 
@@ -153,11 +172,11 @@ void keyboard_task(uint32_t param)
             g_hid_com->class_ptr = g_kbd_hid_device.class_handle;
             g_hid_com->callback_fn = usb_host_hid_keyboard_recv_callback;
             g_hid_com->callback_param = 0;
-            //printf("\r\nClass handle %x",  g_kbd_hid_device.class_handle);
+            //USB_PRINTF("\r\nClass handle %x",  g_kbd_hid_device.class_handle);
             OS_Event_clear(usb_keyboard_event, USB_Keyboard_Event_DATA);
             status = usb_class_hid_recv_data(g_hid_com, (unsigned char *) buffer, HID_KEYBOARD_BUFFER_SIZE);
             if(status != USB_OK) {
-                printf("\r\nError in _usb_host_recv_data: %x", status);
+                USB_PRINTF("\r\nError in _usb_host_recv_data: %x", status);
             }
         }
     }
@@ -176,7 +195,7 @@ void keyboard_task(uint32_t param)
 void keyboard_task_stun(uint32_t param)
 {
     while(1)
-    {	
+    {   
         keyboard_task(param);
         OS_Event_wait(usb_keyboard_event, KEYBOARD_EVENT_MASK, FALSE, 0);
     }
@@ -199,23 +218,22 @@ uint32_t event_code)
 {
     usb_device_interface_struct_t* pHostIntf = (usb_device_interface_struct_t*)intf_handle;
     interface_descriptor_t* intf_ptr = pHostIntf->lpinterfaceDesc;
-    usb_status status = USB_OK;
-	 
+     
     //fflush(stdout);
     switch (event_code) {
         case USB_ATTACH_EVENT:
             g_interface_info[g_interface_number] = pHostIntf;
             g_interface_number++;
-			
-            printf("HID State = %d", g_kbd_hid_device.dev_state);
-            printf("HID  Class = %d", intf_ptr->bInterfaceClass);
-            printf("HID  SubClass = %d", intf_ptr->bInterfaceSubClass);
-            printf("HID  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+            
+            USB_PRINTF("HID State = %d", g_kbd_hid_device.dev_state);
+            USB_PRINTF("HID  Class = %d", intf_ptr->bInterfaceClass);
+            USB_PRINTF("HID  SubClass = %d", intf_ptr->bInterfaceSubClass);
+            USB_PRINTF("HID  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
             break;
             /* Drop through config event for the same processing */
         case USB_CONFIG_EVENT:
             //fflush(stdout);
-            printf("HID State = USB_CONFIG_EVENT\r\n");
+            USB_PRINTF("HID State = USB_CONFIG_EVENT\r\n");
             
             if(g_kbd_hid_device.dev_state == USB_DEVICE_IDLE) 
             {
@@ -225,42 +243,34 @@ uint32_t event_code)
             }
             else
             {
-                printf("HID device already attached\r\n");
+                USB_PRINTF("HID device already attached\r\n");
                 //fflush(stdout);
             }
             break;
-    	case USB_INTF_OPENED_EVENT:
-            printf("HID State = USB_INTF_OPENED_EVENT\r\n");
+        case USB_INTF_OPENED_EVENT:
+            USB_PRINTF("HID State = USB_INTF_OPENED_EVENT\r\n");
             g_kbd_hid_device.dev_state = USB_DEVICE_INTERFACED;
             OS_Event_set(usb_keyboard_event, USB_Keyboard_Event_CTRL);
             break;
-    	  
+          
         case USB_DETACH_EVENT:
             /* Use only the interface with desired protocol */
             g_interface_number = 0;
-			if (g_kbd_hid_device.dev_state < USB_DEVICE_INTERFACED)
-			{
-				g_kbd_hid_device.dev_handle = NULL;
-				g_kbd_hid_device.intf_handle = NULL;
-				g_kbd_hid_device.dev_state = USB_DEVICE_IDLE;
-				return;
-			}
-            printf("\r\n----- Detach Event -----\r\n");
-            printf("State = %d", g_kbd_hid_device.dev_state);
-            printf("  Class = %d", intf_ptr->bInterfaceClass);
-            printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-            printf("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
-            //fflush(stdout);
-            g_interface_keyboard_number = 0;
-            status = usb_host_close_dev_interface(host_handle, g_kbd_hid_device.dev_handle, g_kbd_hid_device.intf_handle,  g_kbd_hid_device.class_handle);
-            
-			if (status != USB_OK)
+            if (g_kbd_hid_device.dev_state < USB_DEVICE_INTERFACED)
             {
-                printf("error in _usb_hostdev_close_interface %x\r\n", status);
+                g_kbd_hid_device.dev_handle = NULL;
+                g_kbd_hid_device.intf_handle = NULL;
+                g_kbd_hid_device.dev_state = USB_DEVICE_IDLE;
+                return;
             }
-            g_kbd_hid_device.dev_handle = NULL;
-            g_kbd_hid_device.intf_handle = NULL;
-			g_kbd_hid_device.dev_state = USB_DEVICE_IDLE;
+            USB_PRINTF("\r\n----- Detach Event -----\r\n");
+            USB_PRINTF("State = %d", g_kbd_hid_device.dev_state);
+            USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+            USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+            USB_PRINTF("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+            //fflush(stdout);
+            
+            g_kbd_hid_device.dev_state = USB_DEVICE_IDLE;
             OS_Event_set(usb_keyboard_event, USB_Keyboard_Event_CTRL);
             break;
     }
@@ -288,11 +298,11 @@ uint32_t buflen,
 uint32_t status)
 {
     if(status == USBERR_ENDPOINT_STALLED) {
-        printf("\r\nHID Set_Protocol Request BOOT is not supported!\r\n");
+        USB_PRINTF("\r\nHID Set_Protocol Request BOOT is not supported!\r\n");
         //fflush(stdout);
     }
     else if(status) {
-        printf("\r\nHID Set_Protocol Request BOOT failed!: 0x%x ... END!\r\n", status);
+        USB_PRINTF("\r\nHID Set_Protocol Request BOOT failed!: 0x%x ... END!\r\n", status);
         //fflush(stdout);
     }
 
@@ -343,9 +353,10 @@ uint32_t status)
 *END*--------------------------------------------------------------------*/
 void process_kbd_buffer(unsigned char *buffer)
 {
-    printf("\r\nprocess_kbd_buffer :%d\r\n",buffer[0]);
-    if(4==buffer[0]) audio_mute_command();
-    if(1==buffer[0]) audio_increase_volume_command(1);
-    if(2==buffer[0]) audio_decrease_volume_command(1);
+   // USB_PRINTF("\nprocess_kbd_buffer :%d\n",buffer[0]);
+    if(MUTE_VOLUME==buffer[0]) audio_mute_command();
+    if(INCREASE_VOLUME==buffer[0]) audio_increase_volume_command(1);
+    if(DECREASE_VOLUME==buffer[0]) audio_decrease_volume_command(1);
     //fflush(stdout);
+
 }

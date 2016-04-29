@@ -7,8 +7,8 @@
 **                          IAR ANSI C/C++ Compiler for ARM
 **
 **     Reference manual:    K22P121M120SF7RM, Rev. 1, March 24, 2014
-**     Version:             rev. 2.5, 2014-05-06
-**     Build:               b140604
+**     Version:             rev. 2.7, 2014-10-14
+**     Build:               b141016
 **
 **     Abstract:
 **         CMSIS Peripheral Access Layer for MK22F51212
@@ -66,14 +66,19 @@
 **         Update according to reference manual rev. 1.0,
 **         Update of system and startup files.
 **         Module access macro module_BASES replaced by module_BASE_PTRS.
+**     - rev. 2.6 (2014-08-28)
+**         Update of system files - default clock configuration changed.
+**         Update of startup files - possibility to override DefaultISR added.
+**     - rev. 2.7 (2014-10-14)
+**         Interrupt INT_LPTimer renamed to INT_LPTMR0, interrupt INT_Watchdog renamed to INT_WDOG_EWM.
 **
 ** ###################################################################
 */
 
 /*!
  * @file MK22F51212.h
- * @version 2.5
- * @date 2014-05-06
+ * @version 2.7
+ * @date 2014-10-14
  * @brief CMSIS Peripheral Access Layer for MK22F51212
  *
  * CMSIS Peripheral Access Layer for MK22F51212
@@ -101,7 +106,7 @@
  * compatible) */
 #define MCU_MEM_MAP_VERSION 0x0200u
 /** Memory map minor version */
-#define MCU_MEM_MAP_VERSION_MINOR 0x0005u
+#define MCU_MEM_MAP_VERSION_MINOR 0x0007u
 
 /**
  * @brief Macro to calculate address of an aliased word in the peripheral
@@ -154,6 +159,9 @@
 #define NUMBER_OF_INT_VECTORS 102                /**< Number of interrupts in the Vector table */
 
 typedef enum IRQn {
+  /* Auxiliary constants */
+  NotAvail_IRQn                = -128,             /**< Not available device specific interrupt */
+
   /* Core interrupts */
   NonMaskableInt_IRQn          = -14,              /**< Non Maskable Interrupt */
   HardFault_IRQn               = -13,              /**< Cortex-M4 SV Hard Fault Interrupt */
@@ -188,7 +196,7 @@ typedef enum IRQn {
   Read_Collision_IRQn          = 19,               /**< Read Collision Interrupt */
   LVD_LVW_IRQn                 = 20,               /**< Low Voltage Detect, Low Voltage Warning */
   LLW_IRQn                     = 21,               /**< Low Leakage Wakeup */
-  Watchdog_IRQn                = 22,               /**< WDOG Interrupt */
+  WDOG_EWM_IRQn                = 22,               /**< WDOG Interrupt */
   RNG_IRQn                     = 23,               /**< RNG Interrupt */
   I2C0_IRQn                    = 24,               /**< I2C0 interrupt */
   I2C1_IRQn                    = 25,               /**< I2C1 interrupt */
@@ -224,7 +232,7 @@ typedef enum IRQn {
   Reserved71_IRQn              = 55,               /**< Reserved interrupt 71 */
   DAC0_IRQn                    = 56,               /**< DAC0 interrupt */
   MCG_IRQn                     = 57,               /**< MCG Interrupt */
-  LPTimer_IRQn                 = 58,               /**< LPTimer interrupt */
+  LPTMR0_IRQn                  = 58,               /**< LPTimer interrupt */
   PORTA_IRQn                   = 59,               /**< Port A interrupt */
   PORTB_IRQn                   = 60,               /**< Port B interrupt */
   PORTC_IRQn                   = 61,               /**< Port C interrupt */
@@ -2510,7 +2518,7 @@ typedef struct {
 /** Array initializer of EWM peripheral base pointers */
 #define EWM_BASE_PTRS                            { EWM }
 /** Interrupt vectors for the EWM peripheral type */
-#define EWM_IRQS                                 { Watchdog_IRQn }
+#define EWM_IRQS                                 { WDOG_EWM_IRQn }
 
 /* ----------------------------------------------------------------------------
    -- EWM - Register accessor macros
@@ -5263,7 +5271,7 @@ typedef struct {
 /** Array initializer of LPTMR peripheral base pointers */
 #define LPTMR_BASE_PTRS                          { LPTMR0 }
 /** Interrupt vectors for the LPTMR peripheral type */
-#define LPTMR_IRQS                               { LPTimer_IRQn }
+#define LPTMR_IRQS                               { LPTMR0_IRQn }
 
 /* ----------------------------------------------------------------------------
    -- LPTMR - Register accessor macros
@@ -10017,7 +10025,7 @@ typedef struct {
 /** Array initializer of WDOG peripheral base pointers */
 #define WDOG_BASE_PTRS                           { WDOG }
 /** Interrupt vectors for the WDOG peripheral type */
-#define WDOG_IRQS                                { Watchdog_IRQn }
+#define WDOG_IRQS                                { WDOG_EWM_IRQn }
 
 /* ----------------------------------------------------------------------------
    -- WDOG - Register accessor macros
@@ -10091,6 +10099,24 @@ typedef struct {
 #define  MCG_C2_RANGE0_MASK          MCG_C2_RANGE_MASK
 #define  MCG_C2_RANGE0_SHIFT         MCG_C2_RANGE_SHIFT
 #define  MCG_C2_RANGE0(x)            MCG_C2_RANGE(x)
+#define ADC_BASES                    ADC_BASE_PTRS
+#define CMP_BASES                    CMP_BASE_PTRS
+#define CRC_BASES                    CRC_BASE_PTRS
+#define DAC_BASES                    DAC_BASE_PTRS
+#define DMA_BASES                    DMA_BASE_PTRS
+#define DMAMUX_BASES                 DMAMUX_BASE_PTRS
+#define EWM_BASES                    EWM_BASE_PTRS
+#define FB_BASES                     FB_BASE_PTRS
+#define FMC_BASES                    FMC_BASE_PTRS
+#define FTFA_BASES                   FTFA_BASE_PTRS
+#define FTM_BASES                    FTM_BASE_PTRS
+#define GPIO_BASES                   GPIO_BASE_PTRS
+#define I2C_BASES                    I2C_BASE_PTRS
+#define I2S_BASES                    I2S_BASE_PTRS
+#define LLWU_BASES                   LLWU_BASE_PTRS
+#define LPTMR_BASES                  LPTMR_BASE_PTRS
+#define LPUART_BASES                 LPUART_BASE_PTRS
+#define MCG_BASES                    MCG_BASE_PTRS
 #define MCM_ISR_REG(base)            MCM_ISCR_REG(base)
 #define MCM_ISR_FIOC_MASK            MCM_ISCR_FIOC_MASK
 #define MCM_ISR_FIOC_SHIFT           MCM_ISCR_FIOC_SHIFT
@@ -10116,9 +10142,32 @@ typedef struct {
 #define MCM_ISR_FIXCE_SHIFT          MCM_ISCR_FIXCE_SHIFT
 #define MCM_ISR_FIDCE_MASK           MCM_ISCR_FIDCE_MASK
 #define MCM_ISR_FIDCE_SHIFT          MCM_ISCR_FIDCE_SHIFT
+#define MCM_BASES                    MCM_BASE_PTRS
+#define NV_BASES                     NV_BASE_PTRS
+#define OSC_BASES                    OSC_BASE_PTRS
+#define PDB_BASES                    PDB_BASE_PTRS
+#define PIT_BASES                    PIT_BASE_PTRS
+#define PMC_BASES                    PMC_BASE_PTRS
+#define PORT_BASES                   PORT_BASE_PTRS
+#define RCM_BASES                    RCM_BASE_PTRS
+#define RFSYS_BASES                  RFSYS_BASE_PTRS
+#define RFVBAT_BASES                 RFVBAT_BASE_PTRS
+#define RNG_BASES                    RNG_BASE_PTRS
+#define RTC_BASES                    RTC_BASE_PTRS
+#define SIM_BASES                    SIM_BASE_PTRS
+#define SMC_BASES                    SMC_BASE_PTRS
+#define SPI_BASES                    SPI_BASE_PTRS
+#define UART_BASES                   UART_BASE_PTRS
+#define USB_BASES                    USB_BASE_PTRS
+#define VREF_BASES                   VREF_BASE_PTRS
+#define WDOG_BASES                   WDOG_BASE_PTRS
 #define USB_ADDINFO_IRQNUM_MASK      This_symbol_has_been_deprecated
 #define USB_ADDINFO_IRQNUM_SHIFT     This_symbol_has_been_deprecated
 #define USB_ADDINFO_IRQNUM(x)        This_symbol_has_been_deprecated
+#define Watchdog_IRQn                WDOG_EWM_IRQn
+#define Watchdog_IRQHandler          WDOG_EWM_IRQHandler
+#define LPTimer_IRQn                 LPTMR0_IRQn
+#define LPTimer_IRQHandler           LPTMR0_IRQHandler
 
 /*!
  * @}

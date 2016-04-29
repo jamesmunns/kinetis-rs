@@ -29,11 +29,13 @@
 *****************************************************************************/
 #include "usb.h"
 #include "usb_otg_private.h"
-#include "usb_otg_max3353.h"
 #include "fsl_i2c_master_driver.h"
 #include "fsl_i2c_shared_function.h"
 #include "adapter.h"
 #include "pin_mux.h"
+#include "usb_otg.h"
+
+#include "usb_otg_max3353.h"
 
 /*******************************************************************************
  * Global Variables
@@ -49,7 +51,6 @@ i2c_device_t g_slave =
     .baudRate_kbps = MAX3353_SLAVE_BAUDRATE
 };
 extern usb_otg_khci_call_struct_t * g_otg_khci_call_ptr;
-extern void I2C0_IRQHandler(void);
 /* Private functions prototypes *********************************************/
 bool            max3353_WriteReg(uint8_t i2c_channel, uint8_t regAdd , uint8_t regValue);
 bool            max3353_ReadReg(uint8_t i2c_channel, uint8_t regAdd , uint8_t* p_regValue);
@@ -58,16 +59,21 @@ static uint8_t  max3353_Init(uint8_t i2c_channel);
 extern void     _bsp_usb_otg_max3353_clear_pin_int_flag(void);
 extern void     _bsp_usb_otg_max3353_set_pin_int(bool level ,bool enable);
 extern void     Pause(void);
+extern void*    bsp_usb_otg_get_peripheral_init_param(uint8_t);
 /* Private functions definitions *********************************************/
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : I2C0_IRQHandler
+* Function Name    : max3353_i2c0_IRQHandler
 * Returned Value   :
-* Comments         : I2C0_IRQHandler 
+* Comments         : max3353_i2c0_IRQHandler
 *    
 *
 *END*----------------------------------------------------------------------*/
+#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && defined(FSL_RTOS_MQX)
+void max3353_i2c0_IRQHandler(void)
+#else
 void I2C0_IRQHandler(void)
+#endif
 {
     I2C_DRV_IRQHandler(0);
 }
@@ -188,8 +194,6 @@ bool max3353_ReadReg
     uint8_t*    p_regValue
 )
 {
-    uint8_t result;
-    uint32_t j;
     i2c_status_t error;
     /* write register address */
     error =  I2C_DRV_MasterSendDataBlocking(0, &g_slave,NULL, 0, &regAdd,1,200);
@@ -377,33 +381,66 @@ static void _usb_otg_max3353_isr
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_max3353_init
+* Function Name    : usb_otg_max3353_preinit
 * Returned Value   :
 * Comments         : 
 *    
 *
 *END*----------------------------------------------------------------------*/
-uint8_t _usb_otg_max3353_init
+usb_status usb_otg_max3353_preinit
 (
-    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr
+    void*                      uplayer_handle,
+    void** handle
 )
 {
+    usb_otg_max3353_call_struct_t *    max3353_call_struct_ptr;
+    
+    max3353_call_struct_ptr =  (usb_otg_max3353_call_struct_t*)OS_Mem_alloc_zero(sizeof(usb_otg_max3353_call_struct_t));
+    if (max3353_call_struct_ptr == NULL)
+    {
+        *handle = NULL;
+        return USBERR_ALLOC;
+    }
+    max3353_call_struct_ptr->otg_handle_ptr = uplayer_handle;
+    *handle = (void*)max3353_call_struct_ptr;
+    
+    return USB_OK;
+}
+
+/*FUNCTION*-------------------------------------------------------------------
+*
+* Function Name    : usb_otg_max3353_init
+* Returned Value   :
+* Comments         : 
+*    
+*
+*END*----------------------------------------------------------------------*/
+usb_status usb_otg_max3353_init
+(
+    void* handle
+)
+{
+    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr = (usb_otg_max3353_call_struct_t*)handle;
     usb_otg_state_struct_t *    usb_otg_struct_ptr  = ((usb_otg_max3353_call_struct_t *)otg_max3353_call_ptr)->otg_handle_ptr;
-    uint8_t                     channel             = otg_max3353_call_ptr->init_param_ptr->channel;
-    i2c_status_t error;
+    uint8_t                     channel             = 0;
+
+    otg_max3353_call_ptr->init_param_ptr = (usb_otg_max3353_init_struct_t*)bsp_usb_otg_get_peripheral_init_param(USB_OTG_PERIPHERAL_MAX3353);
+    channel = otg_max3353_call_ptr->init_param_ptr->channel;
     /* configure GPIO for I2C function */
 #if (defined (FSL_RTOS_MQX))
     /* install interrupt for i2c0 */
+    OS_install_isr(I2C0_IRQn, (void (*)(void))max3353_i2c0_IRQHandler, &otg_max3353_call_ptr->init_param_ptr->channel);
+#else
     OS_install_isr(I2C0_IRQn, (void (*)(void))I2C0_IRQHandler, &otg_max3353_call_ptr->init_param_ptr->channel);
 #endif
     /* Initialize hardware */
     configure_i2c_pins(0);
     /* init the i2c master */
-    I2C_DRV_MasterInit(MAX3353_SLAVE_INSTANCE, &g_master);
+    I2C_DRV_MasterInit(channel, &g_master);
     OS_install_isr(otg_max3353_call_ptr->init_param_ptr->vector, (void (*)(void))_usb_otg_max3353_isr, otg_max3353_call_ptr);
-    OS_intr_init(otg_max3353_call_ptr->init_param_ptr->vector,otg_max3353_call_ptr->init_param_ptr->priority,0,TRUE);
+    OS_intr_init((IRQn_Type)otg_max3353_call_ptr->init_param_ptr->vector,otg_max3353_call_ptr->init_param_ptr->priority,0,TRUE);
 #if defined (FSL_RTOS_FREE_RTOS)
-	NVIC_SetPriority(I2C0_IRQn,3); 
+    NVIC_SetPriority(I2C0_IRQn,3); 
 #endif
     /* set interrupt pin for max 3353 out put interrupt */
     _bsp_usb_otg_max3353_set_pin_int(FALSE, TRUE);
@@ -417,17 +454,18 @@ uint8_t _usb_otg_max3353_init
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_max3353_shut_down
+* Function Name    : usb_otg_max3353_shut_down
 * Returned Value   :
 * Comments         : 
 *    
 *
 *END*----------------------------------------------------------------------*/
-uint8_t _usb_otg_max3353_shut_down
+usb_status usb_otg_max3353_shut_down
 (
-    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr
+    void* handle
 )
 {
+    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr = (usb_otg_max3353_call_struct_t*)handle;
     usb_otg_state_struct_t *    usb_otg_struct_ptr  = ((usb_otg_max3353_call_struct_t *)otg_max3353_call_ptr)->otg_handle_ptr;
     uint8_t                     channel             = otg_max3353_call_ptr->init_param_ptr->channel;
 
@@ -440,23 +478,25 @@ uint8_t _usb_otg_max3353_shut_down
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_max3353_get_status
+* Function Name    : usb_otg_max3353_get_status
 * Returned Value   :
 * Comments         : 
 *    
 *
 *END*----------------------------------------------------------------------*/
-uint8_t _usb_otg_max3353_get_status
+usb_status usb_otg_max3353_get_status
 (
-    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr
+    void* handle
 )
-{
+{    
+    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr = (usb_otg_max3353_call_struct_t*)handle;
     uint8_t                     status;
     uint8_t                     channel             = otg_max3353_call_ptr->init_param_ptr->channel;
     usb_otg_state_struct_t *    usb_otg_struct_ptr  = otg_max3353_call_ptr->otg_handle_ptr; 
     usb_otg_status_t *          otg_status_ptr      = &usb_otg_struct_ptr->otg_status;
-    while (_otg_max3353_get_interrupts(channel))
-    {} 
+
+    while(_otg_max3353_get_interrupts(channel)){}
+    
     status = _otg_max3353_get_status(channel);
     /* check the status indications */         
     /* ID status update */
@@ -472,18 +512,19 @@ uint8_t _usb_otg_max3353_get_status
 }
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_max3353_get_status
+* Function Name    : usb_otg_max3353_get_status
 * Returned Value   :
 * Comments         : 
 *    
 *
 *END*----------------------------------------------------------------------*/
-uint8_t _usb_otg_max3353_set_vbus
+usb_status usb_otg_max3353_set_vbus
 (
-    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr, 
+    void* handle,
     bool enable
 )
 {
+    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr = (usb_otg_max3353_call_struct_t*)handle;
     uint8_t channel = otg_max3353_call_ptr->init_param_ptr->channel;
     _otg_max3353_set_VBUS(channel,enable);
 
@@ -491,18 +532,19 @@ uint8_t _usb_otg_max3353_set_vbus
 }
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_max3353_set_pull_downs
+* Function Name    : usb_otg_max3353_set_pull_downs
 * Returned Value   :
 * Comments         : 
 *    
 *
 *END*----------------------------------------------------------------------*/
-uint8_t _usb_otg_max3353_set_pull_downs
+usb_status usb_otg_max3353_set_pull_downs
 (
-    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr, 
+    void* handle, 
     uint8_t bitfield 
 )
 {
+    usb_otg_max3353_call_struct_t * otg_max3353_call_ptr = (usb_otg_max3353_call_struct_t*)handle;
     uint8_t channel = otg_max3353_call_ptr->init_param_ptr->channel;
     _otg_max3353_set_pdowns(channel,bitfield);
     return USB_OK;

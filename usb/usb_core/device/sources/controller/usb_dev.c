@@ -51,7 +51,7 @@
         #pragma data_alignment=32
         __no_init usb_dev_data_t g_usb_dev_data[USBCFG_DEV_NUM];
     #elif defined (__CC_ARM) || defined(__GNUC__)
-        __attribute__((aligned(32))) usb_dev_data_t g_usb_dev_data[USBCFG_DEV_NUM] = { 1 };
+        __attribute__((aligned(32))) usb_dev_data_t g_usb_dev_data[USBCFG_DEV_NUM];
     #else
         #error Unsupported compiler, please use IAR, Keil or arm gcc compiler and rebuild the project.
     #endif
@@ -95,13 +95,16 @@
 #endif
 
 extern int32_t bsp_usb_dev_init(uint8_t controller_id);
+#if USBCFG_DEV_KHCI && USBCFG_DEV_DETACH_ENABLE && USB_CFG_DEV_IO_DETACH_ENABLE
+extern int32_t bsp_usb_detach_init(uint8_t controller_id);
+#endif
 extern void USB_Control_Service (void* handle, usb_event_struct_t* event,void* arg);
 extern void USB_Reset_Service(void* handle, usb_event_struct_t* event, void* arg);
 extern void USB_Error_Service(void* handle, usb_event_struct_t* event, void* arg);
 extern void USB_Suspend_Service(void* handle, usb_event_struct_t* event,void* arg);
 extern void USB_Resume_Service(void* handle,usb_event_struct_t* event,void* arg );
 
-static usb_dev_state_struct_t g_usb_dev[USBCFG_DEV_NUM] = {0};
+static usb_dev_state_struct_t g_usb_dev[USBCFG_DEV_NUM] = {{0}};
 #if USBCFG_DEV_KHCI
 extern const usb_dev_interface_functions_struct_t _usb_khci_dev_function_table;
 #endif
@@ -220,7 +223,7 @@ static usb_status _usb_device_shutdown
     else
     {
         #if _DEBUG
-            printf("_usb_device_shutdown: DEV_SHUTDOWN is NULL\n");
+            USB_PRINTF("_usb_device_shutdown: DEV_SHUTDOWN is NULL\n");
         #endif  
         return USBERR_ERROR;
     }    
@@ -247,27 +250,32 @@ usb_status _usb_device_call_service_internal
     uint32_t                      i;
 
     /* Needs mutual exclusion */
-    OS_Mutex_lock(usb_dev_ptr->mutex);
+    //OS_Mutex_lock(usb_dev_ptr->mutex);
 
     switch (event->type)
     {
         case USB_SERVICE_EP0:
-            USB_Control_Service(&usb_dev_ptr->usb_framework, event, service_ptr->arg);
+            USB_Control_Service(&usb_dev_ptr->usb_framework, event, NULL);
             break;     
         case USB_SERVICE_BUS_RESET:
-            USB_Reset_Service(&usb_dev_ptr->usb_framework, event, service_ptr->arg);
+            USB_Reset_Service(&usb_dev_ptr->usb_framework, event, NULL);
             break;
 #if USBCFG_DEV_ADVANCED_SUSPEND_RESUME
         case USB_SERVICE_SUSPEND:
-            USB_Suspend_Service(&usb_dev_ptr->usb_framework, event, service_ptr->arg);
+            USB_Suspend_Service(&usb_dev_ptr->usb_framework, event, NULL);
             break;
         case USB_SERVICE_RESUME:
-            USB_Resume_Service(&usb_dev_ptr->usb_framework, event, service_ptr->arg);
+            USB_Resume_Service(&usb_dev_ptr->usb_framework, event, NULL);
             break;
 #endif
 #if USBCFG_DEV_KHCI_ADVANCED_ERROR_HANDLING
         case USB_SERVICE_ERROR:
-            USB_Error_Service(&usb_dev_ptr->usb_framework, event, service_ptr->arg);
+            USB_Error_Service(&usb_dev_ptr->usb_framework, event, NULL);
+            break;
+#endif
+#if USBCFG_DEV_DETACH_ENABLE
+        case USB_SERVICE_DETACH:
+            USB_Detach_Service(&usb_dev_ptr->usb_framework, event, NULL);
             break;
 #endif
         default:
@@ -279,16 +287,14 @@ usb_status _usb_device_call_service_internal
     {
         service_ptr = &usb_dev_ptr->services[i];
         if (service_ptr->type == event->type) 
-        {   
-            if((event->direction == USB_RECV) && (event->buffer_ptr != NULL))
-                OS_dcache_invalidate_mlines((void*)event->buffer_ptr,event->len);
+        {
             service_ptr->service(event,service_ptr->arg);
-            OS_Mutex_unlock(usb_dev_ptr->mutex);
+            //OS_Mutex_unlock(usb_dev_ptr->mutex);
             return USB_OK;
         }  
     }
 
-	OS_Mutex_unlock(usb_dev_ptr->mutex);
+	//OS_Mutex_unlock(usb_dev_ptr->mutex);
     return USBERR_CLOSED_SERVICE;
 } /* EndBody */
 
@@ -381,6 +387,10 @@ usb_status _usb_device_call_service
     usb_dev_ptr = (usb_dev_state_struct_t*)event->handle;
 
     event->type = type;
+    if((type & 0x7F) && ((type & 0x7F) < 0x10))
+    {
+        event->type = (uint8_t)(((uint8_t)(event->direction << 7)) | (type & 0x7F));
+    }
 #if USBCFG_DEV_USE_TASK
     if (0 != OS_MsgQ_send(usb_dev_ptr->usb_dev_service_que, (void *)event, 0))
     {
@@ -423,8 +433,8 @@ usb_status _usb_device_set_address
     }
     else
     {
-        #ifdef _DEV_DEBUG
-            printf("usb_device_set_address: DEV_SET_ADDRESS is NULL\n");                      
+        #ifdef _DEBUG
+            USB_PRINTF("usb_device_set_address: DEV_SET_ADDRESS is NULL\n");                      
         #endif  
         return USBERR_ERROR;
     }
@@ -467,7 +477,7 @@ usb_status usb_device_get_status
         else
         {
             #if _DEBUG
-                printf("usb_device_get_status: DEV_GET_ENDPOINT_STATUS is NULL\n");
+                USB_PRINTF("usb_device_get_status: DEV_GET_ENDPOINT_STATUS is NULL\n");
             #endif  
             OS_Mutex_unlock(usb_dev_ptr->mutex);
             return USBERR_ERROR;
@@ -485,7 +495,7 @@ usb_status usb_device_get_status
         else
         {
             #if _DEBUG
-                printf("usb_device_get_status: DEV_GET_DEVICE_STATUS is NULL\n");
+                USB_PRINTF("usb_device_get_status: DEV_GET_DEVICE_STATUS is NULL\n");
             #endif  
             OS_Mutex_unlock(usb_dev_ptr->mutex);
             return USBERR_ERROR;
@@ -529,7 +539,7 @@ usb_status usb_device_set_status
     else
     {
         #if _DEBUG
-            printf("usb_device_set_status: dev_set_device_status is NULL\n");
+            USB_PRINTF("usb_device_set_status: dev_set_device_status is NULL\n");
         #endif  
 		OS_Mutex_unlock(usb_dev_ptr->mutex);
         return USBERR_ERROR;
@@ -624,8 +634,8 @@ usb_status usb_device_init
 
     if (usb_dev_ptr->controller_handle == NULL)
     {
-        #ifdef _DEV_DEBUG
-        printf("1 memalloc failed in usb_device_init\n");
+        #ifdef _DEBUG
+        USB_PRINTF("1 memalloc failed in usb_device_init\n");
         #endif  
         return USBERR_ALLOC_STATE;
     } /* Endif */
@@ -633,6 +643,9 @@ usb_status usb_device_init
     usb_fw_ptr->dev_handle = usb_dev_ptr;
 #ifndef USBCFG_OTG
     error = bsp_usb_dev_init(controller_id);
+#if USBCFG_DEV_KHCI && USBCFG_DEV_DETACH_ENABLE && USB_CFG_DEV_IO_DETACH_ENABLE
+    error = bsp_usb_detach_init(controller_id);
+#endif
 #endif
     if (error != USB_OK)
     {     
@@ -650,8 +663,8 @@ usb_status usb_device_init
     }
     else
     {
-        #ifdef _DEV_DEBUG
-            printf("usb_device_init: DEV_INIT is NULL\n");                   
+        #ifdef _DEBUG
+            USB_PRINTF("usb_device_init: DEV_INIT is NULL\n");                   
         #endif  
         return USBERR_ERROR;
     }
@@ -722,7 +735,7 @@ usb_status usb_device_deinit
     if (handle == NULL)
     {
         #if _DEBUG
-            printf("_usb_device_shutdowna: handle is NULL\n");
+            USB_PRINTF("_usb_device_shutdowna: handle is NULL\n");
         #endif  
         return USBERR_ERROR;
     }
@@ -777,27 +790,13 @@ usb_status usb_device_init_endpoint
     if (handle == NULL)
     {
         #if _DEBUG
-            printf("_usb_device_shutdowna: handle is NULL\n");
+            USB_PRINTF("_usb_device_shutdowna: handle is NULL\n");
         #endif  
         return USBERR_ERROR;
     }
     
     usb_dev_ptr = (usb_dev_state_struct_t*)handle;
-#if 0
-    if (((usb_dev_interface_functions_struct_t*)\
-         usb_dev_ptr->usb_dev_interface)->DEV_GET_XD != NULL)
-    {
-        error = ((usb_dev_interface_functions_struct_t*)\
-            usb_dev_ptr->usb_dev_interface)->DEV_GET_XD(usb_dev_ptr->controller_handle, &xd_ptr);    
-    }
-    else
-    {
-        #if _DEBUG
-            printf("usb_device_recv_data: DEV_GET_XD is NULL\n");
-        #endif  
-        return USBERR_ERROR;
-    }
-#endif 
+ 
     /* Initialize the transfer descriptor */
     xd.ep_num = ep_ptr->ep_num;
     xd.bdirection = ep_ptr->direction;
@@ -815,8 +814,8 @@ usb_status usb_device_init_endpoint
     }
     else
     {
-         #ifdef _DEV_DEBUG
-             printf("usb_device_init_endpoint: DEV_INIT_ENDPOINT is NULL\n");                     
+         #ifdef _DEBUG
+             USB_PRINTF("usb_device_init_endpoint: DEV_INIT_ENDPOINT is NULL\n");                     
          #endif  
          return USBERR_ERROR;
     }
@@ -969,7 +968,7 @@ usb_status usb_device_deinit_endpoint
     else
     {
          #if _DEBUG
-             printf("usb_device_deinit_endpoint: DEV_DEINIT_ENDPOINT is NULL\n");                     
+             USB_PRINTF("usb_device_deinit_endpoint: DEV_DEINIT_ENDPOINT is NULL\n");                     
          #endif  
          return USBERR_ERROR;
     }
@@ -1013,11 +1012,19 @@ usb_status usb_device_recv_data
     {
         error = ((usb_dev_interface_functions_struct_t*)\
             usb_dev_ptr->usb_dev_interface)->dev_get_xd(usb_dev_ptr->controller_handle, &xd_ptr);    
+        
+        if (USB_OK != error)
+        {
+            #if _DEBUG
+                USB_PRINTF("usb_device_recv_data: DEV_GET_XD failed\n");
+            #endif
+            return USBERR_ERROR;
+        }
     }
     else
     {
         #if _DEBUG
-            printf("usb_device_recv_data: DEV_GET_XD is NULL\n");
+            USB_PRINTF("usb_device_recv_data: DEV_GET_XD is NULL\n");
         #endif  
         return USBERR_ERROR;
     }
@@ -1035,13 +1042,19 @@ usb_status usb_device_recv_data
     if (((usb_dev_interface_functions_struct_t*)\
        usb_dev_ptr->usb_dev_interface)->dev_recv != NULL)
     {
+#if (USBCFG_BUFF_PROPERTY_CACHEABLE)  
+        if (size > 0)
+        {
+            OS_dcache_invalidate_mlines((void*)buff_ptr, size);
+        }
+#endif 
         error = ((usb_dev_interface_functions_struct_t*)\
                  usb_dev_ptr->usb_dev_interface)->dev_recv(usb_dev_ptr->controller_handle, xd_ptr);  
     }
     else
     {
         #if _DEBUG
-        printf("usb_device_recv_data: DEV_RECV is NULL\n");                      
+        USB_PRINTF("usb_device_recv_data: DEV_RECV is NULL\n");                      
         #endif    
         return USBERR_ERROR;
     }
@@ -1082,31 +1095,31 @@ usb_status usb_device_send_data
     if (handle == NULL)
     {
         #if _DEBUG
-            printf("usb_device_send_data: handle is NULL\n");
+            USB_PRINTF("usb_device_send_data: handle is NULL\n");
         #endif  
         return USBERR_ERROR;
     }
 
-    usb_dev_ptr = (usb_dev_state_struct_t*)handle;
-
-    /********************************************************
-     If system has a data cache, it is assumed that buffer
-     passed to this routine will be aligned on a cache line
-     boundry. The following code will flush the
-     buffer before passing it to hardware driver.   
-     ********************************************************/
-    OS_dcache_flush_mlines((void*)buff_ptr,size); 
+    usb_dev_ptr = (usb_dev_state_struct_t*)handle;   
 
     if (((usb_dev_interface_functions_struct_t*)\
         usb_dev_ptr->usb_dev_interface)->dev_get_xd != NULL)
     {
         error = ((usb_dev_interface_functions_struct_t*)\
             usb_dev_ptr->usb_dev_interface)->dev_get_xd(usb_dev_ptr->controller_handle, &xd_ptr);    
+        
+        if (USB_OK != error)
+        {
+            #if _DEBUG
+                USB_PRINTF("usb_device_send_data: DEV_GET_XD failed\n");
+            #endif
+            return USBERR_ERROR;
+        }
     }
     else
     {
         #if _DEBUG
-            printf("usb_device_send_data: DEV_GET_XD is NULL\n");
+            USB_PRINTF("usb_device_send_data: DEV_GET_XD is NULL\n");
         #endif  
         return USBERR_ERROR;
     }
@@ -1124,13 +1137,25 @@ usb_status usb_device_send_data
     if (((usb_dev_interface_functions_struct_t*)\
         usb_dev_ptr->usb_dev_interface)->dev_send != NULL)
     {
+#if (USBCFG_BUFF_PROPERTY_CACHEABLE)  
+        if (size > 0)
+        {
+            /********************************************************
+             If system has a data cache, it is assumed that buffer
+             passed to this routine will be aligned on a cache line
+             boundry. The following code will flush the
+             buffer before passing it to hardware driver.   
+             ********************************************************/
+            OS_dcache_flush_mlines((void*)buff_ptr, size);
+        }
+#endif 
         error = ((usb_dev_interface_functions_struct_t*)\
             usb_dev_ptr->usb_dev_interface)->dev_send(usb_dev_ptr->controller_handle, xd_ptr);    
     }
     else
     {
         #if _DEBUG
-            printf("usb_device_send_data: DEV_SEND is NULL\n");
+            USB_PRINTF("usb_device_send_data: DEV_SEND is NULL\n");
         #endif  
         return USBERR_ERROR;
     }
@@ -1139,7 +1164,7 @@ usb_status usb_device_send_data
     if (error) 
     {
         #if _DEBUG
-            printf("usb_device_send_data, transfer failed\n");
+            USB_PRINTF("usb_device_send_data, transfer failed\n");
         #endif  
         return USBERR_TX_FAILED;
     }
@@ -1170,7 +1195,7 @@ usb_status usb_device_unstall_endpoint
     if (handle  == NULL)
     {
        #if _DEBUG
-          printf("usb_device_unstall_endpoint: handle is NULL\n");
+          USB_PRINTF("usb_device_unstall_endpoint: handle is NULL\n");
        #endif    
        return USBERR_ERROR;
     }
@@ -1217,7 +1242,7 @@ usb_status usb_device_stall_endpoint
     if (handle == NULL)
     {
        #if _DEBUG
-         printf("usb_device_stall_endpoint: handle is NULL\n");
+         USB_PRINTF("usb_device_stall_endpoint: handle is NULL\n");
        #endif    
        return USBERR_ERROR;
     }
@@ -1234,7 +1259,7 @@ usb_status usb_device_stall_endpoint
     else
     {
         #if _DEBUG
-            printf("usb_device_stall_endpoint: DEV_STALL_ENDPOINT is NULL\n");             
+            USB_PRINTF("usb_device_stall_endpoint: DEV_STALL_ENDPOINT is NULL\n");             
         #endif  
         error = USBERR_ERROR;
     }
@@ -1264,7 +1289,7 @@ usb_status usb_device_register_application_notify
     if (handle == NULL)
     {
         #if _DEBUG
-        printf("usb_device_register_application_notify: handle is NULL\n");
+        USB_PRINTF("usb_device_register_application_notify: handle is NULL\n");
         #endif    
         return USBERR_ERROR;
     }
@@ -1297,7 +1322,7 @@ usb_status usb_device_register_vendor_class_request_notify
     if (handle == NULL)
     {
         #if _DEBUG
-        printf("usb_device_register_vendor_class_request_notify: handle is NULL\n");
+        USB_PRINTF("usb_device_register_vendor_class_request_notify: handle is NULL\n");
         #endif    
         return USBERR_ERROR;
     }
@@ -1331,7 +1356,7 @@ usb_status usb_device_register_desc_request_notify
     if (handle == NULL)
     {
     #if _DEBUG
-       printf("usb_device_register_desc_request_notify\n");
+       USB_PRINTF("usb_device_register_desc_request_notify\n");
     #endif    
        return USBERR_ERROR;
     }
@@ -1366,7 +1391,7 @@ usb_status usb_device_cancel_transfer
     if (handle == NULL)
     {
         #if _DEBUG
-            printf("_usb_device_shutdowna: handle is NULL\n");
+            USB_PRINTF("_usb_device_shutdowna: handle is NULL\n");
         #endif  
         return USBERR_ERROR;
     }
@@ -1387,7 +1412,7 @@ usb_status usb_device_cancel_transfer
     else
     {
         #if _DEBUG
-            printf("usb_device_cancel_transfer: dev_cancel_transfer is NULL\n");               
+            USB_PRINTF("usb_device_cancel_transfer: dev_cancel_transfer is NULL\n");               
         #endif  
         return USBERR_ERROR;
     }
@@ -1419,7 +1444,7 @@ usb_status usb_device_assert_resume
     if (handle == NULL)
     {
        #if _DEBUG
-         printf("usb_device_assert_resume: handle is NULL\n");
+         USB_PRINTF("usb_device_assert_resume: handle is NULL\n");
        #endif    
        return USBERR_ERROR;
     }
@@ -1434,7 +1459,7 @@ usb_status usb_device_assert_resume
     else
     {
         #if _DEBUG
-            printf("usb_device_assert_resume: dev_assert_resume is NULL\n");               
+            USB_PRINTF("usb_device_assert_resume: dev_assert_resume is NULL\n");               
         #endif  
         error = USBERR_ERROR;
     }
@@ -1467,7 +1492,7 @@ usb_status usb_device_otg_init
     khci_dev_state_ptr = ((usb_dev_state_struct_t*)handle)->controller_handle;
     khci_dev_state_ptr->otg_attr_srp = (otg_attributes & OTG_SRP_SUPPORT)?(TRUE):(FALSE);
     khci_dev_state_ptr->otg_attr_hnp = (otg_attributes & OTG_HNP_SUPPORT)?(TRUE):(FALSE);
-    error = _usb_otg_device_on_class_init(khci_dev_state_ptr->otg_handle, handle , otg_attributes );
+    error = usb_otg_device_on_class_init(khci_dev_state_ptr->otg_handle, handle , otg_attributes );
 
     return error;
 }
@@ -1517,7 +1542,7 @@ usb_status usb_device_otg_set_hnp_enable
         return USBERR_ERROR;
     }
     khci_dev_state_ptr = ((usb_dev_state_struct_t*)handle)->controller_handle;
-    return _usb_otg_device_hnp_enable(khci_dev_state_ptr->otg_handle, TRUE);
+    return usb_otg_device_hnp_enable(khci_dev_state_ptr->otg_handle, TRUE);
 }
 #endif /* USBCFG_OTG */
 
@@ -1555,7 +1580,7 @@ usb_status usb_device_reset
     else
     {
         #if _DEBUG
-        printf("usb_device_reset: dev_reset is NULL\n");                      
+        USB_PRINTF("usb_device_reset: dev_reset is NULL\n");                      
         #endif    
         return USBERR_ERROR;
     }
@@ -1563,4 +1588,53 @@ usb_status usb_device_reset
     return error;
 } /* EndBody */
 
+
+#if USBCFG_DEV_EHCI_TEST_MODE
+/*FUNCTION*-------------------------------------------------------------
+*
+*  Function Name  : usb_device_set_test_mode
+*  Returned Value : USB_OK or error code
+*  Comments       :
+*     Stalls the endpoint.
+*
+*END*-----------------------------------------------------------------*/
+usb_status usb_device_set_test_mode
+(
+    /* [IN] the USB_USB_dev_initialize state structure */
+    usb_device_handle          handle,
+    /* [IN] the Endpoint number */
+    uint16_t                   testmode
+)
+{
+    usb_status                            error = 0;
+    usb_dev_state_struct_t*               usb_dev_ptr;
+
+    if (handle == NULL)
+    {
+       #if _DEBUG
+         USB_PRINTF("usb_device_set_test_mode: handle is NULL\n");
+       #endif    
+       return USBERR_ERROR;
+    }
+    usb_dev_ptr = (usb_dev_state_struct_t*)handle;
+ 
+    if (((usb_dev_interface_functions_struct_t*)
+    usb_dev_ptr->usb_dev_interface)->dev_set_test_mode
+        != NULL)
+    {
+        error = ((usb_dev_interface_functions_struct_t*)
+            usb_dev_ptr->usb_dev_interface)->dev_set_test_mode(usb_dev_ptr->controller_handle, 
+            testmode);
+    }
+    else
+    {
+        #if _DEBUG
+            USB_PRINTF("usb_device_set_test_mode: dev_set_test_mode is NULL\n");             
+        #endif  
+        error = USBERR_ERROR;
+    }
+    
+    return  error;
+}
+#endif 
 #endif

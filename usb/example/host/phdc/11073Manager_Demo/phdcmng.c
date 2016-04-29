@@ -41,18 +41,18 @@
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
-#include "fsl_gpio_common.h"
 #include "fsl_port_hal.h"
+#include "board.h"
 #include "fsl_debug_console.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "uart/fsl_uart_driver.h"
+#include "fsl_uart_driver.h"
 #endif
 
 #include "usb_host_phdc.h"
 #include "usb_host_hub_sm.h"
 #if (OS_ADAPTER_ACTIVE_OS != OS_ADAPTER_SDK)
-#include "rtc.h"
+//#include "rtc.h"
 #endif
 #include "ieee11073_phd_types.h"
 #include "ieee11073_nom_codes.h"
@@ -342,16 +342,16 @@ void usb_host_phdc_unsupported_device_event
     {
         pDeviceIntf = (usb_device_interface_struct_t*)intf_handle;
         intf_ptr    = pDeviceIntf->lpinterfaceDesc;
-        printf("----- Unsupported Interface of attached Device -----\n");
-        printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-        printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-        printf("  Class = %d", intf_ptr->bInterfaceClass);
-        printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-        printf("  Protocol = %d\n", intf_ptr->bInterfaceProtocol);
+        USB_PRINTF("----- Unsupported Interface of attached Device -----\n");
+        USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+        USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+        USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+        USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+        USB_PRINTF("  Protocol = %d\n", intf_ptr->bInterfaceProtocol);
     }
     else if (USB_ATTACH_DEVICE_NOT_SUPPORT == event_code)
     {
-        printf("----- Unsupported Device attached -----\n");
+        USB_PRINTF("----- Unsupported Device attached -----\n");
     }
 }
 
@@ -377,7 +377,7 @@ void APP_init(void)
 
     if(status != USB_OK) 
     {
-        printf("\n\rUSB Host Initialization failed! STATUS: 0x%x", (unsigned int)status);
+        USB_PRINTF("\n\rUSB Host Initialization failed! STATUS: 0x%x", (unsigned int)status);
         return;
     }
 
@@ -388,27 +388,27 @@ void APP_init(void)
     status = usb_host_register_driver_info(g_host_handle, (void *)g_driver_info_table);
     if (status != USB_OK) 
     {
-        printf("\n\rDriver Registration failed! STATUS: 0x%x", (unsigned int)status);
+        USB_PRINTF("\n\rDriver Registration failed! STATUS: 0x%x", (unsigned int)status);
         return;
     }
     status = usb_host_register_unsupported_device_notify(g_host_handle, usb_host_phdc_unsupported_device_event);
 
     if(status != USB_OK) 
     {         
-        printf("\nUSB Initialization driver info failed! STATUS: 0x%x", status);
+        USB_PRINTF("\nUSB Initialization driver info failed! STATUS: 0x%x", status);
         return;
     }
     g_phdc_usb_event = OS_Event_create(0);/* manually clear */
 
     if (g_phdc_usb_event == NULL)
     {
-        printf("\nOS_Event_create failed!\n");
+        USB_PRINTF("\nOS_Event_create failed!\n");
         return;
     }
 
-    printf("\n\r****************************************************************************");
-    printf("\n\rUSB PHDC Manager Demo");
-    printf("\n\rWaiting for PHDC Agent to be attached...");
+    USB_PRINTF("\n\r****************************************************************************");
+    USB_PRINTF("\n\rUSB PHDC Manager Demo");
+    USB_PRINTF("\n\rWaiting for PHDC Agent to be attached...");
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -432,13 +432,13 @@ void APP_task(void)
             case USB_DEVICE_ATTACHED:
             {
                 usb_status                     status = USB_OK;
-                printf(" PHDC device attached");
+                USB_PRINTF(" PHDC device attached");
                 g_phdc_device.dev_state = USB_DEVICE_SET_INTERFACE_STARTED;
     
                 status = usb_host_open_dev_interface(g_host_handle, g_phdc_device.dev_handle, g_phdc_device.intf_handle, (class_handle*)&g_phdc_device.class_handle);
                 if (status != USB_OK)
                 {
-                    printf("\n\rError in _usb_hostdev_select_interface: %x",(unsigned int) status);
+                    USB_PRINTF("\n\rError in _usb_hostdev_select_interface: %x",(unsigned int) status);
                     return;
                 }
             }
@@ -447,7 +447,7 @@ void APP_task(void)
                 break;
 
             case USB_DEVICE_INTERFACED:
-                printf("\n\rPHDC device interfaced and ready"); 
+                USB_PRINTF("\n\rPHDC device interfaced and ready"); 
                 /* Advance to the INUSE state to process the PHDC messages */
                 g_phdc_device.dev_state = USB_DEVICE_INUSE;
                 OS_Event_set(g_phdc_usb_event, USB_EVENT_CTRL);
@@ -477,11 +477,11 @@ void APP_task(void)
                 break;
     
             case USB_DEVICE_DETACHED:
-                printf("\n\rGoing to idle state");
+                USB_PRINTF("\n\rGoing to idle state");
                 status = usb_host_close_dev_interface(g_host_handle, g_phdc_device.dev_handle, g_phdc_device.intf_handle, g_phdc_device.class_handle);
                 if (status != USB_OK)
                 {
-                   printf("error in _usb_hostdev_close_interface %x\n", status);
+                   USB_PRINTF("error in _usb_hostdev_close_interface %x\n", status);
                 }
                 if (g_phdc_device.phd_buffer!=NULL)
                 {
@@ -591,7 +591,7 @@ void phdc_manager_aarq_handler
         {
             assocResult = ACCEPTED_UNKNOWN_CONFIG;
             /* Advance the manager state */
-            printf("\n\r11073 MNG Demo: Received a valid association request.");
+            USB_PRINTF("\n\r11073 MNG Demo: Received a valid association request.");
             g_phdc_device.phd_manager_state = PHD_MNG_WAIT_CONFIG;
         }
     }
@@ -613,12 +613,12 @@ void phdc_manager_aarq_handler
         phdc_call_param_send->buff_ptr = &g_phd_mng_assoc_res[0];
         phdc_call_param_send->buff_size = ASSOC_RES_SIZE;
 
-        printf("\n\r11073 MNG Demo: Send back association response. Waiting for config...");
+        USB_PRINTF("\n\r11073 MNG Demo: Send back association response. Waiting for config...");
         usb_class_phdc_send_data(phdc_call_param_send);
     }
     else
     {
-        printf("\n\r11073 MNG Demo: Cannot allocate memory for the Association response parameter");
+        USB_PRINTF("\n\r11073 MNG Demo: Cannot allocate memory for the Association response parameter");
     }
 }
 
@@ -679,20 +679,20 @@ void phdc_manager_rlrq_handler
 
     rlrq_apdu_t *pRlrq = (rlrq_apdu_t *)&(apdu->u.prst); 
 
-    printf("\n\r11073 MNG Demo: Received a Release request. Reason = %d", pRlrq->reason);
+    USB_PRINTF("\n\r11073 MNG Demo: Received a Release request. Reason = %d", pRlrq->reason);
     if (pRlrq->reason == RELEASE_REQUEST_REASON_NORMAL)
     {
-        printf(" (REASON_NORMAL)");
+        USB_PRINTF(" (REASON_NORMAL)");
     }
 
     if (g_phdc_device.confObjList != NULL)
     {
         OS_Mem_free(g_phdc_device.confObjList);
         g_phdc_device.confObjList = NULL;
-        printf("\n\r11073 MNG Demo: Device configuration memory is now deallocated");  
+        USB_PRINTF("\n\r11073 MNG Demo: Device configuration memory is now deallocated");  
     } 
 
-    printf("\n\r11073 MNG Demo: Manager state is now UNASSOCIATED");  
+    USB_PRINTF("\n\r11073 MNG Demo: Manager state is now UNASSOCIATED");  
     /* Advance the manager state */
     g_phdc_device.phd_manager_state = PHD_MNG_UNASSOCIATED;
 
@@ -708,7 +708,7 @@ void phdc_manager_rlrq_handler
     }
     else
     {
-        printf("\n\r11073 MNG Demo: Cannot allocate memory for the release response parameter");
+        USB_PRINTF("\n\r11073 MNG Demo: Cannot allocate memory for the release response parameter");
     }
 }
 
@@ -727,16 +727,16 @@ void phdc_manager_abrt_handler
     apdu_t      *apdu  = (apdu_t *)buffer;
     abrt_apdu_t *pAbrt = (abrt_apdu_t *)&(apdu->u.prst); 
 
-    printf("\n\r11073 MNG Demo:Received an Abort request. Reason = %d", pAbrt->reason);
+    USB_PRINTF("\n\r11073 MNG Demo:Received an Abort request. Reason = %d", pAbrt->reason);
 
     if (g_phdc_device.confObjList != NULL)
     {
         OS_Mem_free(g_phdc_device.confObjList);
         g_phdc_device.confObjList = NULL;
-        printf("\n\r11073 MNG Demo: Device configuration memory is now deallocated");  
+        USB_PRINTF("\n\r11073 MNG Demo: Device configuration memory is now deallocated");  
     } 
 
-    printf("\n\r11073 MNG Demo: Manager state is now UNASSOCIATED");  
+    USB_PRINTF("\n\r11073 MNG Demo: Manager state is now UNASSOCIATED");  
     /* Advance the manager state */
     g_phdc_device.phd_manager_state = PHD_MNG_UNASSOCIATED;
 }
@@ -771,10 +771,10 @@ void phdc_manager_prst_mdc_noti_config
 
     configReport->config_report_id = USB_SHORT_BE_TO_HOST(configReport->config_report_id);
     confObjList->count = USB_SHORT_BE_TO_HOST(confObjList->count);
-    printf("\n\r11073 MNG Demo: Received a configuration event report.");
-    printf("\n\r11073 MNG Demo: -------------------------------------------");
-    printf("\n\r11073 MNG Demo: Configuration Report Id: %d.", configReport->config_report_id); 
-    printf("\n\r11073 MNG Demo: Number of Agent Measurements Objects: %d.", confObjList->count); 
+    USB_PRINTF("\n\r11073 MNG Demo: Received a configuration event report.");
+    USB_PRINTF("\n\r11073 MNG Demo: -------------------------------------------");
+    USB_PRINTF("\n\r11073 MNG Demo: Configuration Report Id: %d.", configReport->config_report_id); 
+    USB_PRINTF("\n\r11073 MNG Demo: Number of Agent Measurements Objects: %d.", confObjList->count); 
 
     apdu->length = USB_SHORT_BE_TO_HOST(apdu->length);
     if ((apdu->length + sizeof(apdu->choice) + sizeof(apdu->length)) < APDU_MAX_BUFFER_SIZE)
@@ -801,15 +801,15 @@ void phdc_manager_prst_mdc_noti_config
                 confObj->obj_handle = USB_SHORT_BE_TO_HOST(confObj->obj_handle);
                 confObj->obj_class = USB_SHORT_BE_TO_HOST(confObj->obj_class);
                 confObj->attributes.count = USB_SHORT_BE_TO_HOST(confObj->attributes.count);
-                printf("\n\r11073 MNG Demo:  > Object Handle %d: Class = %d  Num Attributes = %d.", confObj->obj_handle, confObj->obj_class, confObj->attributes.count);
+                USB_PRINTF("\n\r11073 MNG Demo:  > Object Handle %d: Class = %d  Num Attributes = %d.", confObj->obj_handle, confObj->obj_class, confObj->attributes.count);
                 attrOffset = 0;
                 for (j = 0; j<confObj->attributes.count; j++)
                 {
                     ava_type_t *attr = (ava_type_t *)((uint8_t*)(&confObj->attributes.value[0]) + attrOffset);
-                    printf("\n\r11073 MNG Demo:  > > Attribute%d: Id = ", j);
+                    USB_PRINTF("\n\r11073 MNG Demo:  > > Attribute%d: Id = ", j);
                     if(!phdc_manager_print_nomenclature(attr->attribute_id))
                     {
-                        printf("%d (unsupported ASCII nomenclature", USB_SHORT_BE_TO_HOST(attr->attribute_id));
+                        USB_PRINTF("%d (unsupported ASCII nomenclature", USB_SHORT_BE_TO_HOST(attr->attribute_id));
                     }
        
                     attr->attribute_value.length = USB_SHORT_BE_TO_HOST(attr->attribute_value.length); 
@@ -832,24 +832,24 @@ void phdc_manager_prst_mdc_noti_config
         }
         else
         {
-            printf("\n\r11073 MNG Demo: Cannot allocate memory to store the configuration");
+            USB_PRINTF("\n\r11073 MNG Demo: Cannot allocate memory to store the configuration");
         }
     }
     else
     {
         /* Advance the manager state */
         g_phdc_device.phd_manager_state = PHD_MNG_UNASSOCIATED;
-        printf("\n\r11073 APDU length (%d) exceeds allocated RX buffer length (%d)",apdu->length + sizeof(apdu->choice) + sizeof(apdu->length), APDU_MAX_BUFFER_SIZE);
+        USB_PRINTF("\n\r11073 APDU length (%d) exceeds allocated RX buffer length (%d)",apdu->length + sizeof(apdu->choice) + sizeof(apdu->length), APDU_MAX_BUFFER_SIZE);
     }
           
-    printf("\n\r11073 MNG Demo: -------------------------------------------");
+    USB_PRINTF("\n\r11073 MNG Demo: -------------------------------------------");
     if (configResult == ACCEPTED_CONFIG)
     {
-        printf("\n\r11073 MNG Demo: Configuration Accepted.");
+        USB_PRINTF("\n\r11073 MNG Demo: Configuration Accepted.");
     }
     else
     {
-        printf("\n\r11073 MNG Demo: Configuration NOT Accepted.");
+        USB_PRINTF("\n\r11073 MNG Demo: Configuration NOT Accepted.");
     }
 
     /* Send back the configuration response */
@@ -871,12 +871,12 @@ void phdc_manager_prst_mdc_noti_config
         phdc_call_param_send->metadata = FALSE;
         phdc_call_param_send->buff_ptr = &g_phd_mng_config_res[0];
         phdc_call_param_send->buff_size = CONFIG_RES_SIZE;    
-        printf("\n\r11073 MNG Demo: Send back configuration response.");
+        USB_PRINTF("\n\r11073 MNG Demo: Send back configuration response.");
         usb_class_phdc_send_data(phdc_call_param_send);
 
         if (g_phdc_device.phd_manager_state == PHD_MNG_OPERATING)
         {      
-            printf("\n\r11073 MNG Demo: The MANAGER is now in the OPERATING state. Ready to receive measurements.");
+            USB_PRINTF("\n\r11073 MNG Demo: The MANAGER is now in the OPERATING state. Ready to receive measurements.");
             /* Send data -> Get MDS Attributes */
             phdc_call_param_send = (usb_phdc_param_t *)OS_Mem_alloc_uncached_zero(sizeof(usb_phdc_param_t));
             if(phdc_call_param_send != NULL)
@@ -885,18 +885,18 @@ void phdc_manager_prst_mdc_noti_config
                 phdc_call_param_send->metadata = FALSE;
                 phdc_call_param_send->buff_ptr = &g_phd_mng_get_mds_attr[0];
                 phdc_call_param_send->buff_size = GET_MDS_ATTR_SIZE;
-                printf("\n\r11073 MNG Demo: Send ROIGET MDS Attributes(all) request.");
+                USB_PRINTF("\n\r11073 MNG Demo: Send ROIGET MDS Attributes(all) request.");
                 usb_class_phdc_send_data(phdc_call_param_send);     
             }
             else
             {
-                printf("\n\r11073 MNG Demo: Cannot allocate memory for the Get-MDS request parameter");
+                USB_PRINTF("\n\r11073 MNG Demo: Cannot allocate memory for the Get-MDS request parameter");
             }
         }
         else
         {
             /* configuration was not accepted. The manager is in the UNASSOCIATED state */
-            printf("\n\r11073 MNG Demo: The MANAGER is now in the UNASSOCIATED state.");
+            USB_PRINTF("\n\r11073 MNG Demo: The MANAGER is now in the UNASSOCIATED state.");
             /* Send abort */
             phdc_call_param_send = (usb_phdc_param_t *)OS_Mem_alloc_uncached_zero(sizeof(usb_phdc_param_t));
             if (phdc_call_param_send != NULL)
@@ -906,18 +906,18 @@ void phdc_manager_prst_mdc_noti_config
                 phdc_call_param_send->buff_ptr = &g_phd_mng_abrt_req[0];
                 phdc_call_param_send->buff_size = ABRT_SIZE;
 
-                printf("\n\r11073 MNG Demo: Send Abort message to the device.");
+                USB_PRINTF("\n\r11073 MNG Demo: Send Abort message to the device.");
                 usb_class_phdc_send_data(phdc_call_param_send);     
             }
             else
             {
-                printf("\n\r11073 MNG Demo: Cannot allocate memory for the Abort request parameter");
+                USB_PRINTF("\n\r11073 MNG Demo: Cannot allocate memory for the Abort request parameter");
             }
         }
     }
     else
     {
-        printf("\n\r11073 MNG Demo: Cannot allocate memory for the Configuration response parameter");
+        USB_PRINTF("\n\r11073 MNG Demo: Cannot allocate memory for the Configuration response parameter");
     }
 }
 
@@ -939,13 +939,13 @@ void phdc_manager_prst_mdc_noti_scanrep_fixed
     data_apdu_t *respDataApdu;
     usb_phdc_param_t *phdc_call_param_send;
 
-    printf("\n\r11073 MNG Demo: Received a Scan Report (Fixed) event.");
-    printf("\n\r11073 MNG Demo: -------------------------------------------");
+    USB_PRINTF("\n\r11073 MNG Demo: Received a Scan Report (Fixed) event.");
+    USB_PRINTF("\n\r11073 MNG Demo: -------------------------------------------");
 
     scan_rep = (scan_report_info_fixed_t *)&(dataApdu->choice.u.roiv_cmipConfirmedEventReport.event_info.value[0]);
     scan_rep->scan_report_no = USB_SHORT_BE_TO_HOST(scan_rep->scan_report_no);
     scan_rep->obs_scan_fixed.count = USB_SHORT_BE_TO_HOST(scan_rep->obs_scan_fixed.count);
-    printf("\n\r11073 MNG Demo: Scan Report Num: %d  Num Observations: %d", scan_rep->scan_report_no, scan_rep->obs_scan_fixed.count); 
+    USB_PRINTF("\n\r11073 MNG Demo: Scan Report Num: %d  Num Observations: %d", scan_rep->scan_report_no, scan_rep->obs_scan_fixed.count); 
 
     phdc_manager_validate_print_fixedscan(&(scan_rep->obs_scan_fixed));
 
@@ -964,13 +964,13 @@ void phdc_manager_prst_mdc_noti_scanrep_fixed
         phdc_call_param_send->buff_ptr = &g_phd_mng_scan_res[0];
         phdc_call_param_send->buff_size = SCAN_RES_SIZE;
 
-        printf("\n\r11073 MNG Demo: -------------------------------------------");
-        printf("\n\r11073 MNG Demo: Send back measurements confirmation.");
+        USB_PRINTF("\n\r11073 MNG Demo: -------------------------------------------");
+        USB_PRINTF("\n\r11073 MNG Demo: Send back measurements confirmation.");
         usb_class_phdc_send_data(phdc_call_param_send);
     }
     else
     {
-        printf("\n\r11073 MNG Demo: Cannot allocate memory for the Scan response parameter");
+        USB_PRINTF("\n\r11073 MNG Demo: Cannot allocate memory for the Scan response parameter");
     }
 }
 
@@ -998,9 +998,9 @@ void phdc_manager_prst_get
 
     UNUSED_ARGUMENT(apdu);
 
-    printf("\n\r11073 MNG Demo: Received a GET Response.");
-    printf("\n\r11073 MNG Demo: -------------------------------------------");
-    printf("\n\r11073 MNG Demo: Number of attributes = %d", attribute_list->count);
+    USB_PRINTF("\n\r11073 MNG Demo: Received a GET Response.");
+    USB_PRINTF("\n\r11073 MNG Demo: -------------------------------------------");
+    USB_PRINTF("\n\r11073 MNG Demo: Number of attributes = %d", attribute_list->count);
 
     for (i = 0; i<attribute_list->count; i++)
     {
@@ -1030,18 +1030,18 @@ void phdc_manager_prst_get
                 {
                     type_ver->type = USB_SHORT_BE_TO_HOST(type_ver->type);
                     type_ver->version = USB_SHORT_BE_TO_HOST(type_ver->version);
-                    printf("\n\r11073 MNG Demo: Type = %d (%s)  Version = %d", type_ver->type, typeString, type_ver->version);
+                    USB_PRINTF("\n\r11073 MNG Demo: Type = %d (%s)  Version = %d", type_ver->type, typeString, type_ver->version);
                 }
                 else
                 {
-                    printf("\n\r11073 MNG Demo: Type = %d  Version = %d", type_ver->type, type_ver->version);
+                    USB_PRINTF("\n\r11073 MNG Demo: Type = %d  Version = %d", type_ver->type, type_ver->version);
                 }
             }
             break;
         case MDC_ATTR_ID_MODEL:
             length = attr->attribute_value.length;
             genOffset = 0;
-            printf("\n\r11073 MNG Demo: Model: ");
+            USB_PRINTF("\n\r11073 MNG Demo: Model: ");
             while (length - genOffset)
             {
                 any_t *str = (any_t *)((uint8_t*)&attr->attribute_value.value[0] + genOffset);
@@ -1051,9 +1051,9 @@ void phdc_manager_prst_get
                     char tempString[2];
                     tempString[0] = (char)str->value[j];
                     tempString[1] = '\0';
-                    printf("%s",tempString);
+                    USB_PRINTF("%s",tempString);
                 }
-                printf("  ");
+                USB_PRINTF("  ");
                 genOffset += sizeof(str->length) +
                               str->length;;
             }
@@ -1099,12 +1099,12 @@ void phdc_manager_validate_print_fixedscan
             }
             else
             {
-                printf("\n\r11073 MNG Demo: Usupported object class to print the observation scan : %d", confObj->obj_class);  
+                USB_PRINTF("\n\r11073 MNG Demo: Usupported object class to print the observation scan : %d", confObj->obj_class);  
             }
         }
         else
         {
-            printf("\n\r11073 MNG Demo: Unknown object handle for observation scan : %d", observation->obj_handle); 
+            USB_PRINTF("\n\r11073 MNG Demo: Unknown object handle for observation scan : %d", observation->obj_handle); 
         }
         observation->obs_val_data.length = USB_SHORT_BE_TO_HOST(observation->obs_val_data.length);
         obsListOffset += sizeof(observation->obj_handle) + 
@@ -1144,9 +1144,9 @@ void phdc_manager_handle_metric_nu_fixedscan
             /* Decode the attribute value - TYPE */
             type_t *type = (type_t *)&(gen_attr->attribute_value.value[0]);
      
-            printf("\n\r11073 MNG Demo: Observation for object type: ");
+            USB_PRINTF("\n\r11073 MNG Demo: Observation for object type: ");
             phdc_manager_print_nomenclature(type->code);
-            printf(". Partition: ");
+            USB_PRINTF(". Partition: ");
             phdc_manager_print_partition(type->partition);
         }
 
@@ -1165,29 +1165,29 @@ void phdc_manager_handle_metric_nu_fixedscan
             {
             case MDC_ATTR_NU_VAL_OBS_SIMP:
                 /* SimpleNuObsValue -> Print the observation based on the FLOAT type */
-                printf("\n\r11073 MNG Demo: Observation Value = ");
+                USB_PRINTF("\n\r11073 MNG Demo: Observation Value = ");
                 phdc_manager_print_float_val(&observation->obs_val_data.value[obs_offset]);
                 /* print also the unit code */
                 if (unit_code_attr != NULL)
                 {
-                    printf(" ");
+                    USB_PRINTF(" ");
                     phdc_manager_print_nomenclature(*(oid_type_t*)&(unit_code_attr->attribute_value.value[0]));
                 }
                 break;
             case MDC_ATTR_NU_VAL_OBS_BASIC:
                 /* BasicNuObsValue -> Print the observation based on the SFLOAT type */
-                printf("\n\r11073 MNG Demo: Observation Value = ");
+                USB_PRINTF("\n\r11073 MNG Demo: Observation Value = ");
                 phdc_manager_print_sfloat_val(&observation->obs_val_data.value[obs_offset]);
                 /* print also the unit code */
                 if (unit_code_attr != NULL)
                 {
-                    printf(" ");
+                    USB_PRINTF(" ");
                     phdc_manager_print_nomenclature(*(oid_type_t*)&(unit_code_attr->attribute_value.value[0]));
                 }
                 break;
             case MDC_ATTR_TIME_STAMP_ABS:
                 /* AbsoluteTime */
-                printf("\n\r11073 MNG Demo: Absolute Timestamp = ");
+                USB_PRINTF("\n\r11073 MNG Demo: Absolute Timestamp = ");
                 phdc_manager_print_abs_timestamp(&observation->obs_val_data.value[obs_offset]);
                 break;
             }
@@ -1201,7 +1201,7 @@ void phdc_manager_handle_metric_nu_fixedscan
     }
     else
     {
-        printf("\n\r11073 MNG Demo: Missing MDC_ATTR_ATTRIBUTE_VAL_MAP attribute to print the fixed observation"); 
+        USB_PRINTF("\n\r11073 MNG Demo: Missing MDC_ATTR_ATTRIBUTE_VAL_MAP attribute to print the fixed observation"); 
     }
 }
 
@@ -1228,12 +1228,12 @@ void phdc_manager_print_float_val
     int8_t          exponent;
     float           decValue;
 
-    memcpy(&temp, (uint32_t*)value, sizeof(temp));
+    memcpy(&temp, value, sizeof(temp));
     rawVal = USB_LONG_BE_TO_HOST(temp);
     mantisa = (((int32_t)(rawVal & 0xFFFFFF) << 8)) >> 8; /* Shifting left and right to propagate the sign bit */
     exponent = (int8_t)((int32_t)(rawVal & 0xFF000000) >> 24); /* int32 cast to ensure the sign bit is propagated */
     decValue = (float)(mantisa * pow(10, (double)exponent));      
-    printf("%f", decValue);
+    USB_PRINTF("%f", decValue);
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -1258,7 +1258,7 @@ void phdc_manager_print_sfloat_val
     int8_t exponent = (int8_t)((int16_t)(rawVal & 0xF000) >> 12); /* int cast to ensure the sign bit is propagated */ 
     float decValue;
     decValue = (float)(mantisa * pow(10, (double)exponent));
-    printf("%f", decValue);
+    USB_PRINTF("%f", decValue);
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -1274,7 +1274,7 @@ void phdc_manager_print_abs_timestamp
     uint8_t *value
 )
 {
-    printf("%02x%02x-%02x-%02x  %02x:%02x", value[0], value[1], value[2], value[3], value[4], value[5]); 
+    USB_PRINTF("%02x%02x-%02x-%02x  %02x:%02x", value[0], value[1], value[2], value[3], value[4], value[5]); 
 }
 
 
@@ -1292,7 +1292,7 @@ bool phdc_manager_print_nomenclature(oid_type_t type)
     {
         if ((g_nomenclature_ascii_table[i].type == USB_SHORT_BE_TO_HOST(type)) && (g_nomenclature_ascii_table[i].ascii_string != NULL))
         {
-            printf("%s", (uint8_t*)g_nomenclature_ascii_table[i].ascii_string);    
+            USB_PRINTF("%s", (uint8_t*)g_nomenclature_ascii_table[i].ascii_string);    
             return TRUE;
         }
     }
@@ -1316,7 +1316,7 @@ bool phdc_manager_print_partition
     {
         if ((g_partition_ascii_table[i].partition == USB_SHORT_BE_TO_HOST(partition)) && (g_partition_ascii_table[i].ascii_string != NULL))
         {
-            printf("%s", (uint8_t*)g_partition_ascii_table[i].ascii_string);
+            USB_PRINTF("%s", (uint8_t*)g_partition_ascii_table[i].ascii_string);
             return TRUE;
         }
     }
@@ -1432,12 +1432,12 @@ void usb_host_phdc_manager_event
     case USB_ATTACH_EVENT:
         g_phdc_interface_info[g_phdc_interface_number] = pHostIntf;
         g_phdc_interface_number++;
-        printf("\n\r----- Attach Event -----");
-        printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-        printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-        printf("  Class = %d", intf_ptr->bInterfaceClass);
-        printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-        printf("  Protocol = %d\n", intf_ptr->bInterfaceProtocol);
+        USB_PRINTF("\n\r----- Attach Event -----");
+        USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+        USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+        USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+        USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+        USB_PRINTF("  Protocol = %d\n", intf_ptr->bInterfaceProtocol);
         break;
     case USB_CONFIG_EVENT:
         if (g_phdc_device.dev_state == USB_DEVICE_IDLE) 
@@ -1448,12 +1448,12 @@ void usb_host_phdc_manager_event
         }
         else 
         {
-            printf("\n\rPHDC device already attached");
+            USB_PRINTF("\n\rPHDC device already attached");
         }
         break;
 
     case USB_INTF_OPENED_EVENT:
-        printf("\n\r----- Interfaced Event -----");
+        USB_PRINTF("\n\r----- Interfaced Event -----");
 
         if (phdc_manager_initialize_device())
         {
@@ -1464,11 +1464,11 @@ void usb_host_phdc_manager_event
     case USB_DETACH_EVENT:
     {
         /* Use only the interface with desired protocol */
-        printf("\n\r----- Detach Event -----");
-        printf("\n\rState = %d", (int32_t)g_phdc_device.dev_state);
-        printf("\n\r  Class = %d", intf_ptr->bInterfaceClass);
-        printf("\n\r  SubClass = %d", intf_ptr->bInterfaceSubClass);
-        printf("\n\r  Protocol = %d\n", intf_ptr->bInterfaceProtocol);
+        USB_PRINTF("\n\r----- Detach Event -----");
+        USB_PRINTF("\n\rState = %d", (int32_t)g_phdc_device.dev_state);
+        USB_PRINTF("\n\r  Class = %d", intf_ptr->bInterfaceClass);
+        USB_PRINTF("\n\r  SubClass = %d", intf_ptr->bInterfaceSubClass);
+        USB_PRINTF("\n\r  Protocol = %d\n", intf_ptr->bInterfaceProtocol);
         g_phdc_interface_number = 0;
         g_phdc_device.dev_state = USB_DEVICE_DETACHED;
     }
@@ -1495,7 +1495,7 @@ bool phdc_manager_initialize_device(void)
                                                usb_host_phdc_recv_callback,
                                                usb_host_phdc_ctrl_callback
                                              );
-    printf("\n\rConfigure PHDC callbacks and initializing attached device: ... ");
+    USB_PRINTF("\n\rConfigure PHDC callbacks and initializing attached device: ... ");
     if (status == USB_OK)
     {
         g_phdc_device.phd_buffer = (uint8_t*)OS_Mem_alloc_uncached_zero(APDU_MAX_BUFFER_SIZE);
@@ -1504,7 +1504,7 @@ bool phdc_manager_initialize_device(void)
         
         if (g_phdc_device.phd_buffer != NULL)
         {
-            printf(" DONE");
+            USB_PRINTF(" DONE");
             g_phdc_call_param.class_ptr = (class_handle*)g_phdc_device.class_handle;
             g_phdc_call_param.qos = 0xFE;
             g_phdc_call_param.buff_ptr = g_phdc_device.phd_buffer;
@@ -1514,13 +1514,13 @@ bool phdc_manager_initialize_device(void)
         }
         else
         {
-            printf(" ERROR allocating memory");
+            USB_PRINTF(" ERROR allocating memory");
             return FALSE;
         }
     }
     else
     {
-        printf(" ERROR (returned code = %d)", status);
+        USB_PRINTF(" ERROR (returned code = %d)", status);
         return FALSE;
     }
 }

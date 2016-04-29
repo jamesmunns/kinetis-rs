@@ -77,6 +77,8 @@ sgtl_status_t SGTL_Init(sgtl_handler_t *handler, sgtl_init_t *codec_config)
         SGTL_ModifyReg(handler,CHIP_ANA_CTRL, 0xFFFF, 0x0004); 
         /* Route ADC to I2S_OUT */
         SGTL_ModifyReg(handler,CHIP_SSS_CTRL, 0xFFFC, 0x0000); 
+        /* Default using I2S left format. */
+        SGTL_SetProtocol(handler,kSgtlBusI2SLeft);
     }
     else
     {
@@ -100,8 +102,10 @@ sgtl_status_t SGTL_Init(sgtl_handler_t *handler, sgtl_init_t *codec_config)
     SGTL_ModifyReg(handler,CHIP_ANA_CTRL, 0xFFEF, 0x0000); 
     /* LINEOUT and DAC volume control. */
     SGTL_ModifyReg(handler,CHIP_ANA_CTRL, 0xFEFF, 0x0000); 
-    /* Configure DAC left and right digital volume. Example shows volume of 0dB. */
+    /* Configure DAC left and right digital volume. */
     SGTL_WriteReg(handler,CHIP_DAC_VOL, 0x5C5C);
+    /* Configure ADC volume, reduce 6db. */
+    SGTL_WriteReg(handler,CHIP_ANA_ADC_CTRL, 0x0100);
     /* Unmute DAC*/
     SGTL_ModifyReg(handler,CHIP_ADCDAC_CTRL, 0xFFFB, 0x0000); 
     SGTL_ModifyReg(handler,CHIP_ADCDAC_CTRL, 0xFFF7, 0x0000); 

@@ -43,6 +43,7 @@
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
+#include "board.h"
 #include "fsl_debug_console.h"
 #include "fsl_port_hal.h"
 #include <stdio.h>
@@ -73,7 +74,7 @@ weighscale_variable_struct_t g_weighscale;
 /*****************************************************************************
  * Local Functions Prototypes
  *****************************************************************************/
-static void Weights_App_Callback(uint32_t handle, uint8_t event_type) ;
+static void Weights_App_Device_Callback(uint32_t handle, uint8_t event_type) ;
 static void Send_Weights(void); 
 
 /*****************************************************************************
@@ -81,7 +82,7 @@ static void Send_Weights(void);
  *****************************************************************************/
 /******************************************************************************
  * 
- *    @name        Weights_App_Callback
+ *    @name        Weights_App_Device_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -94,7 +95,7 @@ static void Send_Weights(void);
  * This function is called from the lower layer whenever an event occurs.
  * This sets a variable according to the event_type
  *****************************************************************************/
-static void Weights_App_Callback
+static void Weights_App_Device_Callback
 (
     uint32_t handle, 
     uint8_t event_type
@@ -179,7 +180,7 @@ void APP_init(void)
 #endif
 
     /* Initialize the USB interface */
-    (uint8_t)PHD_Transport_Init((uint32_t *)&g_weighscale.app_handle,Weights_App_Callback);
+    (uint8_t)PHD_Transport_Init((uint32_t *)&g_weighscale.app_handle,Weights_App_Device_Callback);
 }
 
 /******************************************************************************
@@ -241,7 +242,6 @@ void APP_task()
             break;
 
         case USB_PHD_DISCONNECTED_FROM_HOST:
-            g_weighscale.event = USB_PHD_MEASUREMENT_SENT; 
             break;
          
         case USB_PHD_MEASUREMENT_SENT: 
@@ -252,7 +252,6 @@ void APP_task()
             break;
 
         default:
-            g_weighscale.event = USB_PHD_CONNECTED_TO_HOST;
             break;
     }
     USB_PHDC_Periodic_Task(); 
@@ -272,8 +271,12 @@ void APP_task()
 void Main_Task( uint32_t param )
 {   
     UNUSED_ARGUMENT (param)
-    APP_init();  
-	APP_task();
+    APP_init();
+    
+    for ( ; ; )
+    {
+        APP_task();
+    }
 }
 #endif
 
@@ -307,7 +310,13 @@ static void Task_Start(void *arg)
 #if defined(FSL_RTOS_MQX)
 void Main_Task(uint32_t param)
 #else
+
+#if defined(__CC_ARM) || defined(__GNUC__)
+int main(void)
+#else
 void main(void)
+#endif
+
 #endif
 {
     OSA_Init();
@@ -320,6 +329,9 @@ void main(void)
 
     OS_Task_create(Task_Start, NULL, 9L, 3000L, "task_start", NULL);
     OSA_Start();
+#if (!defined(FSL_RTOS_MQX))&(defined(__CC_ARM) || defined(__GNUC__))
+    return 1;
+#endif
 }
 #endif
 /* EOF */

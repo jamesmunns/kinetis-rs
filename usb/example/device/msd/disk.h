@@ -45,8 +45,8 @@
 /******************************************************************************
  * Macro's
  *****************************************************************************/
-#define RAM_DISK_APP         (1)
-#define SD_CARD_APP			 (0)
+#define RAM_DISK_APP                        (1)
+#define SD_CARD_APP                         (0)
 
 
 #if RAM_DISK_APP
@@ -58,12 +58,20 @@
     #define DISK_SIZE_NORMAL (TOTAL_LOGICAL_ADDRESS_BLOCKS_NORMAL * LENGTH_OF_EACH_LAB)
 #endif
 
-#define LOGICAL_UNIT_SUPPORTED          (1)
+#define LOGICAL_UNIT_SUPPORTED              (1)
 
-#define SUPPORT_DISK_LOCKING_MECHANISM  (0) /*1: TRUE; 0:FALSE*/
+#define SUPPORT_DISK_LOCKING_MECHANISM      (0) /*1: TRUE; 0:FALSE*/
 
-#define MSD_RECV_BUFFER_SIZE            (512)
-#define MSD_SEND_BUFFER_SIZE            (512)
+#if SD_CARD_APP
+    #define MUTILE_BUFFER                   (1)
+#endif
+#if MUTILE_BUFFER
+    #define MSD_RECV_BUFFER_NUM             (2)
+    #else
+    #define MSD_RECV_BUFFER_NUM             (1)
+#endif
+#define MSD_RECV_BUFFER_SIZE                (512)
+#define MSD_SEND_BUFFER_SIZE                (512)
 /*****************************************************************************
  * Global variables
  *****************************************************************************/
@@ -78,7 +86,8 @@ typedef struct _disk_variable_struct
 #if RAM_DISK_APP
     uint8_t storage_disk[DISK_SIZE_NORMAL];
 #endif  
-    uint8_t disk_lock;   
+    uint8_t disk_lock;
+    uint8_t read_write_error;
 }disk_struct_t; 
 
 /*****************************************************************************

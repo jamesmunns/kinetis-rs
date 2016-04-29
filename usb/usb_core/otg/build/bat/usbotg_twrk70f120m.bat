@@ -55,11 +55,17 @@ goto os_%OS%
 rem cw10gcc files
 :tool_cw10gcc
 goto os_%OS%
+
+rem uv4 files
+:tool_uv4
+goto os_%OS%
+
 rem gcc_arm files
 :tool_gcc_arm
 goto os_%OS%
-rem uv4 files
-:tool_uv4
+
+rem kds files
+:tool_kds
 goto os_%OS%
 
 rem mqx file

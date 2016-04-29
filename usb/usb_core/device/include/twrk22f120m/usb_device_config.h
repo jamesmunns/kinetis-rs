@@ -150,11 +150,11 @@
 */
 #define	USBCFG_BUFF_PROPERTY_CACHEABLE        0
 
+#define _DEBUG                               0
+
+
 #define USBCFG_DEV_ADVANCED_SUSPEND_RESUME    (0)
 
-#define USBCFG_DEV_ADVANCED_CANCEL_ENABLE     (0)
+#define USBCFG_DEV_ADVANCED_CANCEL_ENABLE     (1)
 
-#ifdef _DEBUG
-#undef _DEBUG
-#endif
 #endif

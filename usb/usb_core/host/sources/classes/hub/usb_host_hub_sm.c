@@ -89,13 +89,13 @@ static void usb_host_hub_rescan(hub_device_struct_t* hub_instance, hub_command_t
             if (USB_OK != usb_class_hub_get_port_status(hub_com, hub_instance->port_iterator + 1, hub_instance->port_status_buffer, 4))
             {
 #if _DEBUG
-                printf("ERROR usb_class_hub_get_port_status in HUB_GET_PORT_STATUS_PROCESS\r\n");
+                USB_PRINTF("ERROR usb_class_hub_get_port_status in HUB_GET_PORT_STATUS_PROCESS\r\n");
 #endif
             }
             else
             {
 #if _DEBUG
-                printf("get port %d status 0x%x\r\n", i, port_status_ptr->status);
+                USB_PRINTF("get port %d status 0x%x\r\n", i, port_status_ptr->status);
 #endif
                 hub_instance->in_control = 1;
             }
@@ -119,7 +119,7 @@ static void usb_host_hub_get_bitmap(hub_device_struct_t* hub_instance, hub_comma
         if (USB_OK != usb_class_hub_recv_bitmap(hub_com, hub_instance->bit_map_buffer, hub_instance->hub_port_nr / 8 + 1))
         {
 #if _DEBUG
-            printf("error in hub usb_class_hub_recv_bitmap\r\n");
+            USB_PRINTF("error in hub usb_class_hub_recv_bitmap\r\n");
 #endif
             hub_instance->state = HUB_NONE;
         }
@@ -200,7 +200,7 @@ static hub_device_struct_t* usb_host_hub_create_instance
     if (hub_instance == NULL)
     {
 #if _DEBUG
-        printf("OS_Mem_alloc_zero error in usb_host_hub_create_instance\r\n");
+        USB_PRINTF("OS_Mem_alloc_zero error in usb_host_hub_create_instance\r\n");
 #endif
         return NULL;
     }
@@ -209,7 +209,7 @@ static hub_device_struct_t* usb_host_hub_create_instance
     if (hub_instance->hub_descriptor_buffer == NULL)
     {
 #if _DEBUG
-        printf("failed to get memory for hub descriptor\r\n");
+        USB_PRINTF("failed to get memory for hub descriptor\r\n");
 #endif
     }
     
@@ -217,7 +217,7 @@ static hub_device_struct_t* usb_host_hub_create_instance
     if (hub_instance->port_status_buffer == NULL)
     {
 #if _DEBUG
-        printf("failed to get memory for port status\r\n");
+        USB_PRINTF("failed to get memory for port status\r\n");
 #endif
     }
     
@@ -225,7 +225,7 @@ static hub_device_struct_t* usb_host_hub_create_instance
     if (hub_instance->bit_map_buffer == NULL)
     {
 #if _DEBUG
-        printf("failed to get memory for bit map\r\n");
+        USB_PRINTF("failed to get memory for bit map\r\n");
 #endif
     }
     
@@ -245,7 +245,7 @@ static hub_device_struct_t* usb_host_hub_create_instance
 		hub_instance->hs_port_no = usb_host_dev_mng_get_hs_port_no(dev_handle);
 	}
 #if _DEBUG
-	printf("### Level :%d Speed:%d  %d  %d \r\n",hub_instance->hub_level, hub_instance->speed,hub_instance->hs_hub_no,hub_instance->hs_port_no);
+	USB_PRINTF("### Level :%d Speed:%d  %d  %d \r\n",hub_instance->hub_level, hub_instance->speed,hub_instance->hs_hub_no,hub_instance->hs_port_no);
 #endif   
     return hub_instance;
 }
@@ -337,10 +337,10 @@ static void usb_hub_task(void* param)
                 if (USB_OK != usb_host_close_dev_interface(instance_ptr->host_handle, instance_ptr->dev_handle, instance_ptr->intf_handle, instance_ptr->class_handle))
                 {
 #if _DEBUG
-                    printf("error in hub usb_host_close_dev_interface\r\n");
+                    USB_PRINTF("error in hub usb_host_close_dev_interface\r\n");
 #endif
                 }
-                printf("level %d hub disconnected\r\n", instance_ptr->hub_level);
+                USB_PRINTF("level %d hub disconnected\r\n", instance_ptr->hub_level);
                 usb_host_hub_destroy_instance(instance_ptr);
                 break;
             }
@@ -435,7 +435,7 @@ void usb_host_hub_device_event
                     if (usb_host_ptr->hub_task == (uint32_t)OS_TASK_ERROR)
                     {
 #if _DEBUG
-                        printf("failed to create hub task\r\n");
+                        USB_PRINTF("failed to create hub task\r\n");
 #endif
                     }
                 }
@@ -477,14 +477,14 @@ void usb_host_hub_device_event
                 if (USB_OK != usb_host_open_dev_interface(hub_instance->host_handle, dev_handle, intf_handle, (class_handle*)&hub_instance->class_handle))
                 {
 #if _DEBUG                
-                    printf("error in hub usb_host_open_dev_interface\r\n");
+                    USB_PRINTF("error in hub usb_host_open_dev_interface\r\n");
 #endif
                 }
                 else
                 {
                     hub_instance->opened_interface++;
 #if _DEBUG
-                    printf("usb_host_open_dev_interface\r\n");
+                    USB_PRINTF("usb_host_open_dev_interface\r\n");
 #endif                    
                 }
             }
@@ -492,18 +492,18 @@ void usb_host_hub_device_event
             
         case USB_INTF_OPENED_EVENT:
 #if _DEBUG
-            printf("USB_INTF_OPENED_EVENT\r\n");
+            USB_PRINTF("USB_INTF_OPENED_EVENT\r\n");
 #endif
             if (USB_OK != usb_host_hub_get_instance(dev_handle, intf_handle, &hub_instance))
             {
 #if _DEBUG            
-                printf("ERROR usb_host_hub_get_instance in USB_INTF_OPENED_EVENT\r\n");
+                USB_PRINTF("ERROR usb_host_hub_get_instance in USB_INTF_OPENED_EVENT\r\n");
 #endif
                 break;
             }
             else
             {
-                printf("level %d hub connected\r\n", hub_instance->hub_level);
+                USB_PRINTF("level %d hub connected\r\n", hub_instance->hub_level);
             }
             /* set we are in process of getting hub descriptor */
             //hub_instance->state    = HUB_BEGIN_GET_DESCRIPTOR_TINY_PROCESS;
@@ -515,7 +515,7 @@ void usb_host_hub_device_event
             if (USB_OK != usb_class_hub_get_descriptor(&hub_com, hub_instance->hub_descriptor_buffer, 7))
             {
 #if _DEBUG            
-                printf("error in hub usb_class_hub_get_descriptor\r\n");
+                USB_PRINTF("error in hub usb_class_hub_get_descriptor\r\n");
 #endif
                 hub_instance->state = HUB_NONE;
             }
@@ -529,7 +529,7 @@ void usb_host_hub_device_event
             if (USB_OK != usb_host_hub_get_instance(dev_handle, intf_handle, &hub_instance))
             {
 #if _DEBUG
-                printf("ERROR usb_host_hub_get_instance in USB_DETACH_EVENT\r\n");
+                USB_PRINTF("ERROR usb_host_hub_get_instance in USB_DETACH_EVENT\r\n");
 #endif
                 break;
             }
@@ -612,7 +612,7 @@ void usb_host_hub_device_sm
     if (status != USB_OK)
     {
 #if _DEBUG    
-        printf("last request failed 0x%x\r\n", hub_instance->state);
+        USB_PRINTF("last request failed 0x%x\r\n", hub_instance->state);
 #endif
         usb_host_hub_rescan(hub_instance, &hub_com);
         return;
@@ -635,7 +635,7 @@ void usb_host_hub_device_sm
             if (hub_instance->hub_port_nr > MAX_HUB_PORT_NUMBER)
             {
 #if _DEBUG
-                printf("the port number exceeds the MAX_HUB_PORT_NUMBER\r\n");
+                USB_PRINTF("the port number exceeds the MAX_HUB_PORT_NUMBER\r\n");
 #endif
                 break;
             }
@@ -644,7 +644,7 @@ void usb_host_hub_device_sm
             if (USB_OK != usb_class_hub_get_descriptor(&hub_com, hub_instance->hub_descriptor_buffer, 7 + hub_instance->hub_port_nr / 8 + 1))
             {
 #if _DEBUG            
-                printf("error in hub usb_class_hub_get_descriptor\r\n");
+                USB_PRINTF("error in hub usb_class_hub_get_descriptor\r\n");
 #endif                
                 hub_instance->state = HUB_NONE;
             }
@@ -683,7 +683,7 @@ void usb_host_hub_device_sm
                 if (USB_OK != usb_class_hub_set_port_feature(&hub_com, ++hub_instance->port_iterator, PORT_POWER))
                 {
 #if _DEBUG                
-                    printf("error in hub usb_class_hub_set_port_feature\r\n");
+                    USB_PRINTF("error in hub usb_class_hub_set_port_feature\r\n");
 #endif
                     hub_instance->state = HUB_NONE;
                 }
@@ -707,7 +707,7 @@ void usb_host_hub_device_sm
                 if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, ++hub_instance->port_iterator, C_PORT_CONNECTION))
                 {
 #if _DEBUG                
-                    printf("error in hub usb_class_hub_clear_port_feature\r\n");
+                    USB_PRINTF("error in hub usb_class_hub_clear_port_feature\r\n");
 #endif
                     hub_instance->state = HUB_NONE;
                 }
@@ -736,7 +736,7 @@ void usb_host_hub_device_sm
                 if (USB_OK != usb_class_hub_get_port_status(&hub_com, ++hub_instance->port_iterator, hub_instance->port_status_buffer, 4))
                 {
 #if _DEBUG
-                    printf("error in hub usb_class_hub_get_port_status\r\n");
+                    USB_PRINTF("error in hub usb_class_hub_get_port_status\r\n");
 #endif                    
                     hub_instance->state = HUB_NONE;
                 }
@@ -756,7 +756,7 @@ void usb_host_hub_device_sm
             if (USB_OK != usb_class_hub_get_port_status(&hub_com, hub_instance->port_iterator + 1, hub_instance->port_status_buffer, 4))
             {
 #if _DEBUG            
-                printf("usb_class_hub_get_port_status failed in usb_host_hub_int_callback\r\n");
+                USB_PRINTF("usb_class_hub_get_port_status failed in usb_host_hub_int_callback\r\n");
 #endif
                 hub_instance->state = HUB_NONE;
             }
@@ -772,7 +772,7 @@ void usb_host_hub_device_sm
             if (USB_OK != usb_class_hub_set_port_feature(&hub_com, hub_instance->port_iterator + 1, PORT_RESET))
             {
 #if _DEBUG            
-                printf("error in usb_class_hub_set_port_feature of PORT_RESET\r\n");
+                USB_PRINTF("error in usb_class_hub_set_port_feature of PORT_RESET\r\n");
 #endif
             }
             else
@@ -823,7 +823,7 @@ void usb_host_hub_device_sm
         case HUB_GET_PORT_STATUS_ASYNC:
             stat = USB_LONG_LE_TO_HOST(*(uint32_t*)(hub_instance->port_status_buffer));
 #if _DEBUG            
-            printf("stat 0x%x 0x%x\r\n", stat, (hub_instance->hub_ports + hub_instance->port_iterator)->app_status);
+            USB_PRINTF("stat 0x%x 0x%x\r\n", stat, (hub_instance->hub_ports + hub_instance->port_iterator)->app_status);
 #endif
             /* register the current status of the port */
             (hub_instance->hub_ports + hub_instance->port_iterator)->status = stat;
@@ -836,7 +836,7 @@ void usb_host_hub_device_sm
                     if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, C_PORT_CONNECTION))
                     {
 #if _DEBUG                    
-                        printf("error in hub usb_class_hub_clear_port_feature C_PORT_CONNECTION\r\n");
+                        USB_PRINTF("error in hub usb_class_hub_clear_port_feature C_PORT_CONNECTION\r\n");
 #endif
                         hub_instance->state = HUB_NONE;
                     }
@@ -857,7 +857,7 @@ void usb_host_hub_device_sm
                     if (USB_OK != usb_class_hub_get_port_status(&hub_com, hub_instance->port_iterator + 1, hub_instance->port_status_buffer, 4))
                     {
 #if _DEBUG                    
-                        printf("usb_class_hub_get_port_status failed in HUB_WAIT_FOR_PORT_RESET\r\n");
+                        USB_PRINTF("usb_class_hub_get_port_status failed in HUB_WAIT_FOR_PORT_RESET\r\n");
 #endif
                         hub_instance->state = HUB_NONE;
                     }
@@ -905,7 +905,7 @@ void usb_host_hub_device_sm
                     if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, C_PORT_CONNECTION))
                     {
 #if _DEBUG                    
-                        printf("error in hub usb_class_hub_clear_port_feature C_PORT_CONNECTION\r\n");
+                        USB_PRINTF("error in hub usb_class_hub_clear_port_feature C_PORT_CONNECTION\r\n");
 #endif
                         hub_instance->state = HUB_NONE;
                     }
@@ -931,7 +931,7 @@ void usb_host_hub_device_sm
                             if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, C_PORT_ENABLE))
                             {
 #if _DEBUG                
-                                printf("error in hub usb_class_hub_clear_port_feature C_PORT_ENABLE\r\n");
+                                USB_PRINTF("error in hub usb_class_hub_clear_port_feature C_PORT_ENABLE\r\n");
 #endif
                                 hub_instance->state = HUB_NONE;
                             }
@@ -952,7 +952,7 @@ void usb_host_hub_device_sm
                     if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, PORT_CONNECTION))
                     {
 #if _DEBUG                    
-                        printf("error in hub usb_class_hub_clear_port_feature PORT_CONNECTION\r\n");
+                        USB_PRINTF("error in hub usb_class_hub_clear_port_feature PORT_CONNECTION\r\n");
 #endif                        
                         hub_instance->state = HUB_NONE;
                     }
@@ -965,7 +965,7 @@ void usb_host_hub_device_sm
                     if (USB_OK != usb_class_hub_set_port_feature(&hub_com, hub_instance->port_iterator + 1, PORT_RESET))
                     {
 #if _DEBUG            
-                      printf("error in usb_class_hub_set_port_feature of PORT_RESET\r\n");
+                      USB_PRINTF("error in usb_class_hub_set_port_feature of PORT_RESET\r\n");
 #endif
                      }
                     else
@@ -990,7 +990,7 @@ void usb_host_hub_device_sm
                 if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, C_PORT_RESET))
                 {
 #if _DEBUG                
-                    printf("error in hub usb_class_hub_clear_port_feature C_PORT_RESET2222\r\n");
+                    USB_PRINTF("error in hub usb_class_hub_clear_port_feature C_PORT_RESET2222\r\n");
 #endif                    
                     hub_instance->state = HUB_NONE;
                 }
@@ -1009,7 +1009,7 @@ void usb_host_hub_device_sm
                 if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, C_PORT_ENABLE))
                 {
 #if _DEBUG                
-                    printf("error in hub usb_class_hub_clear_port_feature C_PORT_ENABLE\r\n");
+                    USB_PRINTF("error in hub usb_class_hub_clear_port_feature C_PORT_ENABLE\r\n");
 #endif
                     hub_instance->state = HUB_NONE;
                 }
@@ -1027,7 +1027,7 @@ void usb_host_hub_device_sm
                 if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, C_PORT_OVER_CURRENT))
                 {
 #if _DEBUG                
-                    printf("error in hub usb_class_hub_clear_port_feature C_PORT_OVER_CURRENT\r\n");
+                    USB_PRINTF("error in hub usb_class_hub_clear_port_feature C_PORT_OVER_CURRENT\r\n");
 #endif
                     break;
                 }
@@ -1045,7 +1045,7 @@ void usb_host_hub_device_sm
                 if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, C_PORT_POWER))
                 {
 #if _DEBUG                
-                    printf("error in hub usb_class_hub_clear_port_feature C_PORT_POWER\r\n");
+                    USB_PRINTF("error in hub usb_class_hub_clear_port_feature C_PORT_POWER\r\n");
 #endif
 
                 }
@@ -1076,7 +1076,7 @@ void usb_host_hub_device_sm
                 if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, C_HUB_LOCAL_POWER))
                 {
 #if _DEBUG                
-                    printf("error in hub usb_class_hub_clear_port_feature C_HUB_LOCAL_POWER\r\n");
+                    USB_PRINTF("error in hub usb_class_hub_clear_port_feature C_HUB_LOCAL_POWER\r\n");
 #endif
                     break;
                 }
@@ -1092,7 +1092,7 @@ void usb_host_hub_device_sm
                 if (USB_OK != usb_class_hub_clear_port_feature(&hub_com, hub_instance->port_iterator + 1, C_HUB_OVER_CURRENT))
                 {
 #if _DEBUG
-                    printf("error in hub usb_class_hub_clear_port_feature C_HUB_OVER_CURRENT\r\n");
+                    USB_PRINTF("error in hub usb_class_hub_clear_port_feature C_HUB_OVER_CURRENT\r\n");
 #endif
                     break;
                 }
@@ -1154,7 +1154,7 @@ static void usb_host_hub_int_callback
     usb_host_state_struct_t*      usb_host_ptr = (usb_host_state_struct_t*)dev_instance_ptr->host;
 
 #if _DEBUG
-    //printf("%d bm 0x%x 0x%x\r\n", hub_instance->hub_level, port_pattern[0], hub_instance->state);
+    //USB_PRINTF("%d bm 0x%x 0x%x\r\n", hub_instance->hub_level, port_pattern[0], hub_instance->state);
 #endif
     hub_instance->in_recv = 0;
     
@@ -1167,7 +1167,7 @@ static void usb_host_hub_int_callback
     if (status != USB_OK)
     {
 #if _DEBUG    
-        printf("can't get level %d hub bit map\r\n", hub_instance->hub_level);
+        USB_PRINTF("can't get level %d hub bit map\r\n", hub_instance->hub_level);
 #endif
         return ;
     }
@@ -1202,14 +1202,14 @@ static void usb_host_hub_int_callback
         if (USB_OK != usb_class_hub_get_status(&hub_com, hub_instance->port_status_buffer, 4))
         {
 #if _DEBUG        
-            printf("usb_class_hub_get_status failed in usb_host_hub_int_callback\r\n");
+            USB_PRINTF("usb_class_hub_get_status failed in usb_host_hub_int_callback\r\n");
 #endif            
             hub_instance->state = HUB_NONE;
         }
         else
         {
 #if _DEBUG        
-            printf("try to get status\r\n");
+            USB_PRINTF("try to get status\r\n");
 #endif            
             hub_instance->in_control = 1;
         }
@@ -1223,7 +1223,7 @@ static void usb_host_hub_int_callback
             if (USB_OK != usb_class_hub_get_port_status(&hub_com, port, hub_instance->port_status_buffer, 4))
             {
 #if _DEBUG            
-                printf("usb_class_hub_get_port_status failed in usb_host_hub_int_callback\r\n");
+                USB_PRINTF("usb_class_hub_get_port_status failed in usb_host_hub_int_callback\r\n");
 #endif                
                 hub_instance->state = HUB_NONE;
             }

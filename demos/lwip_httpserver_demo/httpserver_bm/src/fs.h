@@ -29,48 +29,53 @@
  * Author: Adam Dunkels <adam@sics.se>
  *
  */
+
 #ifndef __FS_H__
 #define __FS_H__
+
+////////////////////////////////////////////////////////////////////////////////
+// Includes
+////////////////////////////////////////////////////////////////////////////////
 
 #include "lwip/opt.h"
 #include "lwip/err.h"
 
-/** Set this to 1 and provide the functions:
- * - "int fs_open_custom(struct fs_file *file, const char *name)"
- *    Called first for every opened file to allow opening files
- *    that are not included in fsdata(_custom).c
- * - "void fs_close_custom(struct fs_file *file)"
- *    Called to free resources allocated by fs_open_custom().
- */
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
+
+// Set this to 1 and provide the functions:
+// - "int fs_open_custom(struct fs_file *file, const char *name)"
+//    Called first for every opened file to allow opening files
+//    that are not included in fsdata(_custom).c
+// - "void fs_close_custom(struct fs_file *file)"
+//    Called to free resources allocated by fs_open_custom().
 #ifndef LWIP_HTTPD_CUSTOM_FILES
 #define LWIP_HTTPD_CUSTOM_FILES       0
 #endif
 
-/** Set this to 1 to support fs_read() to dynamically read file data.
- * Without this (default=off), only one-block files are supported,
- * and the contents must be ready after fs_open().
- */
+// Set this to 1 to support fs_read() to dynamically read file data.
+// Without this (default=off), only one-block files are supported,
+// and the contents must be ready after fs_open().
 #ifndef LWIP_HTTPD_DYNAMIC_FILE_READ
 #define LWIP_HTTPD_DYNAMIC_FILE_READ  0
 #endif
 
-/** Set this to 1 to include an application state argument per file
- * that is opened. This allows to keep a state per connection/file.
- */
+// Set this to 1 to include an application state argument per file
+// that is opened. This allows to keep a state per connection/file.
 #ifndef LWIP_HTTPD_FILE_STATE
 #define LWIP_HTTPD_FILE_STATE         0
 #endif
 
-/** HTTPD_PRECALCULATED_CHECKSUM==1: include precompiled checksums for
- * predefined (MSS-sized) chunks of the files to prevent having to calculate
- * the checksums at runtime. */
+// HTTPD_PRECALCULATED_CHECKSUM==1: include precompiled checksums for
+// predefined (MSS-sized) chunks of the files to prevent having to calculate
+// the checksums at runtime. */
 #ifndef HTTPD_PRECALCULATED_CHECKSUM
 #define HTTPD_PRECALCULATED_CHECKSUM  0
 #endif
 
-/** LWIP_HTTPD_FS_ASYNC_READ==1: support asynchronous read operations
- * (fs_read_async returns FS_READ_DELAYED and calls a callback when finished).
- */
+// LWIP_HTTPD_FS_ASYNC_READ==1: support asynchronous read operations
+// (fs_read_async returns FS_READ_DELAYED and calls a callback when finished).
 #ifndef LWIP_HTTPD_FS_ASYNC_READ
 #define LWIP_HTTPD_FS_ASYNC_READ      0
 #endif
@@ -80,53 +85,53 @@
 
 #if HTTPD_PRECALCULATED_CHECKSUM
 struct fsdata_chksum {
-  u32_t offset;
-  u16_t chksum;
-  u16_t len;
+    u32_t offset;
+    u16_t chksum;
+    u16_t len;
 };
-#endif /* HTTPD_PRECALCULATED_CHECKSUM */
+#endif // HTTPD_PRECALCULATED_CHECKSUM
 
 struct fs_file {
-  const char *data;
-  int len;
-  int index;
-  void *pextension;
+    const char *data;
+    int len;
+    int index;
+    void *pextension;
 #if HTTPD_PRECALCULATED_CHECKSUM
-  const struct fsdata_chksum *chksum;
-  u16_t chksum_count;
-#endif /* HTTPD_PRECALCULATED_CHECKSUM */
-  u8_t http_header_included;
+    const struct fsdata_chksum *chksum;
+    u16_t chksum_count;
+#endif // HTTPD_PRECALCULATED_CHECKSUM
+    u8_t http_header_included;
 #if LWIP_HTTPD_CUSTOM_FILES
-  u8_t is_custom_file;
-#endif /* LWIP_HTTPD_CUSTOM_FILES */
+    u8_t is_custom_file;
+#endif // LWIP_HTTPD_CUSTOM_FILES
 #if LWIP_HTTPD_FILE_STATE
-  void *state;
-#endif /* LWIP_HTTPD_FILE_STATE */
+    void *state;
+#endif // LWIP_HTTPD_FILE_STATE
 };
 
 #if LWIP_HTTPD_FS_ASYNC_READ
 typedef void (*fs_wait_cb)(void *arg);
-#endif /* LWIP_HTTPD_FS_ASYNC_READ */
+#endif // LWIP_HTTPD_FS_ASYNC_READ
 
 err_t fs_open(struct fs_file *file, const char *name);
 void fs_close(struct fs_file *file);
 #if LWIP_HTTPD_DYNAMIC_FILE_READ
 #if LWIP_HTTPD_FS_ASYNC_READ
 int fs_read_async(struct fs_file *file, char *buffer, int count, fs_wait_cb callback_fn, void *callback_arg);
-#else /* LWIP_HTTPD_FS_ASYNC_READ */
+#else // LWIP_HTTPD_FS_ASYNC_READ
 int fs_read(struct fs_file *file, char *buffer, int count);
-#endif /* LWIP_HTTPD_FS_ASYNC_READ */
-#endif /* LWIP_HTTPD_DYNAMIC_FILE_READ */
+#endif // LWIP_HTTPD_FS_ASYNC_READ
+#endif // LWIP_HTTPD_DYNAMIC_FILE_READ
 #if LWIP_HTTPD_FS_ASYNC_READ
 int fs_is_file_ready(struct fs_file *file, fs_wait_cb callback_fn, void *callback_arg);
-#endif /* LWIP_HTTPD_FS_ASYNC_READ */
+#endif // LWIP_HTTPD_FS_ASYNC_READ
 int fs_bytes_left(struct fs_file *file);
 
 #if LWIP_HTTPD_FILE_STATE
-/** This user-defined function is called when a file is opened. */
+// This user-defined function is called when a file is opened.
 void *fs_state_init(struct fs_file *file, const char *name);
-/** This user-defined function is called when a file is closed. */
+// This user-defined function is called when a file is closed.
 void fs_state_free(struct fs_file *file, void *state);
-#endif /* #if LWIP_HTTPD_FILE_STATE */
+#endif // #if LWIP_HTTPD_FILE_STATE
 
-#endif /* __FS_H__ */
+#endif // __FS_H__

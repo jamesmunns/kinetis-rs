@@ -47,20 +47,31 @@
     #define BOARD_DEBUG_UART_BAUD       115200
 #endif
 
+#define BOARD_USE_UART
+
 /* Define feature for the low_power_demo */
 #define FSL_FEATURE_HAS_VLLS2 (1)
 
 /* Define the port interrupt number for the board switches */
 #define BOARD_SW_IRQ_NUM        PORTA_IRQn
 
-/* Define print statement to inform user which switch to press for 
- * low_power_demo 
+/* Define print statement to inform user which switch to press for
+ * low_power_demo
  */
 #define PRINT_INT_SW_NUM \
   printf("SW3")
-      
+
 #define PRINT_LLWU_SW_NUM \
   printf("SW1")
+
+/* Defines the llwu pin number for board switch which is used in power_manager_demo. */
+#define BOARD_SW_HAS_LLWU_PIN        1
+#define BOARD_SW_LLWU_EXT_PIN        kLlwuWakeupPin10
+/* Switch port base address and IRQ handler name. Used by power_manager_demo */
+#define BOARD_SW_LLWU_PIN            6
+#define BOARD_SW_LLWU_BASE           PORTC_BASE
+#define BOARD_SW_LLWU_IRQ_HANDLER    PORTC_IRQHandler
+#define BOARD_SW_LLWU_IRQ_NUM        PORTC_IRQn
 
 /* The MMA8451 i2c instance and slave address */
 #define BOARD_MMA8451_I2C_INSTANCE      0
@@ -79,6 +90,13 @@
         } \
     } while (0)
 
+/* The instances of peripherals used for dac_adc_demo */
+#define BOARD_DAC_DEMO_DAC_INSTANCE     0U
+#define BOARD_DAC_DEMO_ADC_INSTANCE     1U
+#define BOARD_DAC_DEMO_ADC_CHANNEL      10U
+
+/* The CAN instance used for board */
+#define BOARD_CAN_INSTANCE              0
 
 /* The i2c instance used for i2c DAC demo */
 #define BOARD_DAC_I2C_INSTANCE          1
@@ -90,6 +108,9 @@
 #define BOARD_FTM_INSTANCE              3
 #define BOARD_FTM_CHANNEL               1
 
+/* The Enet instance used for board */
+#define BOARD_ENET_INSTANCE             0
+
 /* ADC0 input channel */
 #define BOARD_ADC0_INPUT_CHAN           0
 
@@ -98,10 +119,10 @@
 #define BOARD_GPIO_LED_GREEN            kGpioLED1
 #define BOARD_GPIO_LED_BLUE             kGpioLED4
 #define BOARD_GPIO_LED_YELLOW           kGpioLED2
-        
+
 #define DISABLE_DEBUG_CONSOLE_TX PORT_HAL_SetMuxMode(PORTC_BASE, 4, kPortMuxAsGpio)
 #define DISABLE_DEBUG_CONSOLE_RX PORT_HAL_SetMuxMode(PORTC_BASE, 3, kPortMuxAsGpio)
-        
+
 #define DISABLE_SW_INTERRUPT PORT_HAL_SetPinIntMode(PORTA_BASE, 4, kPortIntDisabled)
 #define DISABLE_SW_PIN PORT_HAL_SetMuxMode(PORTA_BASE, 4, kPortPinDisabled)
 #define ENABLE_SW_PIN PORT_HAL_SetMuxMode(PORTA_BASE, 4, kPortMuxAsGpio)
@@ -111,10 +132,10 @@
 #define LED3_EN (PORT_HAL_SetMuxMode(PORTE_BASE, 8, kPortMuxAsGpio)) 	/*!< Enable target LED2 */
 #define LED4_EN (PORT_HAL_SetMuxMode(PORTE_BASE, 9, kPortMuxAsGpio)) 	/*!< Enable target LED3 */
 
-#define LED1_DIS (PORT_HAL_SetMuxMode(PORTE_BASE, 6, kPortMuxAsGpio)) 	/*!< Enable target LED0 */
-#define LED2_DIS (PORT_HAL_SetMuxMode(PORTE_BASE, 7, kPortMuxAsGpio)) 	/*!< Enable target LED1 */
-#define LED3_DIS (PORT_HAL_SetMuxMode(PORTE_BASE, 8, kPortMuxAsGpio)) 	/*!< Enable target LED2 */
-#define LED4_DIS (PORT_HAL_SetMuxMode(PORTE_BASE, 9, kPortMuxAsGpio)) 	/*!< Enable target LED3 */
+#define LED1_DIS (PORT_HAL_SetMuxMode(PORTE_BASE, 6, kPortPinDisabled)) 	/*!< Disable target LED0 */
+#define LED2_DIS (PORT_HAL_SetMuxMode(PORTE_BASE, 7, kPortPinDisabled)) 	/*!< Disable target LED1 */
+#define LED3_DIS (PORT_HAL_SetMuxMode(PORTE_BASE, 8, kPortPinDisabled)) 	/*!< Disable target LED2 */
+#define LED4_DIS (PORT_HAL_SetMuxMode(PORTE_BASE, 9, kPortPinDisabled)) 	/*!< Disable target LED3 */
 
 #define LED1_OFF (GPIO_DRV_WritePinOutput(ledPins[0].pinName, 1))       /*!< Turn off target LED0 */
 #define LED2_OFF (GPIO_DRV_WritePinOutput(ledPins[1].pinName, 1))       /*!< Turn off target LED1 */
@@ -128,6 +149,17 @@
 
 /* The SDHC instance/channel used for board */
 #define BOARD_SDHC_INSTANCE             0
+
+/* The CMP instance used for board. */
+#define BOARD_CMP_INSTANCE              0
+/* The CMP channel used for board. */
+#define BOARD_CMP_CHANNEL               0
+
+/* The i2c instance used for sai demo */
+#define BOARD_SAI_DEMO_I2C_INSTANCE     0
+
+/* The rtc instance used for rtc_func */
+#define BOARD_RTC_FUNC_INSTANCE         0
 
 #if defined(__cplusplus)
 extern "C" {

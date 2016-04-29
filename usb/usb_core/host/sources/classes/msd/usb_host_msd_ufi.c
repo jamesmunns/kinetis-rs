@@ -101,7 +101,7 @@ usb_status usb_mass_ufi_generic
 
 bool usb_mass_ufi_cancel
    (
-		   mass_command_struct_t*     cmd_ptr
+           mass_command_struct_t*     cmd_ptr
    )
 { /* Body */
    return usb_class_mass_storage_device_command(cmd_ptr);

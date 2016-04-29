@@ -235,6 +235,8 @@ void configure_spi_cs1_pins(uint32_t instance);
 
 void configure_gpio_i2c_pins(uint32_t instance);
 
+void configure_cmp_pins(uint32_t instance);
+
 /* END pin_mux. */
 #endif /* #ifndef __pins_H_ */
 /*!

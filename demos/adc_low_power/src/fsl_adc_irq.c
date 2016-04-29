@@ -28,42 +28,88 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdint.h>
 #include <stdbool.h>
-#include "fsl_adc_driver.h"
+// SDK Included Files
+#include "fsl_adc16_driver.h"
 
-/******************************************************************************
- * Code
- *****************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Global Variables
+///////////////////////////////////////////////////////////////////////////////
+
+// Define array to keep run-time callback set by application
+void (* volatile g_AdcTestCallback[HW_ADC_INSTANCE_COUNT][HW_ADC_SC1n_COUNT])(void);
+volatile uint16_t g_AdcValueInt[HW_ADC_INSTANCE_COUNT][HW_ADC_SC1n_COUNT];
+
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
+
+/* User-defined function to install callback. */
+void ADC_TEST_InstallCallback(uint32_t instance, uint32_t chnGroup, void (*callbackFunc)(void) )
+{
+    g_AdcTestCallback[instance][chnGroup] = callbackFunc;
+}
+
+/* User-defined function to read conversion value in ADC ISR. */
+uint16_t ADC_TEST_GetConvValueRAWInt(uint32_t instance, uint32_t chnGroup)
+{
+    return g_AdcValueInt[instance][chnGroup];
+}
+
+/* User-defined ADC ISR. */
+static void ADC16_TEST_IRQHandler(uint32_t instance)
+{
+    uint32_t chnGroup;
+    for (chnGroup = 0U; chnGroup < HW_ADC_SC1n_COUNT; chnGroup++)
+    {
+        if (   ADC16_DRV_GetChnFlag(instance, chnGroup, kAdcChnConvCompleteFlag) )
+        {
+            g_AdcValueInt[instance][chnGroup] = ADC16_DRV_GetConvValueRAW(instance, chnGroup);
+            if ( g_AdcTestCallback[instance][chnGroup] )
+            {
+                (void)(*(g_AdcTestCallback[instance][chnGroup]))();
+            }
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// IRQ Handlers
+///////////////////////////////////////////////////////////////////////////////
+
 /* ADC IRQ handler that would cover the same name's APIs in startup code */
 void ADC0_IRQHandler(void)
 {
-    ADC_DRV_IRQHandler(0U);
+    // Add user-defined ISR for ADC0
+    ADC16_TEST_IRQHandler(0U);
 }
 
-#if defined (K70F12_SERIES) || defined (K64F12_SERIES) || defined (K22F51212_SERIES)
+#if (HW_ADC_INSTANCE_COUNT > 1U)
 void ADC1_IRQHandler(void)
 {
-    ADC_DRV_IRQHandler(1U);
+    // Add user-defined ISR for ADC1
+    ADC16_TEST_IRQHandler(1U);
 }
+#endif
 
-#endif /* K70F12_SERIES, K64F12_SERIES, K22F51212_SERIES */
-
-#if defined (K70F12_SERIES)
-
+#if (HW_ADC_INSTANCE_COUNT > 2U)
 void ADC2_IRQHandler(void)
 {
-    ADC_DRV_IRQHandler(2U);
+    // Add user-defined ISR for ADC2. */
+    ADC16_TEST_IRQHandler(2U);
 }
+#endif
 
+#if (HW_ADC_INSTANCE_COUNT > 3U)
 void ADC3_IRQHandler(void)
 {
-    ADC_DRV_IRQHandler(3U);
+    // Add user-defined ISR for ADC3
+    ADC16_TEST_IRQHandler(3U);
 }
-
-#endif /* K70F12_SERIES */
-
-/******************************************************************************
- * EOF
- *****************************************************************************/
-
+#endif

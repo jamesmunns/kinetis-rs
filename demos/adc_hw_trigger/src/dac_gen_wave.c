@@ -28,15 +28,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// SDK Included Files
 #include "fsl_dac_driver.h"
-#include "fsl_clock_manager.h"
 #include "adc_hw_trigger.h"
 #include "fsl_misc_utilities.h"
 #include "fsl_hwtimer.h"
 
-extern const uint32_t g_gpioBaseAddr[];
-
-/* DAC buffer output data to create sine wave */
+// DAC buffer output data to create sine wave
 static uint16_t dacBuf[] = 
 {
        0U,   39U,  156U,  345U,
@@ -45,14 +47,22 @@ static uint16_t dacBuf[] =
     3496U, 3751U, 3940U, 4056U
 };
 
-static dac_state_t dacStateStruct;
+///////////////////////////////////////////////////////////////////////////////
+// Global Variables
+///////////////////////////////////////////////////////////////////////////////
+
 extern const hwtimer_devif_t kSystickDevif;
 static hwtimer_t hwtimer;
+
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
 
 static void hwtimer_callback(void* data)
 {
     DAC_DRV_SoftTriggerBuff(0);
 }
+
 /*!
  * @brief Use DAC fifo to generate sinewave on DACx_OUT
  */
@@ -65,14 +75,14 @@ int32_t dac_gen_wave(void)
 
     buffLen = ARRAY_SIZE(dacBuf);
 
-    /* Fill the structure with configuration of software trigger. */
+    // Fill the structure with configuration of software trigger
     DAC_DRV_StructInitUserConfigNormal(&dacUserConfig);
 
-    /* Initialize the DAC Converter. */
+    // Initialize the DAC Converter
     DAC_DRV_Init(0, &dacUserConfig);
 
-    /* Enable the feature of DAC internal buffer. */
-#if FSL_FEATURE_DAC_HAS_WATERMARK_DETECTION
+    // Enable the feature of DAC internal buffer
+#if FSL_FEATURE_DAC_HAS_WATERMARK_SELECTION
     dacBuffConfig.buffIndexWatermarkIntEnable = false;
     dacBuffConfig.watermarkMode = kDacBuffWatermarkFromUpperAs2Word;
 #endif
@@ -81,37 +91,38 @@ int32_t dac_gen_wave(void)
     dacBuffConfig.dmaEnable = false;
     dacBuffConfig.buffWorkMode = kDacBuffWorkAsSwingMode;
     dacBuffConfig.buffUpperIndex = buffLen - 1;
-    DAC_DRV_EnableBuff(0, &dacBuffConfig, &dacStateStruct);
+    DAC_DRV_EnableBuff(0, &dacBuffConfig);
 
-    /* Fill the buffer with setting data. */
+    // Fill the buffer with setting data
     DAC_DRV_SetBuffValue(0, 0U, buffLen, dacBuf); 
  
-    /*
-     * Use HW timer of systick to do SW trigger of DAC,
-     * the interrupt priority of systick should be set to low, e.g 5,
-     * as the high priority should be reserved for ADC/PDB ISR.
-     */
+    // Use HW timer of systick to do SW trigger of DAC,
+    // the interrupt priority of systick should be set to low, e.g 5,
+    // as the high priority should be reserved for ADC/PDB ISR.
+
     if (kHwtimerSuccess != HWTIMER_SYS_Init(&hwtimer, &kSystickDevif, 0, 5, NULL))
     {
         return -1;
     }
-    /*
-     * Get the peroid the systick triggered.
-     * There's 30 times of systick interrupt for one peroid of sine wave,
-     * as we only have 16 data depth buffer for DAC, so we need to trigger
-     * 30 times of interrupt to do software trigger.
-     */
+
+    // Get the peroid the systick triggered.
+    // There's 30 times of systick interrupt for one peroid of sine wave,
+    // as we only have 16 data depth buffer for DAC, so we need to trigger
+    // 30 times of interrupt to do software trigger.
+
     period = INPUT_SIGNAL_FREQ * (2 * buffLen - 2);
     if (kHwtimerSuccess != HWTIMER_SYS_SetPeriod(&hwtimer, kCoreClock, 1000000/period))
     {
         return -1;
     }
-    /* install call back for SW trigger for DAC */
+
+    // install call back for SW trigger for DAC 
     if (kHwtimerSuccess != HWTIMER_SYS_RegisterCallback(&hwtimer, hwtimer_callback, 0))
     {
         return -1;
     }
-    /* start systick timer */
+
+    // start systick timer
     if (kHwtimerSuccess != HWTIMER_SYS_Start(&hwtimer))
     {
         return -1;
@@ -122,12 +133,12 @@ int32_t dac_gen_wave(void)
 
 void dac_stop_wave(void)
 {
-    /* Disable the systick timer */
+    // Disable the systick timer
     HWTIMER_SYS_Stop(&hwtimer);
 
-    /* Disable the feature of DAC internal buffer. */
+    // Disable the feature of DAC internal buffer
     DAC_DRV_DisableBuff(0);
     
-    /* De-initialize the DAC converter. */
+    // De-initialize the DAC converter
     DAC_DRV_Deinit(0);
 }

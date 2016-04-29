@@ -287,13 +287,13 @@ struct _scale_range_spec32
 } PACKED_STRUCT_END ;
 typedef struct _scale_range_spec32 scale_range_spec32_t;
 
-PACKED_UNION_BEGIN
+
 union _scale_range_spec32_union
 {
     oid_type_t                  enum_obj_id;
     octet_string_t              enum_text_string;
     uint32_t                    enum_bit_str; /* BITS-32 */
-} PACKED_UNION_END;
+};
 typedef union _scale_range_spec32_union scale_range_spec32_union_t;
 
 PACKED_STRUCT_BEGIN
@@ -409,13 +409,12 @@ struct _segment_info_list
 } PACKED_STRUCT_END ;
 typedef struct _segment_info_list segment_info_list_t;
 
-PACKED_UNION_BEGIN
 union _segm_selection_union
 {
     uint16_t                    all_segments;
     segm_id_list_t              segm_id_list_t;
     abs_time_range_t             abs_time_range_t;
-} PACKED_UNION_END;
+};
 typedef union _segm_selection_union segm_selection_union_t;
 
 PACKED_STRUCT_BEGIN

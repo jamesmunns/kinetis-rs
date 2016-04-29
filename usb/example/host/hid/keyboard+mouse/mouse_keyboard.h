@@ -79,9 +79,10 @@
 
 typedef struct device_struct {
    uint32_t                          DEV_STATE;  /* Attach/detach state */
-   usb_device_instance_handle      DEV_HANDLE;
-   usb_interface_descriptor_handle INTF_HANDLE;
-   class_handle                     CLASS_HANDLE; /* Class-specific info */
+   usb_device_instance_handle        DEV_HANDLE;
+   usb_interface_descriptor_handle   INTF_HANDLE;
+   class_handle                      CLASS_HANDLE; /* Class-specific info */
+   os_mutex_handle                   STATE_MUTEX;
 } device_struct_t;
 
 

@@ -157,24 +157,24 @@ typedef struct usb_phdc_param_type
     class_handle            class_ptr;
     tr_callback             callback_fn;
     void*                   callback_param;
-    /* [APP->PHDC] the type of the request (only for PHDC Ctrl requests) */
-    uint8_t                 classRequestType;
-    /* [APP->PHDC] Boolean for metadata transfers (only for PHDC Send request) */
-    bool                    metadata;
-    /* [APP->PHDC] QoS for receive transfers (only for PHDC Recv request) */
-    uint8_t                 qos;
-    /* [PHDC->APP] USB PHDC status code. USB PHDC (specific) code when the transfer is finished. Not valid until the callback is called */
-    uint8_t                 usb_phdc_status;  
     /* [PHDC->APP] USB status code. usb_status (standard) code when the transfer is finished. Not valid until the callback is called */
     usb_status              usb_status;  
-    /* [APP->PHDC] data buffer (only for PHDC Send/Recv requests) */
-    uint8_t*                buff_ptr;
     /* [APP->PHDC] length of buffer (only for PHDC Send/Recv requests) */
     uint32_t                buff_size;
     /* [PHDC->APP] USB transaction index. Used to identify the Send/Recv transaction */
     uint32_t                tr_index;
     /* [PHDC->APP] USB transaction index. Used to identify the Send/Recv transaction */
-    usb_pipe_handle        tr_pipe_handle;
+    usb_pipe_handle         tr_pipe_handle;
+    /* [APP->PHDC] Boolean for metadata transfers (only for PHDC Send request) */
+    bool                    metadata;
+    /* [APP->PHDC] the type of the request (only for PHDC Ctrl requests) */
+    uint8_t                 classRequestType;
+    /* [APP->PHDC] QoS for receive transfers (only for PHDC Recv request) */
+    uint8_t                 qos;
+    /* [PHDC->APP] USB PHDC status code. USB PHDC (specific) code when the transfer is finished. Not valid until the callback is called */
+    uint8_t                 usb_phdc_status;
+    /* [APP->PHDC] data buffer (only for PHDC Send/Recv requests) */
+    uint8_t*                buff_ptr;
 } usb_phdc_param_t;
 
 /* Callback function pointer keeping the current transaction parameters. It contains a pointer to a USB_PHDC_PARAM struct. */
@@ -201,20 +201,20 @@ typedef struct _usb_phdc_class_intf_struct_type
     phdc_callback                       send_callback;    /* Send app callback */
     phdc_callback                       recv_callback;    /* Receive app callback */
     phdc_callback                       ctrl_callback;    /* Send ctrl app callback */
-    /* Configuration */
+    /* Number of transfers until next metadata on the Bulk OUT. Required on transmit */
+    os_mutex_handle                     mutex;
+    uint32_t                            running;
     bool                                preamble_capability;
-    uint8_t                             phdc_data_code;
     /* Status */
     /* Only one SET_FEATURE/CLEAR_FEATURE request at the time */
     bool                                set_clear_request_pending;
     /* Metadata feature set for the device */
     bool                                device_feature_set;
-    /* Number of transfers until next metadata on the Bulk IN. Required on receive */
-    uint8_t                             num_transf_bulk_in;
-    /* Number of transfers until next metadata on the Bulk OUT. Required on transmit */
     uint8_t                             num_transf_bulk_out;
-    os_mutex_handle                     mutex;
-    uint32_t                            running;
+    /* Number of transfers until next metadata on the Bulk IN. Required on receive */
+    uint8_t                             num_transf_bulk_in; 
+    /* Configuration */
+    uint8_t                             phdc_data_code;
 } usb_phdc_class_struct_t;
 
 /* Internal structure keeping the Metadata preamble fields as defined by the PHDC class specification. */

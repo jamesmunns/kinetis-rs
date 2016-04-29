@@ -1,13 +1,10 @@
-/*HEADER**********************************************************************
+ /**HEADER********************************************************************
  *
- * Copyright 2010, 2013 Freescale Semiconductor, Inc.
+ * Copyright (c) 2010, 2013 - 2014 Freescale Semiconductor;
+ * All Rights Reserved
  *
- * Freescale Confidential and Proprietary - use of this software is
- * governed by the Freescale MQX RTOS License distributed with this
- * material. See the MQX_RTOS_LICENSE file distributed for more
- * details.
  *
- *****************************************************************************
+ *************************************************************************** 
  *
  * THIS SOFTWARE IS PROVIDED BY FREESCALE "AS IS" AND ANY EXPRESSED OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -28,7 +25,9 @@
  *   Data of the sound
  *
  *END************************************************************************/
-
+#if (OS_ADAPTER_ACTIVE_OS != OS_ADAPTER_SDK)
+#include "user_config.h"
+#endif
 #include "usb_device_config.h"
 #include "usb.h"
 

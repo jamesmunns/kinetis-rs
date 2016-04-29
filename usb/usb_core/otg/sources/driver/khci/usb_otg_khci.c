@@ -43,18 +43,13 @@
 #include "fsl_usb_khci_hal.h"
 
 /* Functions */
+extern void* bsp_usb_otg_get_init_param(uint8_t);
 extern void _usb_dev_khci_isr(usb_khci_dev_state_struct_t* state_ptr);
 extern void _usb_host_khci_isr(usb_host_handle handle);
 /* Parameters */
 extern usb_host_handle        host_handle;
 /* global ogt_khci_call_ptr */
 usb_otg_khci_call_struct_t * g_otg_khci_call_ptr;
-
-static usb_instance_t g_usb_instance =    
-{
-    .name = (uint8_t*)"khci_usb0",
-    .instance = 0,
-};
 
 /* Prototypes of functions */
 
@@ -161,6 +156,7 @@ usb_status _usb_otg_khci_init
     usb_hal_khci_clr_usbtrc0(usb_otg_struct_ptr->usbRegBase);
     /* Enable the OTG Interrupts */
     usb_hal_khci_enable_otg_interrupts(usb_otg_struct_ptr->usbRegBase,USB_OTGICR_ONEMSECEN_MASK | USB_OTGICR_LINESTATEEN_MASK);
+    otg_khci_call_ptr->init_param_ptr = (usb_khci_otg_int_struct_t*)bsp_usb_otg_get_init_param(controller_id);
     g_otg_khci_call_ptr = otg_khci_call_ptr;
 #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)) 
     if (!OS_install_isr(otg_khci_call_ptr->init_param_ptr->vector,(void(*)(void *))_usb_otg_khci_isr,(void*)otg_khci_call_ptr))

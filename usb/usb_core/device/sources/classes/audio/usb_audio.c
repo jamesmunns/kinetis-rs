@@ -45,7 +45,8 @@
 
 
 
-audio_device_struct_t g_audio_class; 
+audio_device_struct_t g_audio_class[MAX_AUDIO_DEVICE];
+
 
 /*****************************************************************************
  * Constant and Macro's
@@ -80,7 +81,55 @@ void USB_Service_Audio_Isochronous_IN(usb_event_struct_t* event,void* arg);
 /*****************************************************************************
  * Local Functions
  *****************************************************************************/
- 
+/*************************************************************************//*!
+ *
+ * @name  USB_Audio_Allocate_Handle
+ *
+ * @brief The funtion reserves entry in device array and returns the index.
+ *
+ * @param none.
+ * @return returns the reserved handle or if no entry found device busy.      
+ *
+ *****************************************************************************/
+static usb_status USB_Audio_Allocate_Handle(audio_device_struct_t** handle)
+{
+    uint32_t cnt = 0;
+    for (;cnt< MAX_AUDIO_DEVICE;cnt++)
+    {
+        if (g_audio_class[cnt].handle == NULL)
+        {
+            *handle = (audio_device_struct_t*)&g_audio_class[cnt];
+            return USB_OK;
+        }
+    }
+    return USBERR_DEVICE_BUSY;
+}
+ /*************************************************************************//*!
+ *
+ * @name  USB_Audio_Free_Handle
+ *
+ * @brief The funtion releases entry in device array .
+ *
+ * @param handle  index in device array to be released..
+ * @return returns and error code or USB_OK.      
+ *
+ *****************************************************************************/
+
+static usb_status USB_Audio_Free_Handle(audio_device_struct_t* handle)
+{
+    int32_t cnt = 0;
+    for (;cnt< MAX_AUDIO_DEVICE;cnt++)
+    {
+        if ((&g_audio_class[cnt]) == handle)
+        {
+            OS_Mem_zero((void*)handle, sizeof(audio_device_struct_t));
+            return USB_OK;
+        }
+    }
+    return USBERR_INVALID_PARAM;
+}
+
+
 /**************************************************************************//*!
  *
  * @name  USB_Service_Audio_Status_Interrupt
@@ -94,7 +143,7 @@ void USB_Service_Audio_Isochronous_IN(usb_event_struct_t* event,void* arg);
  *****************************************************************************/
  void USB_Service_Audio_Status_Interrupt(usb_event_struct_t* event,void* arg)
 {
-	audio_device_struct_t*  audio_obj_ptr;
+    audio_device_struct_t*  audio_obj_ptr;
 
 #if AUDIO_IMPLEMENT_QUEUING
     uint8_t index;
@@ -122,11 +171,11 @@ void USB_Service_Audio_Isochronous_IN(usb_event_struct_t* event,void* arg);
      consumer = audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer;
     if(consumer == (AUDIO_MAX_QUEUE_ELEMS -1))
     {
-    	audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer = 0;
+        audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer = 0;
     }
     else
     {
-    	audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer++;
+        audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer++;
     }
      
     audio_obj_ptr->audio_endpoint_data.ep[index].queue_num--;
@@ -146,9 +195,9 @@ void USB_Service_Audio_Isochronous_IN(usb_event_struct_t* event,void* arg);
     /* Callback to application */
     if (audio_obj_ptr->class_specific_callback.callback != NULL)
     {
-	    /* notify the app of the send complete */
-	    audio_obj_ptr->class_specific_callback.callback(USB_DEV_EVENT_SEND_COMPLETE, USB_REQ_VAL_INVALID,NULL,0,
-	    audio_obj_ptr->audio_application_callback.arg); 
+        /* notify the app of the send complete */
+        audio_obj_ptr->class_specific_callback.callback(USB_DEV_EVENT_SEND_COMPLETE, USB_REQ_VAL_INVALID,NULL,0,
+        audio_obj_ptr->audio_application_callback.arg); 
     }
 
 }
@@ -185,17 +234,17 @@ void USB_Service_Audio_Isochronous_IN(usb_event_struct_t* event,void* arg);
             break;
     }
      
-    producer = audio_obj_ptr->audio_endpoint_data.ep[index].bin_producer;	        
+    producer = audio_obj_ptr->audio_endpoint_data.ep[index].bin_producer;           
     /* if there are no errors de-queue the queue and decrement the no. of 
        transfers left, else send the same data again */
     consumer = audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer;
     if((AUDIO_MAX_QUEUE_ELEMS-1) == consumer)
     {
-    	audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer = 0;
+        audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer = 0;
     }
     else
     {
-    	audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer++;
+        audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer++;
     }
     consumer = audio_obj_ptr->audio_endpoint_data.ep[index].bin_consumer;
     audio_obj_ptr->audio_endpoint_data.ep[index].queue_num--;
@@ -206,7 +255,7 @@ void USB_Service_Audio_Isochronous_IN(usb_event_struct_t* event,void* arg);
         queue = audio_obj_ptr->audio_endpoint_data.ep[index].queue[consumer];
                         
         (void)USB_Class_Send_Data(audio_obj_ptr->class_handle, queue.channel, 
-        	queue.app_data.data_ptr, queue.app_data.data_size);
+            queue.app_data.data_ptr, queue.app_data.data_size);
     }          
 #endif
     
@@ -219,7 +268,7 @@ void USB_Service_Audio_Isochronous_IN(usb_event_struct_t* event,void* arg);
         audio_obj_ptr->class_specific_callback.callback(event_type,USB_REQ_VAL_INVALID,(void*)&iso_in_recv,NULL,
             ( iso_in_recv.data_size == 0xFFFFFFFF)? 0 : audio_obj_ptr->class_specific_callback.arg);
     }
-	
+    
 }
 
 /**************************************************************************//*!
@@ -241,8 +290,8 @@ void USB_Service_Audio_Isochronous_IN(usb_event_struct_t* event,void* arg);
     event_type = USB_DEV_EVENT_DATA_RECEIVED; 
     iso_out_recv.data_ptr = event->buffer_ptr;
     iso_out_recv.data_size = event->len; 
-  	
-  	/* Callback to application */
+    
+    /* Callback to application */
     if(audio_obj_ptr->class_specific_callback.callback != NULL) 
     {
         audio_obj_ptr->class_specific_callback.callback(event_type,USB_REQ_VAL_INVALID,(void*)&iso_out_recv,NULL,
@@ -267,71 +316,88 @@ void USB_Service_Audio_Isochronous_IN(usb_event_struct_t* event,void* arg);
  *****************************************************************************/
 void USB_Class_Audio_Event(uint8_t event, void* val,void* arg) 
 {  
-    audio_device_struct_t* devicePtr = (audio_device_struct_t*)arg;
-	uint8_t index = 0;
-	usb_ep_struct_t* ep_struct_ptr;
+    audio_device_struct_t*       devicePtr = (audio_device_struct_t*)arg;
+    uint8_t                      index = 0;
+    usb_ep_struct_t*             ep_struct_ptr;
 #if USBCFG_DEV_COMPOSITE
-	usb_composite_info_struct_t* usb_composite_info;
+    usb_composite_info_struct_t* usb_composite_info;
+    uint32_t                     interface_index = 0xFF;
 #else
-	usb_class_struct_t* usbclass;
+    usb_class_struct_t*          usbclass;
 #endif
 
     if (devicePtr == NULL)
     {
-        #ifdef _DEV_DEBUG
-            printf("USB_Class_Audio_Event:devicePtr is NULL\n");
+        #ifdef _DEBUG
+            USB_PRINTF("USB_Class_Audio_Event:devicePtr is NULL\n");
         #endif  
         return;
     }
  
-	if(event == USB_DEV_EVENT_CONFIG_CHANGED)
-	{
+    if(event == USB_DEV_EVENT_CONFIG_CHANGED)
+    {
 #if USBCFG_DEV_COMPOSITE
         uint8_t count = 0;
         //uint8_t component;
         uint8_t type_sel;
         devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr->handle,
-        USB_COMPOSITE_INFO, (uint32_t *)&usb_composite_info);
+            USB_COMPOSITE_INFO, (uint32_t *)&usb_composite_info);
+        devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr,
+            USB_CLASS_INTERFACE_INDEX_INFO, (uint32_t *)&interface_index);
+      
+        if(interface_index == 0xFF)
+        {
+            USB_PRINTF("not find interface index\n");
+            return;
+        }
+        
         for(type_sel = 0;type_sel < usb_composite_info->count;type_sel++)
         {
-            if(usb_composite_info->class[type_sel].type == USB_CLASS_AUDIO)
+            if ((usb_composite_info->class[type_sel].type == USB_CLASS_AUDIO) && (type_sel == interface_index))
+            {
                 break;
+            }
         }
-
+        if(type_sel >= usb_composite_info->count)
+        {
+            USB_PRINTF("not find audio interface\n");
+            return;
+        }
+        
         devicePtr->usb_ep_data = (usb_endpoints_t *) &usb_composite_info->class[type_sel].interfaces.interface->endpoints;
         if (usb_composite_info->class[type_sel].interfaces.interface->endpoints.count > MAX_AUDIO_CLASS_EP_NUM)
         {
-            printf("too many audio endpoint for the composite class driver\n");
+            USB_PRINTF("too many audio endpoint for the composite class driver\n");
             return;
         }
 
         for(index = 0; index < usb_composite_info->class[type_sel].interfaces.interface->endpoints.count; index++) 
 #else
-		uint8_t count = 0;
-		//uint8_t component;
+        uint8_t count = 0;
+        //uint8_t component;
 
-		devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr->handle,
-		USB_CLASS_INFO, (uint32_t *)&usbclass);
-		devicePtr->usb_ep_data = (usb_endpoints_t *)&usbclass->interfaces.interface->endpoints;
+        devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr->handle,
+        USB_CLASS_INFO, (uint32_t *)&usbclass);
+        devicePtr->usb_ep_data = (usb_endpoints_t *)&usbclass->interfaces.interface->endpoints;
         if (usbclass->interfaces.interface->endpoints.count > MAX_AUDIO_CLASS_EP_NUM)
         {
-            printf("too many audio endpoint for the class driver\n");
+            USB_PRINTF("too many audio endpoint for the class driver\n");
             return;
         }
-	
-		for(index = 0; index < usbclass->interfaces.interface->endpoints.count; index++) 
+    
+        for(index = 0; index < usbclass->interfaces.interface->endpoints.count; index++) 
 #endif
-		{            
-			devicePtr->audio_endpoint_data.ep[index].endpoint = devicePtr->usb_ep_data->ep[index].ep_num;
-	        devicePtr->audio_endpoint_data.ep[index].type = devicePtr->usb_ep_data->ep[index].type;
+        {            
+            devicePtr->audio_endpoint_data.ep[index].endpoint = devicePtr->usb_ep_data->ep[index].ep_num;
+            devicePtr->audio_endpoint_data.ep[index].type = devicePtr->usb_ep_data->ep[index].type;
 #if HID_IMPLEMENT_QUEUING
-	        devicePtr->audio_endpoint_data.ep[index].bin_consumer = 0x00;
-	        devicePtr->audio_endpoint_data.ep[index].bin_producer = 0x00;
-	        devicePtr->audio_endpoint_data.ep[index].queue_num = 0x00;
+            devicePtr->audio_endpoint_data.ep[index].bin_consumer = 0x00;
+            devicePtr->audio_endpoint_data.ep[index].bin_producer = 0x00;
+            devicePtr->audio_endpoint_data.ep[index].queue_num = 0x00;
 #endif
-		}
+        }
 
-		/* get the endpoints from the descriptor module */            
+        /* get the endpoints from the descriptor module */            
         usb_endpoints_t *usb_ep_data = devicePtr->usb_ep_data;
         
         /* intialize all non control endpoints */            
@@ -345,42 +411,42 @@ void USB_Class_Audio_Event(uint8_t event, void* val,void* arg)
             /* register callback service for Non Control EndPoints */
             switch(ep_struct_ptr->type) 
             {
-              	case USB_INTERRUPT_PIPE :
-                  	(void)usb_device_register_service(devicePtr->handle,
-                    	(uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num),
+                case USB_INTERRUPT_PIPE :
+                    (void)usb_device_register_service(devicePtr->handle,
+                        (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))),
                         USB_Service_Audio_Status_Interrupt,(void *)devicePtr);
-                  	break;                              
-              	case USB_ISOCHRONOUS_PIPE :
-                  	if(ep_struct_ptr->direction == USB_RECV) 
-                  	{
-                      	(void)usb_device_register_service(devicePtr->handle,
-                        	(uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num),
+                    break;                              
+                case USB_ISOCHRONOUS_PIPE :
+                    if(ep_struct_ptr->direction == USB_RECV) 
+                    {
+                        (void)usb_device_register_service(devicePtr->handle,
+                            (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))),
                             USB_Service_Audio_Isochronous_OUT,(void *)devicePtr);
-                  	} 
-                  	else
-                  	{
-                      	(void)usb_device_register_service(devicePtr->handle,
-                        	(uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num),
+                    } 
+                    else
+                    {
+                        (void)usb_device_register_service(devicePtr->handle,
+                            (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))),
                             USB_Service_Audio_Isochronous_IN,(void *)devicePtr);
-                  	}
-                  	break;
-              	default : break;        
+                    }
+                    break;
+                default : break;        
             }
 
             count++;                                                    
         }/* EndWhile */
-	}
+    }
     if(event == USB_DEV_EVENT_ENUM_COMPLETE) 
     {
               
     }
-	else if(event == USB_DEV_EVENT_BUS_RESET) 
+    else if(event == USB_DEV_EVENT_BUS_RESET) 
     {
     }
     if(devicePtr->audio_application_callback.callback != NULL) 
     {
         devicePtr->audio_application_callback.callback(event,
-        	val,devicePtr->audio_application_callback.arg);
+            val,devicePtr->audio_application_callback.arg);
     } 
 }
 
@@ -391,7 +457,7 @@ void USB_Class_Audio_Event(uint8_t event, void* val,void* arg)
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -408,72 +474,72 @@ usb_status USB_Get_Cur_Audio_Feature_Unit
     uint8_t * *data, 
     uint32_t* size
 )
-{	
-	usb_status error;
-	int32_t cmd = -1;
-    if (size == NULL)				 
+{   
+    usb_status error;
+    int32_t cmd = -1;
+    if (size == NULL)                
     {
-        return USBERR_ERROR;	
+        return USBERR_ERROR;    
     }
-	error = USBERR_INVALID_REQ_TYPE;
-	switch(setup_packet->value>>8)
-	{
+    error = USBERR_INVALID_REQ_TYPE;
+    switch(setup_packet->value>>8)
+    {
       case MUTE_CONTROL:
-      	*size = 1;
-      	cmd = GET_CUR_MUTE_CONTROL;
+        *size = 1;
+        cmd = GET_CUR_MUTE_CONTROL;
         break;
       case VOLUME_CONTROL:
-      	*size = 2;
-      	cmd = GET_CUR_VOLUME_CONTROL;
+        *size = 2;
+        cmd = GET_CUR_VOLUME_CONTROL;
         break;
       case BASS_CONTROL:
-      	*size = 1;
-      	cmd = GET_CUR_BASS_CONTROL;
+        *size = 1;
+        cmd = GET_CUR_BASS_CONTROL;
         break;
       case MID_CONTROL:
-      	*size = 1;
-      	cmd = GET_CUR_MID_CONTROL;
+        *size = 1;
+        cmd = GET_CUR_MID_CONTROL;
         break;
       case TREBLE_CONTROL:
-      	*size = 1;
-      	cmd = GET_CUR_TREBLE_CONTROL;
+        *size = 1;
+        cmd = GET_CUR_TREBLE_CONTROL;
         break;
       case GRAPHIC_EQUALIZER_CONTROL:
-      	*size = 5;
-      	cmd = GET_CUR_GRAPHIC_EQUALIZER_CONTROL;
+        *size = 5;
+        cmd = GET_CUR_GRAPHIC_EQUALIZER_CONTROL;
         break;
       case AUTOMATIC_GAIN_CONTROL:
-      	*size = 1;
-      	cmd = GET_CUR_AUTOMATIC_GAIN_CONTROL;
+        *size = 1;
+        cmd = GET_CUR_AUTOMATIC_GAIN_CONTROL;
         break;
       case DELAY_CONTROL:
-      	*size = 2;
-      	cmd = GET_CUR_DELAY_CONTROL;
+        *size = 2;
+        cmd = GET_CUR_DELAY_CONTROL;
         break;
       case BASS_BOOST_CONTROL:
-      	*size = 1;
-      	cmd = GET_CUR_BASS_BOOST_CONTROL;
+        *size = 1;
+        cmd = GET_CUR_BASS_BOOST_CONTROL;
         break;
       case LOUDNESS_CONTROL:
-      	*size = 1;
-      	cmd = GET_CUR_LOUDNESS_CONTROL;
+        *size = 1;
+        cmd = GET_CUR_LOUDNESS_CONTROL;
         break;
       default:
-    	break;    
+        break;    
    }
    if(cmd > 0)
    {
-	  if(audio_obj_ptr->class_specific_callback.callback != NULL) 
+      if(audio_obj_ptr->class_specific_callback.callback != NULL) 
         {  
                   
           /* notify the application of the class request.*/
           /* give control to the application */
            error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-           												data,size,audio_obj_ptr->class_specific_callback.arg); 
+                                                        data,size,audio_obj_ptr->class_specific_callback.arg); 
         }
    }
    
-	return error;
+    return error;
 }
 /**************************************************************************//*!
  *
@@ -482,7 +548,7 @@ usb_status USB_Get_Cur_Audio_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -499,49 +565,49 @@ usb_status USB_Get_Min_Audio_Feature_Unit
     uint8_t * *data, 
     uint32_t* size
 )
-{	
-	usb_status error;
-	int32_t cmd = -1;
-    if (size == NULL)				 
+{   
+    usb_status error;
+    int32_t cmd = -1;
+    if (size == NULL)                
     {
-   		return USBERR_ERROR;	
+        return USBERR_ERROR;    
     }
-	error = USBERR_INVALID_REQ_TYPE;
-	switch(setup_packet->value>>8)
-	{
+    error = USBERR_INVALID_REQ_TYPE;
+    switch(setup_packet->value>>8)
+    {
       case VOLUME_CONTROL:
-      	*size = 2;
-      	cmd = GET_MIN_VOLUME_CONTROL;
+        *size = 2;
+        cmd = GET_MIN_VOLUME_CONTROL;
         break;
       case BASS_CONTROL:
-      	*size = 1;
-      	cmd = GET_MIN_BASS_CONTROL;
+        *size = 1;
+        cmd = GET_MIN_BASS_CONTROL;
         break;
       case MID_CONTROL:
-      	*size = 1;
-      	cmd = GET_MIN_MID_CONTROL;
+        *size = 1;
+        cmd = GET_MIN_MID_CONTROL;
         break;
       case TREBLE_CONTROL:
-      	*size = 1;
-      	cmd = GET_MIN_TREBLE_CONTROL;
+        *size = 1;
+        cmd = GET_MIN_TREBLE_CONTROL;
         break;
       case GRAPHIC_EQUALIZER_CONTROL:
-      	*size = 5;
-      	cmd = GET_MIN_GRAPHIC_EQUALIZER_CONTROL;
+        *size = 5;
+        cmd = GET_MIN_GRAPHIC_EQUALIZER_CONTROL;
         break;
       case DELAY_CONTROL:
-      	*size = 2;
-      	cmd = GET_MIN_DELAY_CONTROL;
+        *size = 2;
+        cmd = GET_MIN_DELAY_CONTROL;
         break;
       default:
-    	break;    
+        break;    
    }
    if(cmd > 0)
    {
-		error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-													 data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                                     data,size,audio_obj_ptr->class_specific_callback.arg);
    }
-	return error;
+    return error;
 }
 /**************************************************************************//*!
  *
@@ -550,7 +616,7 @@ usb_status USB_Get_Min_Audio_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -567,49 +633,49 @@ usb_status USB_Get_Max_Audio_Feature_Unit
     uint8_t * *data, 
     uint32_t* size
 )
-{	
-	usb_status error;
-	int32_t cmd = -1;
-    if (size == NULL)				 
+{   
+    usb_status error;
+    int32_t cmd = -1;
+    if (size == NULL)                
     {
-        return USBERR_ERROR;	
-    }	
-	error = USBERR_INVALID_REQ_TYPE;
-	switch(setup_packet->value>>8)
-	{
+        return USBERR_ERROR;    
+    }   
+    error = USBERR_INVALID_REQ_TYPE;
+    switch(setup_packet->value>>8)
+    {
       case VOLUME_CONTROL:
-      	*size = 2;
-      	cmd = GET_MAX_VOLUME_CONTROL;
+        *size = 2;
+        cmd = GET_MAX_VOLUME_CONTROL;
         break;
       case BASS_CONTROL:
-      	*size = 1;
-      	cmd = GET_MAX_BASS_CONTROL;
+        *size = 1;
+        cmd = GET_MAX_BASS_CONTROL;
         break;
       case MID_CONTROL:
-      	*size = 1;
-      	cmd = GET_MAX_MID_CONTROL;
+        *size = 1;
+        cmd = GET_MAX_MID_CONTROL;
         break;
       case TREBLE_CONTROL:
-      	*size = 1;
-      	cmd = GET_MAX_TREBLE_CONTROL;
+        *size = 1;
+        cmd = GET_MAX_TREBLE_CONTROL;
         break;
       case GRAPHIC_EQUALIZER_CONTROL:
-      	*size = 5;
-      	cmd = GET_MAX_GRAPHIC_EQUALIZER_CONTROL;
+        *size = 5;
+        cmd = GET_MAX_GRAPHIC_EQUALIZER_CONTROL;
         break;
       case DELAY_CONTROL:
-      	*size = 2;
-      	cmd = GET_MAX_DELAY_CONTROL;
+        *size = 2;
+        cmd = GET_MAX_DELAY_CONTROL;
         break;
       default:
-    	break;    
+        break;    
    }
    if(cmd > 0)
    {
-		error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-									data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                    data,size,audio_obj_ptr->class_specific_callback.arg);
    }
-	return error;
+    return error;
 }
 /**************************************************************************//*!
  *
@@ -618,7 +684,7 @@ usb_status USB_Get_Max_Audio_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -635,49 +701,49 @@ usb_status USB_Get_Res_Audio_Feature_Unit
     uint8_t * *data, 
     uint32_t* size
 )
-{	
-	usb_status error;
-	int32_t cmd = -1;
-	error = USBERR_INVALID_REQ_TYPE;
-    if (size == NULL)				 
+{   
+    usb_status error;
+    int32_t cmd = -1;
+    error = USBERR_INVALID_REQ_TYPE;
+    if (size == NULL)                
     {
-        return USBERR_ERROR;	
+        return USBERR_ERROR;    
     }
-	switch(setup_packet->value>>8)
-	{
+    switch(setup_packet->value>>8)
+    {
       case VOLUME_CONTROL:
-      	*size = 2;
-      	cmd = GET_RES_VOLUME_CONTROL;
+        *size = 2;
+        cmd = GET_RES_VOLUME_CONTROL;
         break;
       case BASS_CONTROL:
-      	*size = 1;
-      	cmd = GET_RES_BASS_CONTROL;
+        *size = 1;
+        cmd = GET_RES_BASS_CONTROL;
         break;
       case MID_CONTROL:
-      	*size = 1;
-      	cmd = GET_RES_MID_CONTROL;
+        *size = 1;
+        cmd = GET_RES_MID_CONTROL;
         break;
       case TREBLE_CONTROL:
-      	*size = 1;
-      	cmd = GET_RES_TREBLE_CONTROL;
+        *size = 1;
+        cmd = GET_RES_TREBLE_CONTROL;
         break;
       case GRAPHIC_EQUALIZER_CONTROL:
-      	*size = 5;
-      	cmd = GET_RES_GRAPHIC_EQUALIZER_CONTROL;
+        *size = 5;
+        cmd = GET_RES_GRAPHIC_EQUALIZER_CONTROL;
         break;
       case DELAY_CONTROL:
-      	*size = 2;
-      	cmd = GET_RES_DELAY_CONTROL;
+        *size = 2;
+        cmd = GET_RES_DELAY_CONTROL;
         break;
       default:
-    	break;    
+        break;    
    }
    if(cmd > 0)
    {
-	    error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-           												data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                                        data,size,audio_obj_ptr->class_specific_callback.arg);
    }
-	return error;
+    return error;
 }
 /**************************************************************************//*!
  *
@@ -686,7 +752,7 @@ usb_status USB_Get_Res_Audio_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -733,7 +799,7 @@ usb_status USB_Audio_Get_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -754,24 +820,24 @@ usb_status USB_Audio_Get_Control_Terminal
     usb_status error = USBERR_INVALID_REQ_TYPE;
     if (size == NULL)
     {
-    	return USBERR_ERROR;	
+        return USBERR_ERROR;    
     }
     switch(setup_packet -> request)
     {
       /* Copy Protect Control only supports the CUR attribute!*/
       case GET_CUR:
-      	*size = 1;
+        *size = 1;
         if((setup_packet->value >>8) == COPY_PROTECT_CONTROL )
         {
 
-	    	  error = audio_obj_ptr->class_specific_callback.callback((uint8_t)GET_CUR_COPY_PROTECT_CONTROL,audio_obj_ptr->current_interface,
-           												data,size,audio_obj_ptr->class_specific_callback.arg);
+              error = audio_obj_ptr->class_specific_callback.callback((uint8_t)GET_CUR_COPY_PROTECT_CONTROL,audio_obj_ptr->current_interface,
+                                                        data,size,audio_obj_ptr->class_specific_callback.arg);
         }
         break;
       default:
         break;
     }
-	return error;
+    return error;
 }
 /**************************************************************************//*!
  *
@@ -780,7 +846,7 @@ usb_status USB_Audio_Get_Control_Terminal
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -831,7 +897,7 @@ usb_status USB_Get_Request_Interface
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -851,52 +917,52 @@ usb_status USB_Set_Cur_Audio_Feature_Unit
 {
    int32_t cmd = -1;
    usb_status error = USBERR_INVALID_REQ_TYPE;
-   if (size == NULL)				 
+   if (size == NULL)                 
    {
-   		return USBERR_ERROR;	
+        return USBERR_ERROR;    
    }
    *size = 0;
    switch(setup_packet->value>>8)
    {
       case MUTE_CONTROL:
-      	cmd = SET_CUR_MUTE_CONTROL;
+        cmd = SET_CUR_MUTE_CONTROL;
         break;
       case VOLUME_CONTROL:
-      	cmd = SET_CUR_VOLUME_CONTROL;
+        cmd = SET_CUR_VOLUME_CONTROL;
         break;
       case BASS_CONTROL:
-      	cmd = SET_CUR_BASS_CONTROL;
+        cmd = SET_CUR_BASS_CONTROL;
         break;
       case MID_CONTROL:
-      	cmd = SET_CUR_MID_CONTROL;
+        cmd = SET_CUR_MID_CONTROL;
         break;
       case TREBLE_CONTROL:
-      	cmd = SET_CUR_TREBLE_CONTROL;
+        cmd = SET_CUR_TREBLE_CONTROL;
         break;
       case GRAPHIC_EQUALIZER_CONTROL:
-      	cmd = SET_CUR_GRAPHIC_EQUALIZER_CONTROL;
+        cmd = SET_CUR_GRAPHIC_EQUALIZER_CONTROL;
         break;
       case AUTOMATIC_GAIN_CONTROL:
-      	cmd = SET_CUR_AUTOMATIC_GAIN_CONTROL;
+        cmd = SET_CUR_AUTOMATIC_GAIN_CONTROL;
         break;
       case DELAY_CONTROL:
-      	cmd = SET_CUR_DELAY_CONTROL;
+        cmd = SET_CUR_DELAY_CONTROL;
         break;
       case BASS_BOOST_CONTROL:
-      	cmd = SET_CUR_BASS_BOOST_CONTROL;
+        cmd = SET_CUR_BASS_BOOST_CONTROL;
         break;
       case LOUDNESS_CONTROL:
-      	cmd = SET_CUR_LOUDNESS_CONTROL;
+        cmd = SET_CUR_LOUDNESS_CONTROL;
         break;
       default:
-    	break;    
+        break;    
    }
    if (cmd > 0)
    {
-		error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-           									data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                            data,size,audio_obj_ptr->class_specific_callback.arg);
    }
-	return error;
+    return error;
 }
 /**************************************************************************//*!
  *
@@ -905,7 +971,7 @@ usb_status USB_Set_Cur_Audio_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -925,40 +991,40 @@ usb_status USB_Set_Min_Audio_Feature_Unit
 {
    usb_status error = USBERR_INVALID_REQ_TYPE; 
    int32_t cmd = -1;
-   if (size == NULL)				 
+   if (size == NULL)                 
    {
-   		return USBERR_ERROR;	
+        return USBERR_ERROR;    
    }
    *size = 0;
    switch(setup_packet->value>>8)
    {
       case VOLUME_CONTROL:
-      	cmd = SET_MIN_VOLUME_CONTROL;
+        cmd = SET_MIN_VOLUME_CONTROL;
         break;
       case BASS_CONTROL:
-      	cmd = SET_MIN_BASS_CONTROL;
+        cmd = SET_MIN_BASS_CONTROL;
         break;
       case MID_CONTROL:
-      	cmd = SET_MIN_MID_CONTROL;
+        cmd = SET_MIN_MID_CONTROL;
         break;
       case TREBLE_CONTROL:
-      	cmd = SET_MIN_TREBLE_CONTROL;
+        cmd = SET_MIN_TREBLE_CONTROL;
         break;
       case GRAPHIC_EQUALIZER_CONTROL:
-      	cmd = SET_MIN_GRAPHIC_EQUALIZER_CONTROL;
+        cmd = SET_MIN_GRAPHIC_EQUALIZER_CONTROL;
         break;
       case DELAY_CONTROL:
-      	cmd = SET_MIN_DELAY_CONTROL;
+        cmd = SET_MIN_DELAY_CONTROL;
         break;
       default:
-    	break;    
+        break;    
    }
    if (cmd > 0)
    {
-		error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-           									data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                            data,size,audio_obj_ptr->class_specific_callback.arg);
    }
-	return error;
+    return error;
 }
 /**************************************************************************//*!
  *
@@ -967,7 +1033,7 @@ usb_status USB_Set_Min_Audio_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -987,40 +1053,40 @@ usb_status USB_Set_Max_Audio_Feature_Unit
 {
    int32_t cmd = -1;
    usb_status error = USBERR_INVALID_REQ_TYPE; 
-   if (size == NULL)				 
+   if (size == NULL)                 
    {
-   		return USBERR_ERROR;	
+        return USBERR_ERROR;    
    }
    *size = 0;
    switch(setup_packet->value>>8)
    {
       case VOLUME_CONTROL:
-      	cmd = SET_MAX_VOLUME_CONTROL;
+        cmd = SET_MAX_VOLUME_CONTROL;
         break;
       case BASS_CONTROL:
-      	cmd = SET_MAX_BASS_CONTROL;
+        cmd = SET_MAX_BASS_CONTROL;
         break;
       case MID_CONTROL:
-      	cmd = SET_MAX_MID_CONTROL;
+        cmd = SET_MAX_MID_CONTROL;
         break;
       case TREBLE_CONTROL:
-      	cmd = SET_MAX_TREBLE_CONTROL;
+        cmd = SET_MAX_TREBLE_CONTROL;
         break;
       case GRAPHIC_EQUALIZER_CONTROL:
-      	cmd = SET_MAX_GRAPHIC_EQUALIZER_CONTROL;
+        cmd = SET_MAX_GRAPHIC_EQUALIZER_CONTROL;
         break;
       case DELAY_CONTROL:
-      	cmd = SET_MAX_DELAY_CONTROL;
+        cmd = SET_MAX_DELAY_CONTROL;
         break;
       default:
-    	break;    
+        break;    
    }
    if (cmd > 0)
    {
-		error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-           									data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                            data,size,audio_obj_ptr->class_specific_callback.arg);
    }
-	return error;
+    return error;
 }
 /**************************************************************************//*!
  *
@@ -1029,7 +1095,7 @@ usb_status USB_Set_Max_Audio_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -1049,41 +1115,41 @@ usb_status USB_Set_Res_Audio_Feature_Unit
 {
    int32_t cmd = -1;
    usb_status error = USBERR_INVALID_REQ_TYPE;
-   if (size == NULL)				 
+   if (size == NULL)                 
    {
-   		return USBERR_ERROR;	
+        return USBERR_ERROR;    
    } 
    *size = 0;
    switch(setup_packet->value>>8)
    {
       case VOLUME_CONTROL:
-      	cmd = SET_RES_VOLUME_CONTROL;
+        cmd = SET_RES_VOLUME_CONTROL;
         break;
       case BASS_CONTROL:
-      	cmd = SET_RES_BASS_CONTROL;
+        cmd = SET_RES_BASS_CONTROL;
         break;
       case MID_CONTROL:
-      	cmd = SET_RES_MID_CONTROL;
+        cmd = SET_RES_MID_CONTROL;
         break;
       case TREBLE_CONTROL:
-      	cmd = SET_RES_TREBLE_CONTROL;
+        cmd = SET_RES_TREBLE_CONTROL;
         break;
       case GRAPHIC_EQUALIZER_CONTROL:
-      	cmd = SET_RES_GRAPHIC_EQUALIZER_CONTROL;
+        cmd = SET_RES_GRAPHIC_EQUALIZER_CONTROL;
         break;
       case DELAY_CONTROL:
-      	cmd = SET_RES_DELAY_CONTROL;
+        cmd = SET_RES_DELAY_CONTROL;
         break;
       default:
-    	break;    
+        break;    
    }
    if (cmd > 0)
    {
-		error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-           									data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                            data,size,audio_obj_ptr->class_specific_callback.arg);
 
    }
-	return error;
+    return error;
 }
 /**************************************************************************//*!
  *
@@ -1092,7 +1158,7 @@ usb_status USB_Set_Res_Audio_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -1140,7 +1206,7 @@ usb_status USB_Audio_Set_Feature_Unit
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -1161,7 +1227,7 @@ usb_status USB_Audio_Set_Control_Terminal
     usb_status error = USBERR_INVALID_REQ_TYPE;
     if(size == NULL)
     {
-    	return USBERR_ERROR;	
+        return USBERR_ERROR;    
     }
     *size = 0;
     switch(setup_packet -> request)
@@ -1171,14 +1237,14 @@ usb_status USB_Audio_Set_Control_Terminal
         if((setup_packet->value >>8) == COPY_PROTECT_CONTROL )
         {
 
-	    	error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,SET_CUR_COPY_PROTECT_CONTROL,
-           									data,size,audio_obj_ptr->class_specific_callback.arg);
+            error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,SET_CUR_COPY_PROTECT_CONTROL,
+                                            data,size,audio_obj_ptr->class_specific_callback.arg);
         }
         break;
       default:
         break;
     }
-	return error;
+    return error;
 }
 
 /**************************************************************************//*!
@@ -1188,7 +1254,7 @@ usb_status USB_Audio_Set_Control_Terminal
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -1219,7 +1285,7 @@ usb_status USB_Set_Request_Interface
     {
       switch(ut_struct->type)
       {
-      	case AUDIO_CONTROL_OUTPUT_TERMINAL:
+        case AUDIO_CONTROL_OUTPUT_TERMINAL:
           /*Select SET Request Control Input Terminal Module */
           error = USB_Audio_Set_Control_Terminal(audio_obj_ptr,setup_packet,data,size);
           break;
@@ -1241,7 +1307,7 @@ usb_status USB_Set_Request_Interface
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -1261,9 +1327,9 @@ usb_status USB_Set_Request_Endpoint
 {
     int32_t cmd = -1;
     usb_status error = USBERR_INVALID_REQ_TYPE;
-    if (size == NULL)				 
+    if (size == NULL)                
     {
-        return USBERR_ERROR;	
+        return USBERR_ERROR;    
     }
     *size = 0;
     switch(setup_packet->request)
@@ -1272,69 +1338,69 @@ usb_status USB_Set_Request_Endpoint
         switch(setup_packet->value>>8)
         {
           case SAMPLING_FREQ_CONTROL:
-          	cmd = SET_CUR_SAMPLING_FREQ_CONTROL;
+            cmd = SET_CUR_SAMPLING_FREQ_CONTROL;
             break;
           case PITCH_CONTROL:
-          	cmd = SET_CUR_PITCH_CONTROL;
+            cmd = SET_CUR_PITCH_CONTROL;
             break;
           default:
-          	break;    
+            break;    
         }
-      	break;
+        break;
       case SET_MIN:
         switch(setup_packet->value>>8)
         {
           case SAMPLING_FREQ_CONTROL:
-          	cmd = SET_MIN_SAMPLING_FREQ_CONTROL;
+            cmd = SET_MIN_SAMPLING_FREQ_CONTROL;
             break;
           default:
-          	break;    
+            break;    
         }
-      	break;
+        break;
       case SET_MAX:
         switch(setup_packet->value>>8)
         {
           case SAMPLING_FREQ_CONTROL:
-          	cmd = SET_MAX_SAMPLING_FREQ_CONTROL;
+            cmd = SET_MAX_SAMPLING_FREQ_CONTROL;
             break;
           default:
-          	break;    
+            break;    
         }
       break;
       case SET_RES:
         switch(setup_packet->value>>8)
         {
           case SAMPLING_FREQ_CONTROL:
-          	cmd = SET_RES_SAMPLING_FREQ_CONTROL;
+            cmd = SET_RES_SAMPLING_FREQ_CONTROL;
             break;
           default:
-          	break;    
+            break;    
         }
        break;
       case SET_MEM:
-      	*size = setup_packet->length;
-		
-      	if (audio_obj_ptr->class_specific_callback.callback != NULL)
-      	{
-      		error = audio_obj_ptr->class_specific_callback.callback(
+        *size = setup_packet->length;
+        
+        if (audio_obj_ptr->class_specific_callback.callback != NULL)
+        {
+            error = audio_obj_ptr->class_specific_callback.callback(
                                       /* request type */ 
                                       setup_packet->request,
                                       setup_packet->value, 
                                       /* pointer to the data */      
                                       data,
                                       /* size of the transfer */                                    
-                                      size,audio_obj_ptr->class_specific_callback.arg);	
-      	}
+                                      size,audio_obj_ptr->class_specific_callback.arg); 
+        }
       break;
     default:
-    	break;
+        break;
     }
     if (cmd > 0)
     {
-     	error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-   									data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                    data,size,audio_obj_ptr->class_specific_callback.arg);
     }
-	return error;    
+    return error;    
 }
 
 /**************************************************************************//*!
@@ -1344,7 +1410,7 @@ usb_status USB_Set_Request_Endpoint
  * @brief The funtion provides flexibilty to add class and vendor specific
  *        requests 
  *
- * @param audio_obj_ptr:	Pointer to Audio class object.
+ * @param audio_obj_ptr:    Pointer to Audio class object.
  * @param setup_packet:     setup packet recieved      
  * @param data:             data to be send back
  * @param size:             size to be returned    
@@ -1364,9 +1430,9 @@ usb_status USB_Get_Request_Endpoint
 {
     int32_t cmd = -1;
     usb_status error = USBERR_INVALID_REQ_TYPE;
-    if (size == NULL)				 
+    if (size == NULL)                
     {
-   		return USBERR_ERROR;	
+        return USBERR_ERROR;    
     }
     switch(setup_packet->request)
     {
@@ -1374,71 +1440,71 @@ usb_status USB_Get_Request_Endpoint
         switch(setup_packet->value>>8)
         {
           case SAMPLING_FREQ_CONTROL:
-          	*size = 3;
-          	cmd = GET_CUR_SAMPLING_FREQ_CONTROL;
+            *size = 3;
+            cmd = GET_CUR_SAMPLING_FREQ_CONTROL;
             break;
           case PITCH_CONTROL:
-          	*size = 1;
-          	cmd = GET_CUR_PITCH_CONTROL;
+            *size = 1;
+            cmd = GET_CUR_PITCH_CONTROL;
             break;
           default:
-          	break;    
+            break;    
         }
       break;
       case GET_MIN:
         switch(setup_packet->value>>8)
         {
           case SAMPLING_FREQ_CONTROL:
-          	*size = 3;
-          	cmd = GET_MIN_SAMPLING_FREQ_CONTROL;
+            *size = 3;
+            cmd = GET_MIN_SAMPLING_FREQ_CONTROL;
             break;
           default:
-          	break;    
+            break;    
         }
       break;
       case GET_MAX:
         switch(setup_packet->value>>8)
         {
           case SAMPLING_FREQ_CONTROL:
-          	*size = 3;
-          	cmd = GET_MAX_SAMPLING_FREQ_CONTROL;
+            *size = 3;
+            cmd = GET_MAX_SAMPLING_FREQ_CONTROL;
             break;
           default:
-          	break;    
+            break;    
         }
       break;
       case GET_RES:
         switch(setup_packet->value>>8)
         {
           case SAMPLING_FREQ_CONTROL:
-          	cmd = GET_RES_SAMPLING_FREQ_CONTROL;
-          	*size = 3;
+            cmd = GET_RES_SAMPLING_FREQ_CONTROL;
+            *size = 3;
             break;
           default:
-          	break;    
+            break;    
         }
        break;
       case GET_MEM:
-      	*size = setup_packet->length;
-      	if (audio_obj_ptr->class_specific_callback.callback != NULL)
-      	{
-      		error = audio_obj_ptr->class_specific_callback.callback(
+        *size = setup_packet->length;
+        if (audio_obj_ptr->class_specific_callback.callback != NULL)
+        {
+            error = audio_obj_ptr->class_specific_callback.callback(
                                       /* request type */ 
                                       setup_packet->request,
                                       setup_packet->value, 
                                       /* pointer to the data */      
                                       data,
                                       /* size of the transfer */                                    
-                                      size,audio_obj_ptr->class_specific_callback.arg);	
-      	}
-	   break;
+                                      size,audio_obj_ptr->class_specific_callback.arg); 
+        }
+       break;
       default:
-   	   break;
+       break;
     }
    if (cmd > 0)
    {
-     	error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-   									data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                    data,size,audio_obj_ptr->class_specific_callback.arg);
 
    }
    return error;    
@@ -1463,10 +1529,10 @@ usb_status USB_Get_Request_Endpoint
  *****************************************************************************/
 usb_status USB_Audio_Requests
 (
-	usb_setup_struct_t * setup_packet, 
-	uint8_t * *data, 
-	uint32_t* size,
-	void* arg
+    usb_setup_struct_t * setup_packet, 
+    uint8_t * *data, 
+    uint32_t* size,
+    void* arg
 ) 
 {
     usb_status error;
@@ -1482,8 +1548,8 @@ usb_status USB_Audio_Requests
 
     if (audio_obj_ptr == NULL)
     {
-        #ifdef _DEV_DEBUG
-            printf("USB_Audio_Other_Requests:audio_obj_ptr is NULL\n");
+        #ifdef _DEBUG
+            USB_PRINTF("USB_Audio_Other_Requests:audio_obj_ptr is NULL\n");
         #endif  
         return error;
     }
@@ -1542,17 +1608,17 @@ usb_status USB_Audio_Requests
    
     if (cmd > 0)
     {
-    	error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
-    								data,size,audio_obj_ptr->class_specific_callback.arg);
+        error = audio_obj_ptr->class_specific_callback.callback(audio_obj_ptr->current_interface,cmd,
+                                    data,size,audio_obj_ptr->class_specific_callback.arg);
     }
     return error;
 #else
     if((setup_packet->request_type & USB_DEV_REQ_STD_REQUEST_TYPE_TYPE_POS) == 
                                                   USB_DEV_REQ_STD_REQUEST_TYPE_TYPE_CLASS)
     {  /* class request so handle it here */
-    	
-    	switch(setup_packet->request_type)     
-    	{
+        
+        switch(setup_packet->request_type)     
+        {
            /* Set I/O Interface and Feature Unit */
            case SET_REQUEST_ITF:
              error = USB_Set_Request_Interface(audio_obj_ptr,setup_packet,data,size);
@@ -1571,11 +1637,11 @@ usb_status USB_Audio_Requests
              break;
            default:
              *size = 0;
-             break;	
-    	} /* End of switch */
+             break; 
+        } /* End of switch */
     }
-	else if((setup_packet->request_type & USB_DEV_REQ_STD_REQUEST_TYPE_TYPE_POS) == 
-											USB_DEV_REQ_STD_REQUEST_TYPE_TYPE_VENDOR) 
+    else if((setup_packet->request_type & USB_DEV_REQ_STD_REQUEST_TYPE_TYPE_POS) == 
+                                            USB_DEV_REQ_STD_REQUEST_TYPE_TYPE_VENDOR) 
 
     {   /* vendor specific request  */    
         if(audio_obj_ptr->vendor_req_callback.callback != NULL) 
@@ -1613,75 +1679,79 @@ usb_status USB_Audio_Requests
 
 usb_status USB_Class_Audio_Init
 (
-	uint8_t controller_id,
-	audio_config_struct_t* audio_config_ptr,
-	audio_handle_t*  audioHandle
+    uint8_t controller_id,
+    audio_config_struct_t* audio_config_ptr,
+    audio_handle_t*  audioHandle
 
 ) 
 {
-#if !USBCFG_DEV_COMPOSITE
     usb_status error;
-#endif
+
     uint8_t index;
     audio_device_struct_t*  devicePtr = NULL;
     audio_units_struct_t *p_usb_data_ut = NULL;
-	
+    
     if (NULL == audio_config_ptr)
     {
-    	return USBERR_ERROR;	
+        return USBERR_ERROR;    
     }
     
-    devicePtr =  &g_audio_class;
+    error = USB_Audio_Allocate_Handle(&devicePtr);
+
+    if (USB_OK != error)
+    {
+        return error;
+    }
 
 #if USBCFG_DEV_COMPOSITE
-	devicePtr->class_handle = (class_handle_t)USB_Class_Get_Class_Handle();
-	devicePtr->handle = (usb_device_handle)USB_Class_Get_Ctrler_Handle(devicePtr->class_handle);
-	if(NULL == devicePtr->handle)
-	{
-		return USBERR_INIT_FAILED;
-	}
+    devicePtr->class_handle = (class_handle_t)USB_Class_Get_Class_Handle();
+    devicePtr->handle = (usb_device_handle)USB_Class_Get_Ctrler_Handle(devicePtr->class_handle);
+    if(NULL == devicePtr->handle)
+    {
+        return USBERR_INIT_FAILED;
+    }
 #else
-	/* Initialize the device layer*/
-	 error = usb_device_init(controller_id, &devicePtr->handle);
-	 if(error != USB_OK)
-	 {
+    /* Initialize the device layer*/
+     error = usb_device_init(controller_id, &devicePtr->handle);
+     if(error != USB_OK)
+     {
         devicePtr = NULL;
-		return USBERR_INIT_FAILED;
-	 }
-	devicePtr->class_handle = USB_Class_Init(devicePtr->handle,
-		USB_Class_Audio_Event,USB_Audio_Requests,(void *)devicePtr,
-		audio_config_ptr->desc_callback_ptr);
+        return USBERR_INIT_FAILED;
+     }
+    devicePtr->class_handle = USB_Class_Init(devicePtr->handle,
+        USB_Class_Audio_Event,USB_Audio_Requests,(void *)devicePtr,
+        audio_config_ptr->desc_callback_ptr);
 #endif
-	/* save the callback pointer */
-	OS_Mem_copy(&audio_config_ptr->audio_application_callback,
-	&devicePtr->audio_application_callback,sizeof(usb_application_callback_struct_t));           
+    /* save the callback pointer */
+    OS_Mem_copy(&audio_config_ptr->audio_application_callback,
+    &devicePtr->audio_application_callback,sizeof(usb_application_callback_struct_t));           
 
-	/* save the callback pointer */
-	OS_Mem_copy(&audio_config_ptr->vendor_req_callback,
-	&devicePtr->vendor_req_callback,sizeof(usb_vendor_req_callback_struct_t));        
+    /* save the callback pointer */
+    OS_Mem_copy(&audio_config_ptr->vendor_req_callback,
+    &devicePtr->vendor_req_callback,sizeof(usb_vendor_req_callback_struct_t));        
 
-	/* Save the callback to ask application for class specific params*/
-	OS_Mem_copy(&audio_config_ptr->class_specific_callback,
-	&devicePtr->class_specific_callback ,sizeof(usb_class_specific_callback_struct_t));                    
+    /* Save the callback to ask application for class specific params*/
+    OS_Mem_copy(&audio_config_ptr->class_specific_callback,
+    &devicePtr->class_specific_callback ,sizeof(usb_class_specific_callback_struct_t));                    
 
-	/* Save the dec  callback to ask application for class specific params*/
-	OS_Mem_copy(audio_config_ptr->desc_callback_ptr,
+    /* Save the dec  callback to ask application for class specific params*/
+    OS_Mem_copy(audio_config_ptr->desc_callback_ptr,
         &devicePtr->desc_callback ,sizeof(usb_desc_request_notify_struct_t)); 
   
-	devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr->handle,
-		USB_AUDIO_UNITS, (uint32_t *)&p_usb_data_ut);
+    devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr->handle,
+        USB_AUDIO_UNITS, (uint32_t *)&p_usb_data_ut);
     
     for(index = 0; index < p_usb_data_ut->count; index++) 
-	{            
-    	devicePtr->audio_ut_data.ut[index].unit_id = p_usb_data_ut->put[index].unit_id;
+    {            
+        devicePtr->audio_ut_data.ut[index].unit_id = p_usb_data_ut->put[index].unit_id;
         devicePtr->audio_ut_data.ut[index].type = p_usb_data_ut->put[index].type;
-	}
+    }
     devicePtr->usb_ut_data = p_usb_data_ut;
  
-	*audioHandle =(uint32_t)devicePtr;
-	devicePtr->user_handle = *audioHandle;       
+    *audioHandle =(uint32_t)devicePtr;
+    devicePtr->user_handle = *audioHandle;       
  
-	usb_device_postinit(controller_id,devicePtr->handle);
+    usb_device_postinit(controller_id,devicePtr->handle);
     return USB_OK;
 }
 
@@ -1699,7 +1769,7 @@ usb_status USB_Class_Audio_Init
  *****************************************************************************/
 usb_status USB_Class_Audio_Deinit
 (
-	audio_handle_t handle
+    audio_handle_t handle
 ) 
 {
 #if !USBCFG_DEV_COMPOSITE
@@ -1707,8 +1777,8 @@ usb_status USB_Class_Audio_Deinit
 #endif
     audio_device_struct_t*  devicePtr;
 
-	devicePtr = (audio_device_struct_t*)handle;
-		
+    devicePtr = (audio_device_struct_t*)handle;
+        
     if(NULL == devicePtr)
     {
         return USBERR_NO_DEVICE_CLASS;
@@ -1722,6 +1792,7 @@ usb_status USB_Class_Audio_Deinit
         error = usb_device_deinit(devicePtr->handle);
 #endif
 
+    USB_Audio_Free_Handle(devicePtr);
     return USB_OK;
 }
 
@@ -1743,25 +1814,25 @@ usb_status USB_Class_Audio_Deinit
 
 usb_status USB_Class_Audio_Cancel
 (
-	audio_handle_t handle,/*[IN]*/
-	uint8_t ep_num,/*[IN]*/
-	uint8_t direction
+    audio_handle_t handle,/*[IN]*/
+    uint8_t ep_num,/*[IN]*/
+    uint8_t direction
 )
 {
-	usb_status error = USB_OK;
+    usb_status error = USB_OK;
     audio_device_struct_t*  devicePtr;
-	
-	devicePtr = (audio_device_struct_t*)handle;	
+    
+    devicePtr = (audio_device_struct_t*)handle; 
 
-	if (NULL == devicePtr)
-	{
-		return USBERR_NO_DEVICE_CLASS;
-	}
-	error = usb_device_cancel_transfer(devicePtr->handle,
+    if (NULL == devicePtr)
+    {
+        return USBERR_NO_DEVICE_CLASS;
+    }
+    error = usb_device_cancel_transfer(devicePtr->handle,
             ep_num,direction);
-	
-	return error;
-	
+    
+    return error;
+    
 }
 #endif
 
@@ -1798,7 +1869,7 @@ usb_status USB_Class_Audio_Send_Data(
     audio_device_struct_t*  devicePtr;
     //PTR_usb_class_audio_queue_t queue_tmp;  
     
-	devicePtr = (audio_device_struct_t*)handle;
+    devicePtr = (audio_device_struct_t*)handle;
 
 #if AUDIO_IMPLEMENT_QUEUING
     ep_desc_data = devicePtr->usb_ep_data; 
@@ -1826,18 +1897,18 @@ usb_status USB_Class_Audio_Send_Data(
         /* increment producer bin by 1*/
         if (producer == (AUDIO_MAX_QUEUE_ELEMS -1))
         {
-        	devicePtr->audio_endpoint_data.ep[index].bin_producer = 0;	
+            devicePtr->audio_endpoint_data.ep[index].bin_producer = 0;  
         }
         else
         {
-        	devicePtr->audio_endpoint_data.ep[index].bin_producer++;
+            devicePtr->audio_endpoint_data.ep[index].bin_producer++;
         }
         devicePtr->audio_endpoint_data.ep[index].queue_num++;
              
         if(devicePtr->audio_endpoint_data.ep[index].queue_num == 1)         
         { 
 #endif  
-        	/*send the IO if there is only one element in the queue */          
+            /*send the IO if there is only one element in the queue */          
             error = USB_Class_Send_Data(devicePtr->class_handle, ep_num, app_buff,size);
 #if AUDIO_IMPLEMENT_QUEUING
         }        
@@ -1881,7 +1952,7 @@ usb_status USB_Class_Audio_Recv_Data
 
     error = usb_device_recv_data(audio_obj_ptr->handle, ep_num, buff_ptr, size);
     
-    return error;	
+    return error;   
 }
 
 #endif /*AUDIO_CONFIG*/

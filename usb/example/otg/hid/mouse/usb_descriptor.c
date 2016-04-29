@@ -44,10 +44,12 @@
  *****************************************************************************/ 
 usb_ep_struct_t g_ep[HID_DESC_ENDPOINT_COUNT] = 
 {
-    HID_ENDPOINT, 
-    USB_INTERRUPT_PIPE, 
-    USB_SEND,
-    HID_ENDPOINT_PACKET_SIZE
+    {
+        HID_ENDPOINT,
+        USB_INTERRUPT_PIPE,
+        USB_SEND,
+        HID_ENDPOINT_PACKET_SIZE,
+    },
 };
 
 /* structure containing details of all the endpoints used by this device */ 

@@ -38,26 +38,20 @@
  * Includes
  *****************************************************************************/
 #include "usb_class_phdc.h"
+#include "usb_phdc_config.h"
 /******************************************************************************
  * Constants - None
  *****************************************************************************/
 
 /******************************************************************************
  * Macro's
- *****************************************************************************/
-#define MAX_QOS_BIN_ELEMS                 (4) 
- /* the num of recieve endpoints */ 
-#define PHDC_RX_ENDPOINTS                 (1)  
-/* the num of transmit endpoints */ 
-#define PHDC_TX_ENDPOINTS                 (2)   
+ *****************************************************************************/ 
 #define SET_FEATURE_REQUEST               (3)
 #define CLEAR_FEATURE_REQUEST             (1)
 #define GET_STATUS_REQUEST                (0)
 #define INVALID_VAL                       (0xFF)
 #define USB_SET_REQUEST_MASK              (0x02)
-#define MAX_PHDC_DEVICE                   (0x01)
 
-#define MAX_ENDPOINT_SUPPORT              (0x03)
 
 /******************************************************************************
  * Types
@@ -157,13 +151,13 @@ typedef struct _phdc_device_struct
 #if META_DATA_MSG_PRE_IMPLEMENTED
     usb_meta_data_msg_preamble_t                    meta_data_msg_preamble; 
 #endif
+    /* used to store a bit map of the active endpoints */
+    os_mutex_handle                                 mutex;
+    uint16_t                                        phdc_ep_has_data;
 #if USB_METADATA_SUPPORTED
     /* used to store whether meta-data feature is active or not */
     bool                                            phdc_metadata;
-#endif 
-    /* used to store a bit map of the active endpoints */
-    uint16_t                                        phdc_ep_has_data;
-    os_mutex_handle                                 mutex;
+#endif
 } phdc_device_struct_t;
 
 /******************************************************************************

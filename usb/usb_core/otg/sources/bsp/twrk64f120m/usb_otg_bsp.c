@@ -46,9 +46,13 @@
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
 #include "MK64F12.h"
 #endif
-#include "usb_otg_khci_max3353_prv.h"
+
+extern uint8_t soc_get_usb_vector_number(uint8_t controller_id);
+
+#include "usb_otg.h"
 #define BSP_USB_INT_LEVEL                (4)
 #define BSPCFG_USB_USE_IRC48M            (0)
+
 #define BSP_USB_OTG_MAX3353_INT_LEVEL    (4)
 /* TODO: Move this structure to other place */
 /* struct contains max3353 init params */
@@ -72,20 +76,22 @@
 #define I2C_CHANNEL                  0                  /* I2C Channel */
 #endif
 #define MAX3353_INT_PIN              14 /*MAX3353_INT_PIN*/
-static const struct usb_khci_max3353_otg_init_struct g_khci0_max3353_otg_init_param = {
-    {
-        (void*)KHCI_BASE_PTR,
-        KHCI_VECTOR,
-        BSP_USB_INT_LEVEL ,
-    },
-    {
-        (void*)MAX_3353_INT_PORT,
-        MAX3353_INT_PIN,
-        MAX3353_VECTOR,
-        BSP_USB_OTG_MAX3353_INT_LEVEL,
-        I2C_CHANNEL,
-        0x2C
-    }
+
+static const usb_khci_otg_int_struct_t g_khci0_otg_init_param = 
+{
+    (void*)KHCI_BASE_PTR,
+    KHCI_VECTOR,
+    BSP_USB_INT_LEVEL ,
+};
+
+static const usb_otg_max3353_init_struct_t g_otg_max3353_init_param = 
+{
+    (void*)MAX_3353_INT_PORT,
+    MAX3353_INT_PIN,
+    MAX3353_VECTOR,
+    BSP_USB_OTG_MAX3353_INT_LEVEL,
+    I2C_CHANNEL,
+    0x2C
 };
 /*FUNCTION*-------------------------------------------------------------------
 *
@@ -159,14 +165,29 @@ void _bsp_usb_otg_max3353_set_pin_int
 #endif
 }
 
-void* bsp_usb_otg_get_max3353_init_param
+void* bsp_usb_otg_get_init_param
 (
     uint8_t controller_id
 )
 {
-    if (controller_id ==0)
+    if (controller_id == USB_CONTROLLER_KHCI_0)
     {
-        return (void*)(&g_khci0_max3353_otg_init_param);
+        return (void*)(&g_khci0_otg_init_param);
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+void* bsp_usb_otg_get_peripheral_init_param
+(
+    uint8_t peripheral_id
+)
+{
+    if (peripheral_id == USB_OTG_PERIPHERAL_MAX3353)
+    {
+        return (void*)(&g_otg_max3353_init_param);
     }
     else
     {
@@ -233,6 +254,32 @@ static int32_t bsp_usb_otg_io_init
         HW_SIM_SCGC4_SET(SIM_BASE, SIM_SCGC4_USBOTG_MASK);
 #endif
         HW_SIM_SCGC5_SET(SIM_BASE, SIM_SCGC5_PORTD_MASK);
+
+#elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
+#if BSPCFG_USB_USE_IRC48M
+		/*
+		* Configure SIM_CLKDIV2: USBDIV = 0, USBFRAC = 0
+		*/
+		SIM_CLKDIV2 &= ~(SIM_CLKDIV2_USBFRAC_MASK | SIM_CLKDIV2_USBDIV_MASK);
+		/* Configure USB to be clocked from IRC 48MHz */
+		SIM_SOPT2 |= (SIM_SOPT2_USBSRC_MASK);
+		SIM_SOPT2 |= SIM_SOPT2_PLLFLLSEL(3);
+		/* Enable USB-OTG IP clocking */
+		SIM_SCGC4 |= (SIM_SCGC4_USBOTG_MASK);
+		/* Enable IRC 48MHz for USB module */
+		USB0_CLK_RECOVER_IRC_EN |= (USB_CLK_RECOVER_IRC_EN_IRC_EN_MASK);
+#else
+		/* Configure USBFRAC = 0, USBDIV = 0 => frq(USBout) = 1 / 1 * frq(PLLin) */
+		/* Configure USB to be clocked from PLL */
+		SIM_SOPT2 |= (SIM_SOPT2_USBSRC_MASK );
+		SIM_SOPT2 |= SIM_SOPT2_PLLFLLSEL(1);
+		/* Configure USB divider to be 120MHz * 2 / 5 = 48 MHz */
+		SIM_CLKDIV2 &= ~(SIM_CLKDIV2_USBFRAC_MASK | SIM_CLKDIV2_USBDIV_MASK);
+		SIM_CLKDIV2 |= SIM_CLKDIV2_USBFRAC_MASK | SIM_CLKDIV2_USBDIV(5 - 1);
+		/* Enable USB-OTG IP clocking */
+		SIM_SCGC4 |= (SIM_SCGC4_USBOTG_MASK);
+#endif
+		SIM_SCGC5 |= SIM_SCGC5_PORTC_MASK;
 #else
 #if BSPCFG_USB_USE_IRC48M
         /*
@@ -297,6 +344,15 @@ int32_t bsp_usb_otg_init(uint8_t controller_id)
         /* reset USB CTRL register */
         HW_USB_USBCTRL_WR(USB0_BASE, 0);
         
+        /* setup interrupt */
+        OS_intr_init((IRQn_Type)soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
+#elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
+        /* MPU is disabled. All accesses from all bus masters are allowed */
+        MPU_CESR=0;
+        /* Configure enable USB regulator for device */
+        SIM_SOPT1 |= (SIM_SOPT1_USBREGEN_MASK);
+        /* reset USB CTRL register */
+        USB0_USBCTRL = (0);
         /* setup interrupt */
         OS_intr_init(soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
 #else

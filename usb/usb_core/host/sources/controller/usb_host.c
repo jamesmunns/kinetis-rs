@@ -56,9 +56,10 @@ extern const struct usb_host_api_functions_struct _usb_khci_host_api_table;
 extern const struct usb_host_api_functions_struct _usb_ehci_host_api_table;
 #endif
 
-static usb_host_state_struct_t g_usb_host[MAX_HOST_NUM] = {0};
+static usb_host_state_struct_t g_usb_host[MAX_HOST_NUM];
 
 extern int32_t bsp_usb_host_init(uint8_t controller_id);
+extern void* _usb_host_dev_get_instance(usb_host_handle, uint8_t, uint8_t, uint8_t);
 #ifdef USBCFG_OTG
 extern usb_otg_handle *  g_usb_otg_handle;
 #endif
@@ -133,7 +134,7 @@ static void _usb_host_get_api(uint8_t controller_id, usb_host_api_functions_stru
 #endif
 
 #if USBCFG_HOST_EHCI
-    if(controller_id == USB_CONTROLLER_EHCI_0)
+    if ((controller_id == USB_CONTROLLER_EHCI_0) || (controller_id == USB_CONTROLLER_EHCI_1))
     {
 		*controller_api_ptr = (usb_host_api_functions_struct_t*)&_usb_ehci_host_api_table;
     }
@@ -469,7 +470,7 @@ usb_status usb_host_init
             error = host_api->host_shutdown(usb_host_ptr->controller_handle);
         }
         _usb_host_release_handle(usb_host_ptr);
-        printf("host create mutex failed\n");
+        USB_PRINTF("host create mutex failed\n");
         return USBERR_ALLOC;
     }
 
@@ -481,7 +482,7 @@ usb_status usb_host_init
             error = host_api->host_shutdown(usb_host_ptr->controller_handle);
         }
         _usb_host_release_handle(usb_host_ptr);
-        printf("host create mutex failed\n");
+        USB_PRINTF("host create mutex failed\n");
         return USBERR_ALLOC;
     }
 
@@ -493,7 +494,7 @@ usb_status usb_host_init
             error = host_api->host_shutdown(usb_host_ptr->controller_handle);
         }
         _usb_host_release_handle(usb_host_ptr);
-        printf("host create mutex failed\n");
+        USB_PRINTF("host create mutex failed\n");
         return USBERR_ALLOC;
     }
 
@@ -715,7 +716,7 @@ usb_status usb_host_send_data
     usb_host_ptr = (usb_host_state_struct_t*)handle;
     if (usb_host_ptr == NULL)
     {
-        printf("invalid handle in usb_host_send_data\n");
+        USB_PRINTF("invalid handle in usb_host_send_data\n");
         return USBERR_INVALID_PARAM;
     }
     pipe_ptr = (pipe_struct_t*)pipe_handle;
@@ -739,11 +740,6 @@ usb_status usb_host_send_data
   
         return USB_log_error(__FILE__,__LINE__,status);
     } /* Endif */
-      
-
-    /*Must Flush and Invalidate the buffer before sending
-    /receiving the data in it */
-    OS_dcache_flush_mlines((void *)tr_ptr->tx_buffer, tr_ptr->tx_length);
 
     /* We have obtained the current TR on the Pipe's TR list 
     ** from _usb_host_set_up_tr
@@ -753,6 +749,13 @@ usb_status usb_host_send_data
     host_api = (usb_host_api_functions_struct_t*)usb_host_ptr->host_controller_api;
     if (host_api->host_send != NULL)
     {
+#if (USBCFG_BUFF_PROPERTY_CACHEABLE) 
+        if (tr_ptr->tx_length > 0)
+        {
+            /* We do flush the buffer first before used by DMA */
+            OS_dcache_flush_mlines((void *)tr_ptr->tx_buffer, tr_ptr->tx_length);
+        }
+#endif
         status = host_api->host_send(usb_host_ptr->controller_handle, pipe_ptr, tr_ptr);
     }
     if (status != USB_OK)
@@ -831,31 +834,31 @@ usb_status usb_host_send_setup
     
     /* true if this setup packet will have a send data phase */
     tr_ptr->send_phase = (bool)!(tr_ptr->setup_packet.bmrequesttype & USB_SETUP_DATA_XFER_DIRECTION);
-       
-    /***************************************************************
-        For data caching it is important that we update the memory
-        with the intended contents.
-        ***************************************************************/
-
-    OS_dcache_flush_mlines((void *)&tr_ptr->setup_packet, sizeof(usb_setup_t));
-    if (tr_ptr->tx_length > 0)
-    {
-        /* We do flush the buffer first before used by DMA */
-        OS_dcache_flush_mlines((void *)tr_ptr->tx_buffer, tr_ptr->tx_length);
-    }
-    else if (tr_ptr->rx_length > 0)
-    {
-        /* To ensure that the USB DMA transfer will work on a buffer that is not cached,
-            ** we invalidate buffer cache lines.
-            */
-        OS_dcache_invalidate_mlines((void *)tr_ptr->rx_buffer, tr_ptr->rx_length);
-    }
 
    /* Call the low-level routine to send a setup packet */
    host_api = (usb_host_api_functions_struct_t*)usb_host_ptr->host_controller_api;
 
    if (host_api->host_send_setup != NULL)
-   {
+   { 
+#if (USBCFG_BUFF_PROPERTY_CACHEABLE)     
+       /***************************************************************
+           For data caching it is important that we update the memory
+           with the intended contents.
+           ***************************************************************/
+       OS_dcache_flush_mlines((void *)&tr_ptr->setup_packet, sizeof(usb_setup_t));
+       if (tr_ptr->tx_length > 0)
+       {
+           /* We do flush the buffer first before used by DMA */
+           OS_dcache_flush_mlines((void *)tr_ptr->tx_buffer, tr_ptr->tx_length);
+       }
+       else if (tr_ptr->rx_length > 0)
+       {
+           /* To ensure that the USB DMA transfer will work on a buffer that is not cached,
+               ** we invalidate buffer cache lines.
+               */
+           OS_dcache_invalidate_mlines((void *)tr_ptr->rx_buffer, tr_ptr->rx_length);
+       }
+#endif 
        status = host_api->host_send_setup(usb_host_ptr->controller_handle, pipe_ptr, tr_ptr);
    }
    if (status == USB_OK)
@@ -938,6 +941,15 @@ usb_status usb_host_recv_data
 
     if (host_api->host_recv != NULL)
     {
+#if (USBCFG_BUFF_PROPERTY_CACHEABLE) 
+        if (tr_ptr->rx_length > 0)
+        {
+            /* To ensure that the USB DMA transfer will work on a buffer that is not cached,
+                ** we invalidate buffer cache lines.
+                */
+            OS_dcache_invalidate_mlines((void *)tr_ptr->rx_buffer, tr_ptr->rx_length);
+        }
+#endif
         status = host_api->host_recv(usb_host_ptr->controller_handle, pipe_ptr, tr_ptr);
     }
     #ifdef _HOST_DEBUG_
@@ -1054,53 +1066,102 @@ usb_status usb_host_bus_control
 usb_status usb_host_dev_remove
    (
       /* [IN] the USB Host state structure */
-      usb_device_instance_handle             dev_handle
+      usb_host_handle                 handle,
+      
+      /* [IN] USB device */
+      usb_device_instance_handle      dev_handle
    )
 {
-    usb_status status = USB_OK;
-    usb_host_state_struct_t*         usb_host_ptr;
-    dev_instance_t*                dev_inst_ptr = (dev_instance_t*)dev_handle;
+    usb_status                      status = USB_OK;
+    usb_host_state_struct_t*        usb_host_ptr;
+    dev_instance_t*                 dev_inst_ptr;
+    uint8_t                         level;
+    usb_interface_descriptor_handle intf_handle;
+    class_handle                    class_handle;
+    uint8_t                         interface_index;
     
     #ifdef _HOST_DEBUG_
-        DEBUG_LOG_TRACE("_usb_host_bus_control");
+        DEBUG_LOG_TRACE("usb_host_dev_remove");
     #endif
  
+    if ((NULL == dev_handle) || (NULL == handle))
+    {
+        return USBERR_INVALID_PARAM;
+    }
+    dev_inst_ptr = (dev_instance_t*)dev_handle;
+    if (handle != dev_inst_ptr->host)
+    {
+        return USBERR_INVALID_PARAM;
+    }
+    
     usb_host_ptr = (usb_host_state_struct_t*)dev_inst_ptr->host;
     if (usb_host_ptr == NULL)
     {
         #ifdef _HOST_DEBUG_
             DEBUG_LOG_TRACE("_usb_host_shutdown");
         #endif
-        return USBERR_ERROR;
+        return USBERR_INVALID_PARAM;
     }
-      
-    if(dev_inst_ptr->level == 1)
+    level = dev_inst_ptr->level;
+    if(level == 1)
     {
-        usb_host_dev_mng_detach(usb_host_ptr, dev_inst_ptr->hub_no, dev_inst_ptr->port_no);
-        usb_host_bus_control(usb_host_ptr,2);
+        //usb_host_dev_mng_detach(usb_host_ptr, dev_inst_ptr->hub_no, dev_inst_ptr->port_no);
+        //usb_host_bus_control(usb_host_ptr,2);
         usb_host_bus_control(usb_host_ptr,1);
     }
     else
-    {       
+    {
 #if USBCFG_HOST_HUB        
         extern void usb_host_hub_Port_Reset(hub_device_struct_t* hub_instance,uint8_t port);
         usb_host_hub_Port_Reset(dev_inst_ptr->hub_instance, dev_inst_ptr->port_no);
-        usb_host_dev_mng_detach(dev_inst_ptr->host, dev_inst_ptr->hub_no, dev_inst_ptr->port_no);
+        //usb_host_dev_mng_detach(dev_inst_ptr->host, dev_inst_ptr->hub_no, dev_inst_ptr->port_no);
 #endif
     }
-      
-    if (status != USB_OK)
+    //usb_host_dev_mng_detach(dev_inst_ptr->host, dev_inst_ptr->hub_no, dev_inst_ptr->port_no);
+    
+    usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no, dev_inst_ptr->port_no);
+    /* search device list for the one being detached */
+    USB_Host_lock();
+    dev_inst_ptr = (dev_instance_t*)_usb_host_dev_get_instance(dev_inst_ptr->host, dev_inst_ptr->hub_no, dev_inst_ptr->port_no, (uint8_t)1);
+
+    if (dev_inst_ptr == NULL)
     {
         #ifdef _HOST_DEBUG_
-            DEBUG_LOG_TRACE("_usb_host_bus_control FAILED");
+            DEBUG_LOG_TRACE("usb_host_dev_remove NULL device pointer");
         #endif
-        return USBERR_ERROR;
+        USB_Host_unlock();
+        return  USBERR_ERROR; /* No match, abandon ship! */
     }
- 
+    
+    dev_inst_ptr->attached = (uint8_t)FALSE;
+    USB_Host_unlock();
+    
+    for (interface_index = 0; interface_index < dev_inst_ptr->configuration.interface_count; ++interface_index)
+    {
+        intf_handle = (usb_interface_descriptor_handle)dev_inst_ptr->interface_info[interface_index].lphostintf;
+        class_handle = (void*)dev_inst_ptr->interface_info[interface_index].lpClassHandle;
+        if (dev_inst_ptr->interface_info[interface_index].open == (uint8_t)TRUE)
+        {
+            status = usb_host_close_dev_interface(dev_inst_ptr->host, dev_handle, intf_handle, class_handle);
+            if (status != USB_OK)
+            {
+                USB_PRINTF("usb_host_dev_remove close interface FAILED\r\n");
+            }
+        }
+    }
+    
+    OS_Mem_free(dev_inst_ptr);
+
+    if(level == 1)
+    {
+        usb_host_bus_control(usb_host_ptr,2);
+        //usb_host_bus_control(usb_host_ptr,1);
+    }
+    
     #ifdef _HOST_DEBUG_
-        DEBUG_LOG_TRACE("_usb_host_bus_control SUCCESSFUL");
+        DEBUG_LOG_TRACE("usb_host_dev_remove SUCCESSFUL");
     #endif
-    return USB_OK;
+    return status;
 } /* Endbody */
 
 /*FUNCTION*----------------------------------------------------------------
@@ -1227,6 +1288,8 @@ usb_status  usb_host_open_dev_interface
     }
     else
     {
+        /* Set interface on the device */
+        dev->state = DEVSTATE_ENUM_OK;
         lpinterface_info->requesting_set_interface = (uint8_t)TRUE;
         usb_host_dev_notify(dev, USB_INTF_OPENED_EVENT);
         return USB_OK;
@@ -1345,20 +1408,23 @@ usb_status  usb_host_close_dev_interface
         }
         else
         {
-            //printf("ERROR in _usb_hostdev_close_interface, no valid lpinterface_info\n");
+            //USB_PRINTF("ERROR in _usb_hostdev_close_interface, no valid lpinterface_info\n");
             continue;
         }
     }
  
     if (interface_open == (uint8_t)FALSE)
     {
-        usb_host_close_pipe(dev_instance_ptr->host, dev_instance_ptr->control_pipe);
-        dev_instance_ptr->control_callback = NULL; /* no surprises */
- 
-        if (dev_instance_ptr->lpConfiguration != NULL)
-        {
-            OS_Mem_free(dev_instance_ptr->lpConfiguration);
-        }
+    	if(dev_instance_ptr->control_pipe != NULL)
+    	{
+			usb_host_close_pipe(dev_instance_ptr->host, dev_instance_ptr->control_pipe);
+			dev_instance_ptr->control_callback = NULL; /* no surprises */
+			
+			if (dev_instance_ptr->lpConfiguration != NULL)
+			{
+				OS_Mem_free(dev_instance_ptr->lpConfiguration);
+			}
+    	}
         OS_Mem_free(dev_instance_ptr);
     }
     return USB_OK;
@@ -1721,7 +1787,7 @@ usb_status usb_host_get_tr
             usb_host_ptr->tr_list[tr_index].send_phase = FALSE;
             *tr_ptr_ptr = &usb_host_ptr->tr_list[tr_index];
             usb_host_ptr->tr_user++;
-            //printf("get tr %d\n", usb_host_ptr->tr_user);
+            //USB_PRINTF("get tr %d\n", usb_host_ptr->tr_user);
             USB_Host_unlock();
             return USB_OK;
         }
@@ -1777,8 +1843,8 @@ usb_status usb_host_release_tr
             usb_host_ptr->tr_list[tr_index].callback_param = NULL;
             usb_host_ptr->tr_list[tr_index].send_phase = FALSE;
             usb_host_ptr->tr_user--;
-            //printf("release tr %d\n", usb_host_ptr->tr_user);
-            //printf("release tr %d\n", release_number++);
+            //USB_PRINTF("release tr %d\n", usb_host_ptr->tr_user);
+            //USB_PRINTF("release tr %d\n", release_number++);
             USB_Host_unlock();
             return USB_OK;
         }
@@ -1786,5 +1852,45 @@ usb_status usb_host_release_tr
     USB_Host_unlock();
     return USBERR_NOT_FOUND;
 }
+
+/*FUNCTION*-------------------------------------------------------------
+*
+*  Function Name  : usb_host_get_host_handle
+*  Returned Value : Status
+*  Comments       :
+* usb_host_get_host is used to get the host handle of the device. 
+*
+*END*-----------------------------------------------------------------*/
+usb_status usb_host_get_host_handle
+   (
+      /*[IN] usb device */
+      usb_device_instance_handle   dev_handle,
+      
+      /*[OUT] host handle */
+      usb_host_handle *            handle
+   )
+{
+    dev_instance_t*           dev_inst_ptr;
+    usb_status                error;
+
+    dev_inst_ptr = (dev_instance_t*)dev_handle;
+
+    if (dev_inst_ptr == NULL)
+    {
+        return USBERR_INVALID_PARAM;
+    }
+
+    error = usb_hostdev_validate(dev_handle);
+ 
+    if (error != USB_OK)
+    {
+        return USB_log_error(__FILE__,__LINE__,USBERR_DEVICE_NOT_FOUND);
+    } /* Endif */
+    
+    *handle = dev_inst_ptr->host;
+    
+    return USB_OK;
+}
+
 #endif
 

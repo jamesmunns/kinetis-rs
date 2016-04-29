@@ -47,13 +47,17 @@
 //#include "fsl_port_hal.h"
 #include <stdio.h>
 #include <stdlib.h>
-//#include "uart/fsl_uart_driver.h"
+//#include "fsl_uart_driver.h"
 #include "fsl_pit_driver.h"
 //#include "fsl_gpio_hal.h"
 //#include "fsl_gpio_common.h"
 #include "board.h"
 
+#if defined (KL25Z4_SERIES) || defined (KL46Z4_SERIES)
+extern void PIT_IRQHandler(void);
+#else
 extern void PIT0_IRQHandler(void);
+#endif
 
 #endif
 #include "usb_host_audio.h"
@@ -113,28 +117,30 @@ audio_control_device_struct_t      audio_stream  = { 0 };
 usb_audio_stream_desc_format_type_t*     frm_type_desc = NULL;
 usb_audio_ctrl_desc_fu_t*                fu_desc = NULL;
 audio_command_t audio_com;
-static uint16_t                  cur_volume, min_volume, max_volume, res_volume;
-static uint16_t                  physic_volume;
-uint8_t                            host_cur_volume = 5;
-uint16_t                          device_volume_step;
+static int16_t                  cur_volume, min_volume, max_volume, res_volume;
+//static int16_t                  physic_volume;
+int8_t                            host_cur_volume = 5;
+int16_t                          device_volume_step;
 static uint8_t                   increase_times = 1;
 static uint8_t                   decrease_times = 1;
 /* Following are buffers for USB, should be aligned at cache boundary */
-uint8_t *g_cur_mute;
-uint8_t *g_cur_vol;
-uint8_t *g_max_vol;
-uint8_t *g_min_vol;
-uint8_t *g_res_vol;
+int8_t *g_cur_mute;
+int8_t *g_cur_vol;
+int8_t *g_max_vol;
+int8_t *g_min_vol;
+int8_t *g_res_vol;
 
 volatile uint32_t                          buffer_1_free = 1; /* buffer is free */
 volatile uint32_t                          buffer_2_free = 1;
 volatile uint8_t                           buffer_read = 1; /* buffer need to be read */
 extern uint8_t                             file_open_count;
 extern uint8_t                             sd_card_state;
+extern uint8_t                             g_interface_number;
 //extern volatile USB_KEYBOARD_DEVICE_STRUCT kbd_hid_device;
 extern os_event_handle                     usb_audio_fu_request;
 extern os_event_handle                     usb_keyboard_event;
 extern os_event_handle                     sd_card_event;
+
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
 extern FILE_PTR                            file_ptr;
 HWTIMER                                    audio_timer;/* hwtimer handle */
@@ -144,7 +150,6 @@ extern const HWTIMER_DEVIF_STRUCT          BSP_HWTIMER1_DEV;
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 extern const unsigned char wav_data[];
 extern const uint16_t wav_size;
-static   uint8_t   time_index;
 #if (USE_RTOS)
 #define keyboard_task_fuc keyboard_task_stun
 #define timer_task_fuc timer_task_stun
@@ -161,6 +166,7 @@ static   timer_object_t time_obj;
 static   uint8_t   time_index;
 
 #endif
+#define NUMBER_OF_BUFFER  0x5
 
 os_event_handle USB_ctr_Event;
 //#define USB_EVENT_CTRL           (0x01)
@@ -255,15 +261,15 @@ static  usb_host_driver_info_t DriverInfoTable[] =
         0,                            /* Reserved                         */
         usb_host_audio_stream_event   /* Application call back function   */
     },  
-	{
-	     {0x00,0x00},                  /* Vendor ID per USB-IF             */
-	     {0x00,0x00},                  /* Product ID per manufacturer      */
-	     USB_CLASS_HID,                /* Class code                       */
-	     USB_SUBCLASS_HID_NONE,        /* Sub-Class code                   */
-	     USB_PROTOCOL_HID_NONE,        /* Protocol                         */
-	     0,                            /* Reserved                         */
-	     usb_host_hid_keyboard_event      /* Application call back function   */
-	},
+    {
+         {0x00,0x00},                  /* Vendor ID per USB-IF             */
+         {0x00,0x00},                  /* Product ID per manufacturer      */
+         USB_CLASS_HID,                /* Class code                       */
+         USB_SUBCLASS_HID_NONE,        /* Sub-Class code                   */
+         USB_PROTOCOL_HID_NONE,        /* Protocol                         */
+         0,                            /* Reserved                         */
+         usb_host_hid_keyboard_event      /* Application call back function   */
+    },
     /* USB 1.1 hub */
    {
 
@@ -315,7 +321,6 @@ os_event_handle                         usb_timer_event;
 TASK_TEMPLATE_STRUCT  MQX_template_list[] =
 {
     { MAIN_TASK,        main_task,      2000L,  8L,  "Main",      MQX_AUTO_START_TASK},
- //   { AUDIO_TASK,       Audio_Task,     4000L,  10L, "Audio",     MQX_USER_TASK},
     { HID_KEYB_TASK,    keyboard_task_stun,  4000L,  9L,  "Keyboard",  MQX_USER_TASK},
     { HID_KEYB_TASK,    timer_task_stun,  1000L,  9L,  "Timer",  MQX_USER_TASK},
     { SDCARD_TASK,      sdcard_task,    2000L,  11L, "Sdcard",    MQX_USER_TASK},
@@ -334,9 +339,9 @@ static int errcount = 0;
 
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
-void audio_timer_isr()
+void audio_timer_isr(uint32_t channel)
 {
-	OS_Event_set(usb_timer_event, timer_out_event);
+    OS_Event_set(usb_timer_event, timer_out_event);
 
 }
 
@@ -353,10 +358,17 @@ void pit_single_timer_init()
         .isTimerChained = false,
         .periodUs = timerPeriod
     };
- 
+    
+#if defined (KL25Z4_SERIES) || defined (KL46Z4_SERIES)
+    NVIC_SetPriority(PIT_IRQn, 4);
+
+    OS_install_isr(PIT_IRQn, PIT_IRQHandler, NULL);
+#else 
     NVIC_SetPriority(PIT0_IRQn, 4);
 
     OS_install_isr(PIT0_IRQn, PIT0_IRQHandler, NULL);
+#endif
+    
     /* Init pit module and enable run in debug */
     PIT_DRV_Init(0, true);
 
@@ -366,31 +378,32 @@ void pit_single_timer_init()
     /*Register pit isr callback function.*/
     PIT_DRV_InstallCallback(0, 0, audio_timer_isr);
       
-   
-    /* Set timer0 period and start it.*/
-    //pit_set_timer_period_us(0, timerPeriod);
-
 }
 
 #else
 void audio_timer_isr(void *p)
 {
-	OS_Event_set(usb_timer_event, timer_out_event);
+    OS_Event_set(usb_timer_event, timer_out_event);
 }
 #endif
 
 void timer_task(uint32_t param)
-{	
-	if (OS_Event_check_bit(usb_timer_event, timer_out_event))
+{   
+	static uint16_t index = 0;
+    if (OS_Event_check_bit(usb_timer_event, timer_out_event))
     {
-		OS_Event_clear(usb_timer_event, timer_out_event);
-		if(( g_interface_stream_number == 0)||(g_interface_keyboard_number == 0))
-				return;
-		audio_com.callback_fn = usb_host_audio_tr_callback;
+    OS_Event_clear(usb_timer_event, timer_out_event);
+        if( g_interface_stream_number == 0)
+        return;
+        audio_com.callback_fn = usb_host_audio_tr_callback;
         audio_com.callback_param = 0;
         {
-            if(USB_OK != usb_class_audio_send_data(&audio_com,(unsigned char *)wav_buff,packet_size))
+            if(USB_OK != usb_class_audio_send_data(&audio_com,(unsigned char 
+                    *)&wav_buff[packet_size*index],packet_size))
             errcount ++;
+            index ++;
+            if(index == NUMBER_OF_BUFFER)
+                    index = 0;
         }
         //audio_stream.dev_state = USB_DEVICE_IDLE;
     }
@@ -408,8 +421,8 @@ void timer_task_stun(uint32_t param)
 {
     while(1)
     {
-		OS_Event_wait(usb_timer_event, timer_out_event, FALSE, 0);
-		timer_task(param);
+        OS_Event_wait(usb_timer_event, timer_out_event, FALSE, 0);
+        timer_task(param);
     }
 }
 
@@ -426,18 +439,18 @@ void APP_init(void)
     usb_status           status = USB_OK;
     uint32_t task_id;
    #if (defined _MCF51MM256_H) || (defined _MCF51JE256_H)
-	usb_int_dis();
+    usb_int_dis();
 #endif 
     /*
     ** It means that we are going to act like host, so we initialize the
     ** host stack. This call will allow USB system to allocate memory for
     ** data structures, it uses later (e.g pipes etc.).
     */
-	status = usb_host_init(CONTROLLER_ID,							/*  */
-			&host_handle);							/* Returned pointer */
+    status = usb_host_init(CONTROLLER_ID,                           /*  */
+            &host_handle);                          /* Returned pointer */
     if (status != USB_OK) 
     {
-        printf("\n\rUSB Host Initialization failed. STATUS: %x", status);
+        USB_PRINTF("\n\rUSB Host Initialization failed. STATUS: %x", status);
 
     }
     /*
@@ -449,7 +462,7 @@ void APP_init(void)
     DriverInfoTable
     );
     if (status != USB_OK) {
-        printf("\n\rDriver Registration failed. STATUS: %x", status);
+        USB_PRINTF("\n\rDriver Registration failed. STATUS: %x", status);
     }
 
     /* Creat lwevents*/
@@ -459,47 +472,53 @@ void APP_init(void)
    sd_card_event = OS_Event_create(0);/* manually clear */
 #endif
   #if (defined _MCF51MM256_H) || (defined _MCF51JE256_H)
-	usb_int_en();
+    usb_int_en();
 #endif     
-    if (NULL == (g_cur_mute = (uint8_t *)OS_Mem_alloc_uncached_zero(4)))
+    if (NULL == (g_cur_mute = (int8_t *)OS_Mem_alloc_uncached_zero(4)))
     {
-      printf("\r\n memory allocation failed.\r\n");
+      USB_PRINTF("\r\n memory allocation failed.\r\n");
       return;
     }
-    if (NULL == (g_cur_mute = (uint8_t *)OS_Mem_alloc_uncached_zero(4)))
+    if (NULL == (g_cur_mute = (int8_t *)OS_Mem_alloc_uncached_zero(4)))
     {
-      printf("\r\n memory allocation failed.\r\n");
+      USB_PRINTF("\r\n memory allocation failed.\r\n");
       return;
     }
-    if (NULL == (g_cur_vol = (uint8_t *)OS_Mem_alloc_uncached_zero(4)))
+    if (NULL == (g_cur_vol = (int8_t *)OS_Mem_alloc_uncached_zero(4)))
     {
-      printf("\r\n memory allocation failed.\r\n");
+      USB_PRINTF("\r\n memory allocation failed.\r\n");
       return;
     }
-    if (NULL == (g_max_vol = (uint8_t *)OS_Mem_alloc_uncached_zero(4)))
+    if (NULL == (g_max_vol = (int8_t *)OS_Mem_alloc_uncached_zero(4)))
     {
-      printf("\r\n memory allocation failed.\r\n");
+      USB_PRINTF("\r\n memory allocation failed.\r\n");
       return;
     }
-    if (NULL == (g_min_vol = (uint8_t *)OS_Mem_alloc_uncached_zero(4)))
+    if (NULL == (g_min_vol = (int8_t *)OS_Mem_alloc_uncached_zero(4)))
     {
-      printf("\r\n memory allocation failed.\r\n");
+      USB_PRINTF("\r\n memory allocation failed.\r\n");
       return;
     }
-    if (NULL == (g_res_vol = (uint8_t *)OS_Mem_alloc_uncached_zero(4)))
+    if (NULL == (g_res_vol = (int8_t *)OS_Mem_alloc_uncached_zero(4)))
     {
-      printf("\r\n memory allocation failed.\r\n");
+      USB_PRINTF("\r\n memory allocation failed.\r\n");
       return;
     }
+    if (NULL  == (endp = OS_Mem_alloc_uncached_zero(sizeof(endpoint_descriptor_t))))
+    {
+     USB_PRINTF("\nMemory allocation for current sampling failed.\n");
+     return;
+    }
+    
     USB_ctr_Event = OS_Event_create(0);
     usb_timer_event = OS_Event_create(0);
 
-    task_id = OS_Task_create((task_start_t)keyboard_task_fuc, (void*)host_handle, (uint32_t)10, 4000, (char*)"Keyboard", NULL);
+    task_id = OS_Task_create((task_start_t)keyboard_task_fuc, (void*)host_handle, (uint32_t)9, 4000, (char*)"Keyboard", NULL);
     if (task_id == 0) {
         return;
     }
 
-    task_id = OS_Task_create((task_start_t)timer_task_fuc, (void*)host_handle, (uint32_t)9, 2000, (char*)"timer", NULL);
+    task_id = OS_Task_create((task_start_t)timer_task_fuc, (void*)host_handle, (uint32_t)10, 2000, (char*)"timer", NULL);
     if (task_id == 0) {
        return;
     }
@@ -519,7 +538,9 @@ void APP_init(void)
     pit_single_timer_init();
 #endif
 
-    printf("\r\n  USB Audio Speaker Host Demo\n\r");
+    USB_PRINTF("USB Audio Speaker Host Demo\n\r");
+    USB_PRINTF("\r\n");
+    USB_PRINTF("!!Please select the device audio speaker key map MACRO in the hidkeyboard.c and recompile the example, the default device is EDIFIER R18USB.\r\n");
     /* The main task has done its job, so exit */
 } /* Endbody */
 typedef enum
@@ -528,6 +549,8 @@ typedef enum
     AUDIO_GET_MAX_VOLUME,
     AUDIO_GET_RES_VOLUME,
     AUDIO_CONFIG_CHANNEL,
+    AUDIO_CONFIG_CHANNEL1_VOL,
+    AUDIO_CONFIG_CHANNEL2_VOL,
     AUDIO_INCREASE_VOLUME,
     AUDIO_DECREASE_VOLUME,
     AUDIO_DONE,
@@ -544,24 +567,24 @@ void APP_task()
     if (OS_Event_check_bit(USB_ctr_Event,USB_EVENT_CTRL)) 
     {
         OS_Event_clear(USB_ctr_Event,USB_EVENT_CTRL);
-		if(g_interface_control_number == 0)
-			return;
+        if(g_interface_control_number == 0)
+            return;
         status = usb_host_open_dev_interface(host_handle, audio_control.dev_handle, audio_control.intf_handle, (void *)&audio_control.class_handle);
         if (status != USB_OK)
         {
-            printf("\n\rError in _usb_host_open_dev_interface: %x\n\r", status);
+            USB_PRINTF("\n\rError in _usb_host_open_dev_interface: %x\n\r", status);
             return;
         } /* Endif */
         audio_stream.dev_state = USB_DEVICE_INTERFACED;
     }
-	if (OS_Event_check_bit(USB_ctr_Event,USB_EVENT_CTRL_DETACH))
-	{
-	     OS_Event_clear(USB_ctr_Event,USB_EVENT_CTRL_DETACH);
-		 g_interface_control_number = 0;
-	     status = usb_host_close_dev_interface(host_handle, audio_control.dev_handle, audio_control.intf_handle, audio_control.class_handle);
+    if (OS_Event_check_bit(USB_ctr_Event,USB_EVENT_CTRL_DETACH))
+    {
+         OS_Event_clear(USB_ctr_Event,USB_EVENT_CTRL_DETACH);
+         g_interface_control_number = 0;
+         status = usb_host_close_dev_interface(host_handle, audio_control.dev_handle, audio_control.intf_handle, audio_control.class_handle);
             if (status != USB_OK)
             {
-                printf("\n\rError in _usb_host_close_dev_interface: %x\n\r", status);
+                USB_PRINTF("\n\rError in _usb_host_close_dev_interface: %x\n\r", status);
             } /* Endif */
             audio_control.dev_handle = NULL;
             audio_control.intf_handle = NULL;
@@ -569,16 +592,16 @@ void APP_task()
             
             device_direction = USB_AUDIO_DEVICE_DIRECTION_UNDEFINE;
 
-	}
-	if (OS_Event_check_bit(USB_ctr_Event,USB_EVENT_STREAM_DETACH))
-	{
-	    OS_Event_clear(USB_ctr_Event,USB_EVENT_STREAM_DETACH);
+    }
+    if (OS_Event_check_bit(USB_ctr_Event,USB_EVENT_STREAM_DETACH))
+    {
+        OS_Event_clear(USB_ctr_Event,USB_EVENT_STREAM_DETACH);
 
-			g_interface_stream_number = 0;
+        g_interface_stream_number = 0;
             status = usb_host_close_dev_interface(host_handle, audio_stream.dev_handle, audio_stream.intf_handle, audio_stream.class_handle);
             if (status != USB_OK)
             {
-                printf("error in _usb_hostdev_close_interface %x\n\r", status);
+                USB_PRINTF("error in _usb_hostdev_close_interface %x\n\r", status);
             }
             audio_stream.dev_handle = NULL;
             audio_stream.intf_handle = NULL;
@@ -586,14 +609,14 @@ void APP_task()
 #if  (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
             audio_state = AUDIO_IDLE;
             hwtimer_stop(&audio_timer);
-            printf("hwtimer_stop\n\r");
+            USB_PRINTF("hwtimer_stop\n\r");
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
             RemoveTimerQ(time_index);
 #else
             PIT_DRV_StopTimer(0,0);
 #endif    
 
-	}
+    }
     if (USB_DEVICE_INUSE == audio_stream.dev_state)
     {    
         switch (audio_statue)
@@ -626,28 +649,30 @@ void APP_task()
                    }
           }
           break;
-          
+          default:
+          break;
         }
     }
     
     if (USB_DEVICE_INTERFACED == audio_stream.dev_state)
     {
-        audio_com.class_control_handle = (class_handle)audio_control.class_handle;
-        audio_com.callback_fn = usb_host_audio_request_ctrl_callback;
-        control_feature.FU = USB_AUDIO_CTRL_FU_VOLUME;
-        audio_com.callback_param = (void *)&control_feature;
+        
 
 
         /* Get min volume */
         switch( audio_statue )
         {
             case AUDIO_GET_MIN_VOLUME:
-				OS_Event_clear(usb_audio_fu_request, FU_VOLUME_MASK);
+                OS_Event_clear(usb_audio_fu_request, FU_VOLUME_MASK);
+                audio_com.class_control_handle = (class_handle)audio_control.class_handle;
+                audio_com.callback_fn = usb_host_audio_request_ctrl_callback;
+                control_feature.FU = USB_AUDIO_CTRL_FU_VOLUME;
+                audio_com.callback_param = (void *)&control_feature;
                 if(USB_OK == usb_class_audio_feature_command(&audio_com,1,(void *)g_min_vol,USB_AUDIO_GET_MIN_VOLUME))
                     audio_statue = AUDIO_GET_MAX_VOLUME;
                 else
                     audio_statue = AUDIO_DONE;
-                printf("AUDIO_GET_MIN_VOLUME\n\r");
+                USB_PRINTF("AUDIO_GET_MIN_VOLUME\n\r");
                 break;
 
             case AUDIO_GET_MAX_VOLUME:
@@ -659,7 +684,7 @@ void APP_task()
                         audio_statue = AUDIO_GET_RES_VOLUME;
                     else
                         audio_statue = AUDIO_DONE;
-                    printf("AUDIO_GET_MAX_VOLUME\n\r");
+                    USB_PRINTF("AUDIO_GET_MAX_VOLUME\n\r");
                 }
                 break;
 
@@ -667,93 +692,120 @@ void APP_task()
                 /* Get res volume */
                 if (OS_Event_check_bit(usb_audio_fu_request, FU_VOLUME_MASK))
                 {
-					OS_Event_clear(usb_audio_fu_request, FU_VOLUME_MASK);
-					if(USB_OK == usb_class_audio_feature_command(&audio_com,1,(void *)g_res_vol,USB_AUDIO_GET_RES_VOLUME))
-						audio_statue = AUDIO_CONFIG_CHANNEL;
-					else
-						audio_statue = AUDIO_DONE;
+                    OS_Event_clear(usb_audio_fu_request, FU_VOLUME_MASK);
+                    if(USB_OK == usb_class_audio_feature_command(&audio_com,1,(void *)g_res_vol,USB_AUDIO_GET_RES_VOLUME))
+                        audio_statue = AUDIO_CONFIG_CHANNEL;
+                    else
+                        audio_statue = AUDIO_DONE;
                 }
                 break;
 
             case AUDIO_CONFIG_CHANNEL:
-				if (OS_Event_check_bit(usb_audio_fu_request, FU_VOLUME_MASK))
-				{
-				OS_Event_clear(usb_audio_fu_request, FU_VOLUME_MASK);
-					min_volume = (g_min_vol[1]<<8)|(g_min_vol[0]);
+                if (OS_Event_check_bit(usb_audio_fu_request, FU_VOLUME_MASK))
+                {
+                OS_Event_clear(usb_audio_fu_request, FU_VOLUME_MASK);
+                    min_volume = (g_min_vol[1]<<8)|(g_min_vol[0]);
                     max_volume = (g_max_vol[1]<<8)|(g_max_vol[0]);
                     res_volume = (g_res_vol[1]<<8)|(g_res_vol[0]);
-                    printf("  %x  %x  Res %x \r\n", (uint32_t)*(uint32_t *)g_min_vol, (uint32_t)*(uint32_t *)g_max_vol ,res_volume);
-                    control_feature.FU = 0;
+                    USB_PRINTF("  %x  %x  Res %x \r\n", (uint32_t)*(uint32_t *)g_min_vol, (uint32_t)*(uint32_t *)g_max_vol ,res_volume);
+                    control_feature.FU = USB_AUDIO_CTRL_FU_MUTE;
                     /* Synchronize host volume and device volume */
-                    device_volume_step = (uint16_t)(((uint16_t)(max_volume) - (uint16_t)(min_volume))/(HOST_MAX_VOLUME - HOST_MIN_VOLUME));
-                    cur_volume = (uint16_t)(min_volume + device_volume_step*host_cur_volume);
+                    device_volume_step = (int16_t)(((int16_t)(max_volume) - (int16_t)(min_volume))/(HOST_MAX_VOLUME - HOST_MIN_VOLUME));
+                    cur_volume = (int16_t)(min_volume + device_volume_step*host_cur_volume);
                     /* Calculate physical volume(dB) */
-                    physic_volume = ((uint16_t)(cur_volume)*39)/10000;
-                    g_cur_vol[0] = (uint8_t)((uint16_t)(cur_volume)&0x00FF);
-                    g_cur_vol[1] = (uint8_t)((uint16_t)(cur_volume)>>8);
-					config_channel(fu_desc,frm_type_desc->bnrchannels);
-					audio_statue = AUDIO_DONE;
-				}
+                    //physic_volume = ((int16_t)(cur_volume)*39)/10000;
+                    g_cur_vol[0] = (int8_t)((int16_t)(cur_volume)&0x00FF);
+                    g_cur_vol[1] = (int8_t)((int16_t)(cur_volume)>>8);
+                    //config_channel(fu_desc,frm_type_desc->bnrchannels);
+                    g_cur_mute[0] = FALSE;
+                    usb_class_audio_feature_command(&audio_com,0,(void *)g_cur_mute,USB_AUDIO_SET_CUR_MUTE);
+		    audio_statue = AUDIO_CONFIG_CHANNEL1_VOL;
+                }
                 break;
 
-			case AUDIO_INCREASE_VOLUME:
-				audio_statue = AUDIO_DONE;
-				break;
+             case AUDIO_CONFIG_CHANNEL1_VOL:
+                if (OS_Event_check_bit(usb_audio_fu_request, FU_MUTE_MASK)) 
+                {
+                    OS_Event_clear(usb_audio_fu_request, FU_MUTE_MASK);
+                    control_feature.FU = USB_AUDIO_CTRL_FU_VOLUME;
+                    audio_com.callback_param = (void *)&control_feature;
+                    usb_class_audio_feature_command(&audio_com,1,(void *)g_cur_vol,USB_AUDIO_SET_CUR_VOLUME);
+                    audio_statue = AUDIO_CONFIG_CHANNEL2_VOL;
+                }
+                break;
+                
+             case AUDIO_CONFIG_CHANNEL2_VOL:
+                if (OS_Event_check_bit(usb_audio_fu_request, FU_VOLUME_MASK)) 
+                {
+                    OS_Event_clear(usb_audio_fu_request, FU_VOLUME_MASK);
+                    control_feature.FU = USB_AUDIO_CTRL_FU_VOLUME;
+                    audio_com.callback_param = (void *)&control_feature;
+                    usb_class_audio_feature_command(&audio_com,2,(void *)g_cur_vol,USB_AUDIO_SET_CUR_VOLUME);
+                    audio_statue = AUDIO_DONE;
+                }
+                break;
+                
+                
+          
 
-			case AUDIO_DECREASE_VOLUME:
-				audio_statue = AUDIO_DONE;
-				break;
+            case AUDIO_INCREASE_VOLUME:
+                audio_statue = AUDIO_DONE;
+                break;
+
+            case AUDIO_DECREASE_VOLUME:
+                audio_statue = AUDIO_DONE;
+                break;
 
             case AUDIO_DONE:
                 /* Audio device information */
-                printf("Audio device information:\r\n");
-                printf("   - Device type    : %s\n\r", device_string);
+                USB_PRINTF("Audio device information:\r\n");
+                USB_PRINTF("   - Device type    : %s\n\r", device_string);
                 for (bsamfreqtype_index =0; bsamfreqtype_index < frm_type_desc->bsamfreqtype; bsamfreqtype_index++)
                 {
-                    printf("   - Frequency device support      : %d Hz\n\r", ((frm_type_desc->tsamfreq[bsamfreqtype_index][2]) << 16) |
+                    USB_PRINTF("   - Frequency device support      : %d Hz\n\r", ((frm_type_desc->tsamfreq[bsamfreqtype_index][2]) << 16) |
                     ((frm_type_desc->tsamfreq[bsamfreqtype_index][1]) << 8)  |
                     ((frm_type_desc->tsamfreq[bsamfreqtype_index][0]) << 0));
                 }
-                    printf("   - Bit resolution : %d bits\n\r", frm_type_desc->bbitresolution);
-                    printf("   - Number of channels : %d channels\n\r", frm_type_desc->bnrchannels);
-                    printf("   - Transfer type : %s\n\r", TransferType[(endp->bmAttributes)&EP_TYPE_MASK]);
-                    printf("   - Sync type : %s\n\r", SyncType[(endp->bmAttributes>>2)&EP_TYPE_MASK]);
-                    printf("   - Usage type : %s\n\r", DataType[(endp->bmAttributes>>4)&EP_TYPE_MASK]);
+                    USB_PRINTF("   - Bit resolution : %d bits\n\r", frm_type_desc->bbitresolution);
+                    USB_PRINTF("   - Number of channels : %d channels\n\r", frm_type_desc->bnrchannels);
+                    USB_PRINTF("   - Transfer type : %s\n\r", TransferType[(endp->bmAttributes)&EP_TYPE_MASK]);
+                    USB_PRINTF("   - Sync type : %s\n\r", SyncType[(endp->bmAttributes>>2)&EP_TYPE_MASK]);
+                    USB_PRINTF("   - Usage type : %s\n\r", DataType[(endp->bmAttributes>>4)&EP_TYPE_MASK]);
                 if (device_direction == USB_AUDIO_DEVICE_DIRECTION_OUT)
                 {
-                    printf("The device is unsupported!\r\n");
+                    USB_PRINTF("The device is unsupported!\r\n");
                 }
                 else
                 {
-                    printf("This audio device supports play audio files with these properties:\r\n");
-                    printf("   - Sample rate    :\r\n");
+                    USB_PRINTF("This audio device supports play audio files with these properties:\r\n");
+                    USB_PRINTF("   - Sample rate    :\r\n");
                     for (bsamfreqtype_index =0; bsamfreqtype_index < frm_type_desc->bsamfreqtype; bsamfreqtype_index++)
                     {
-                        printf("                    : %d Hz\n\r", ((frm_type_desc->tsamfreq[bsamfreqtype_index][2]) << 16) |
+                        USB_PRINTF("                    : %d Hz\n\r", ((frm_type_desc->tsamfreq[bsamfreqtype_index][2]) << 16) |
                         ((frm_type_desc->tsamfreq[bsamfreqtype_index][1]) << 8)  |
                         ((frm_type_desc->tsamfreq[bsamfreqtype_index][0]) << 0));
                     }
-                    printf("   - Sample size    : %d bits\n\r", frm_type_desc->bbitresolution);
-                    printf("   - Number of channels : %d channels\n\r", frm_type_desc->bnrchannels);
+                    USB_PRINTF("   - Sample size    : %d bits\n\r", frm_type_desc->bbitresolution);
+                    USB_PRINTF("   - Number of channels : %d channels\n\r", frm_type_desc->bnrchannels);
 #if  (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
-                    printf("Type play command to play audio files:\r\n");
+                    USB_PRINTF("Type play command to play audio files:\r\n");
                     for (bsamfreqtype_index =0; bsamfreqtype_index < frm_type_desc->bsamfreqtype; bsamfreqtype_index++)
                     {
-                        printf("Type play a:\\%dk_%dbit_%dch.wav to play the file\n\r",\
+                        USB_PRINTF("Type play a:\\%dk_%dbit_%dch.wav to play the file\n\r",\
                         (((frm_type_desc->tsamfreq[bsamfreqtype_index][2]) << 16) |
                         ((frm_type_desc->tsamfreq[bsamfreqtype_index][1]) << 8)  |
                         ((frm_type_desc->tsamfreq[bsamfreqtype_index][0]) << 0))/1000,\
                         frm_type_desc->bbitresolution,\
                         frm_type_desc->bnrchannels);
                     }
-                    printf("\n\rCurrent physical volume: %d dB\n\r",physic_volume);
+                    //USB_PRINTF("\n\rCurrent physical volume: %d dB\n\r",physic_volume);
 #else
-					 printf("USB Speaker example will loop playback %dk_%dbit_%dch format aduio.\r\n",\
-	                        (((frm_type_desc->tsamfreq[0][2]) << 16) |
-	                        ((frm_type_desc->tsamfreq[0][1]) << 8)  |
-	                        ((frm_type_desc->tsamfreq[0][0]) << 0))/1000,\
-	                        frm_type_desc->bbitresolution,\
-	                        frm_type_desc->bnrchannels);
+                     USB_PRINTF("USB Speaker example will loop playback %dk_%dbit_%dch format aduio.\r\n",\
+                            (((frm_type_desc->tsamfreq[0][2]) << 16) |
+                            ((frm_type_desc->tsamfreq[0][1]) << 8)  |
+                            ((frm_type_desc->tsamfreq[0][0]) << 0))/1000,\
+                            frm_type_desc->bbitresolution,\
+                            frm_type_desc->bnrchannels);
 #endif
                 }
                 freq = ((frm_type_desc->tsamfreq[0][2]) << 16) |
@@ -766,7 +818,7 @@ void APP_task()
 #if  (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
                 if (USB_OK != hwtimer_init(&audio_timer, &BSP_HWTIMER1_DEV, BSP_HWTIMER1_ID, (BSP_DEFAULT_MQX_HARDWARE_INTERRUPT_LEVEL_MAX + 1)))
                 {
-                    printf("\r\n hwtimer initialization failed.\r\n");
+                    USB_PRINTF("\r\n hwtimer initialization failed.\r\n");
                     return;
                 }
                 hwtimer_set_freq(&audio_timer, BSP_HWTIMER1_SOURCE_CLK, AUDIO_SPEAKER_FREQUENCY);
@@ -774,8 +826,6 @@ void APP_task()
 
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
                 USB_Prepare_Data();
-                //pit0_init();
-                //EnableTimer1Interrupt();
                 TimerQInitialize(0);
                 time_obj.ms_count = 1;
                 time_obj.pfn_timer_callback = (pfntimer_callback_t)audio_timer_isr;
@@ -799,7 +849,7 @@ void APP_task()
         /* Check if SD card disconnected */
         if ((SD_CARD_READY != sd_card_state) || read_data_err)
         {
-        printf("  Error: Can't read audio file\n\r");
+        USB_PRINTF("  Error: Can't read audio file\n\r");
         hwtimer_stop(&audio_timer);
         audio_state = AUDIO_IDLE;
         fclose(file_ptr);
@@ -812,7 +862,7 @@ void APP_task()
             /* Check if audio speaker disconnected */
             if (USB_DEVICE_DETACHED == audio_stream.dev_state)
             {
-                printf("	Error: Audio Speaker is disconnected\n\r");
+                USB_PRINTF("    Error: Audio Speaker is disconnected\n\r");
                 hwtimer_stop(&audio_timer);
                 audio_state = AUDIO_IDLE;
                 fclose(file_ptr);
@@ -835,14 +885,14 @@ void APP_task()
         else
         {
             hwtimer_stop(&audio_timer);
-            printf("\n\rFinished");
+            USB_PRINTF("\n\rFinished");
             audio_state = AUDIO_IDLE;
             fclose(file_ptr);
             file_open_count --;
         }
     }
     OS_Time_delay(1);
-#endif	
+#endif  
 }  
 /*FUNCTION*----------------------------------------------------------------
 *
@@ -861,8 +911,8 @@ void main_task ( uint32_t param )
     ** Infinite loop, waiting for events requiring action
     */
     for ( ; ; ) {
-    	APP_task(); 
-    	
+        APP_task(); 
+        
     } /* Endfor */
 } /* Endbody */
 
@@ -878,12 +928,13 @@ void main_task ( uint32_t param )
 static void USB_Prepare_Data(void)
 {
     static uint32_t read_count=0;
+	static uint8_t index = 0;
     uint32_t i;
     for(i=0;i<packet_size;i++)
     {
         if(1==buffer_read) /* read data from buffer 1 */
         {
-            wav_buff[i]=sd_buff_1[read_count];
+            wav_buff[index*packet_size+i]=sd_buff_1[read_count];
             read_count++;
             if (MAX_SD_READ==read_count)
             {
@@ -894,7 +945,7 @@ static void USB_Prepare_Data(void)
         }
         else                 /* read data from buffer 2 */
         {
-            wav_buff[i]=sd_buff_2[read_count];
+            wav_buff[index*packet_size+i]=sd_buff_2[read_count];
             read_count++;
             if (MAX_SD_READ==read_count)
             {
@@ -904,22 +955,28 @@ static void USB_Prepare_Data(void)
             }
         }
     }
+    index ++;
+    if(index == NUMBER_OF_BUFFER)
+    	index = 0;
 }
 #else
 static void USB_Prepare_Data(void)
 {
    uint32_t resolution_size = packet_size >> 5;
    static uint32_t audio_position = 0;
+   static uint8_t index = 0;
    uint8_t k, j=0;
    /* copy data to buffer */
 
    for(k = 0; k < 32; k++, audio_position++)
    {
-		 for(j = 0; j < resolution_size; j++)
-			 wav_buff[j*32+k] = wav_data[audio_position];
+           for(j = 0; j < resolution_size; j++)
+                   wav_buff[index*packet_size+j*32+k] = wav_data[audio_position];
 
    }
-
+    index ++;
+    if(index == NUMBER_OF_BUFFER)
+        index = 0;
 	if(audio_position >= 140000)
 		audio_position = 0;
 }
@@ -1097,9 +1154,9 @@ uint32_t status
 )
 {
 
-  	USB_Prepare_Data();
-	if( status == USB_OK)
-		audio_stream.dev_state =USB_DEVICE_INUSE;
+    USB_Prepare_Data();
+    if( status == USB_OK)
+        audio_stream.dev_state =USB_DEVICE_INUSE;
 }
 
 usb_interface_descriptor_handle audio_control_get_interface()
@@ -1133,10 +1190,9 @@ uint32_t                          event_code
 {
     usb_device_interface_struct_t* pHostIntf = (usb_device_interface_struct_t*)intf_handle;
     interface_descriptor_t* intf_ptr = pHostIntf->lpinterfaceDesc;
-    usb_status status;
 
     switch (event_code) {
-        case USB_CONFIG_EVENT:	 	
+        case USB_CONFIG_EVENT:      
             if((audio_control.dev_state == USB_DEVICE_ATTACHED) )
             {
                 audio_control.dev_handle  = dev_handle;
@@ -1145,70 +1201,73 @@ uint32_t                          event_code
             }
             else
             {
-                printf("Audio device already attached\n\r");
+                USB_PRINTF("Audio device already attached\n\r");
                 //fflush(stdout);
             }
-            printf("----- Audio control interface: USB_CONFIG_EVENT -----\r\n");
+            USB_PRINTF("----- Audio control interface: USB_CONFIG_EVENT -----\r\n");
             break;
         /* Drop through into attach, same processing */
         case USB_ATTACH_EVENT:
             /* initialize new interface members and select this interface */
             g_interface_control_info[g_interface_control_number] = pHostIntf;
             g_interface_control_number++;
-            audio_control.dev_state   = USB_DEVICE_ATTACHED;	
-            printf("----- Audio control interface: attach event -----\r\n");
+            audio_control.dev_state   = USB_DEVICE_ATTACHED;    
+            USB_PRINTF("----- Audio control interface: attach event -----\r\n");
             //fflush(stdout);
-            printf("State = attached");
-            printf("  Class = %d", intf_ptr->bInterfaceClass);
-            printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-            printf("  Protocol = %d\n\r", intf_ptr->bInterfaceProtocol);
+            USB_PRINTF("State = attached");
+            USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+            USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+            USB_PRINTF("  Protocol = %d\n\r", intf_ptr->bInterfaceProtocol);
             break;
 
         case USB_INTF_OPENED_EVENT:
             {
-                printf("----- Audio control interface: interface event -----\r\n");
+                USB_PRINTF("----- Audio control interface: interface event -----\r\n");
                 usb_audio_ctrl_desc_header_t*   header_desc = NULL;
                 usb_audio_ctrl_desc_it_t*        it_desc  = NULL;
                 usb_audio_ctrl_desc_ot_t*       ot_desc  = NULL;
 
                 /* finds all the descriptors in the configuration */
                 if (USB_OK != usb_class_audio_control_get_descriptors(dev_handle,
-                		intf_handle,
-                		&header_desc,
-                		&it_desc,
-                		&ot_desc,
-                		&fu_desc))
+                        intf_handle,
+                        &header_desc,
+                        &it_desc,
+                        &ot_desc,
+                        &fu_desc))
                 {
                     ;//break;
                 };
 
                 /* set all info got from descriptors to the class interface struct */
                 usb_class_audio_control_set_descriptors(audio_control.class_handle,
-                	header_desc, it_desc, ot_desc, fu_desc);
+                    header_desc, it_desc, ot_desc, fu_desc);
 
                 if(USB_OK != check_device_type(it_desc, ot_desc, &device_string, &device_direction))
                 {
                     break;
                 }
                 device_direction = USB_AUDIO_DEVICE_DIRECTION_IN;
-                OS_Event_set(usb_keyboard_event, USB_Keyboard_Event_CTRL);
-				audio_stream.dev_state = USB_DEVICE_INUSE;
+                if(g_interface_number != 0)
+                {
+                    OS_Event_set(usb_keyboard_event, USB_Keyboard_Event_CTRL);
+                }
+                audio_stream.dev_state = USB_DEVICE_INUSE;
             }
             break;
 
         case USB_DETACH_EVENT:
-            printf("----- Audio control interface: detach event -----\r\n");
-            printf("State = detached");
-            printf("  Class = %d", intf_ptr->bInterfaceClass);
-            printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-            printf("  Protocol = %d\n\r", intf_ptr->bInterfaceProtocol);
-			
-			OS_Event_set(USB_ctr_Event, USB_EVENT_CTRL_DETACH);
+            USB_PRINTF("----- Audio control interface: detach event -----\r\n");
+            USB_PRINTF("State = detached");
+            USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+            USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+            USB_PRINTF("  Protocol = %d\n\r", intf_ptr->bInterfaceProtocol);
+            
+            OS_Event_set(USB_ctr_Event, USB_EVENT_CTRL_DETACH);
 
             break;
 
         default:
-            printf("Audio Device: unknown control event\n\r");
+            USB_PRINTF("Audio Device: unknown control event\n\r");
             //fflush(stdout);
             break;
         }
@@ -1236,7 +1295,6 @@ uint32_t                          event_code
 { /* Body */
     usb_device_interface_struct_t* pHostIntf = (usb_device_interface_struct_t*)intf_handle;
     interface_descriptor_t* intf_ptr = pHostIntf->lpinterfaceDesc;
-    usb_status status;
     switch (event_code) {
         case USB_CONFIG_EVENT:
             {
@@ -1252,7 +1310,7 @@ uint32_t                          event_code
                 }
                 else
                 {
-                    printf("Audio device already attached\n\r");
+                    USB_PRINTF("Audio device already attached\n\r");
                 }
 
                 /* finds all the descriptors in the configuration */
@@ -1262,35 +1320,37 @@ uint32_t                          event_code
                         &frm_type_desc,
                         &iso_endp_spec_desc))
                 {
-                    printf("usb_class_audio_stream_get_descriptors fail!\r\n");
+                    USB_PRINTF("usb_class_audio_stream_get_descriptors fail!\r\n");
                     break;
                 };
+                
+                endp->bmAttributes = iso_endp_spec_desc->bmattributes;
                 /* initialize new interface members and select this interface */
                 if (USB_OK != usb_host_open_dev_interface(host_handle, dev_handle,
                         intf_handle, (void *)&audio_stream.class_handle))
                 {
 
-                    printf("----- Audio stream interface: _usb_host_open_dev_interface fail\n\r");
+                    USB_PRINTF("----- Audio stream interface: _usb_host_open_dev_interface fail\n\r");
                 }
                 audio_com.class_stream_handle = (class_handle)audio_stream.class_handle;
                 /* set all info got from descriptors to the class interface struct */
                 usb_class_audio_stream_set_descriptors(audio_stream.class_handle,
                 as_itf_desc, frm_type_desc, iso_endp_spec_desc);
-                printf("----- Audio stream interface: USB_CONFIG_EVENT -----\r\n");
-				//g_interface_stream_number++;
+                USB_PRINTF("----- Audio stream interface: USB_CONFIG_EVENT -----\r\n");
+                //g_interface_stream_number++;
             }
             break;
         /* Drop through into attach, same processing */
         case USB_ATTACH_EVENT:
             g_interface_stream_info[g_interface_stream_number] = pHostIntf;
             g_interface_stream_number++;
-            printf("----- Audio stream interface: attach event -----\r\n");
+            USB_PRINTF("----- Audio stream interface: attach event -----\r\n");
             //fflush(stdout);
-            printf("State = attached");	
-            printf("  Class = %d", intf_ptr->bInterfaceClass);
-            printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-            printf("  Protocol = %d\n\r", intf_ptr->bInterfaceProtocol);
-            printf("  Class = %d", intf_ptr->bAlternateSetting);
+            USB_PRINTF("State = attached"); 
+            USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+            USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+            USB_PRINTF("  Protocol = %d\n\r", intf_ptr->bInterfaceProtocol);
+            USB_PRINTF("  Class = %d", intf_ptr->bAlternateSetting);
             //fflush(stdout);
             break;
      
@@ -1299,16 +1359,17 @@ uint32_t                          event_code
             break;
 
         case USB_DETACH_EVENT:
-			if(intf_handle != audio_stream_get_interface())
+        if(intf_handle != audio_stream_get_interface())
                 return;
-			audio_stream.dev_handle = dev_handle;
-			audio_stream.intf_handle = intf_handle;
-			OS_Event_set(USB_ctr_Event, USB_EVENT_STREAM_DETACH);   
-            printf("----- Audio stream interface: detach event-----\r\n");
+        audio_stream.dev_handle = dev_handle;
+        audio_stream.intf_handle = intf_handle;
+        OS_Event_set(USB_ctr_Event, USB_EVENT_STREAM_DETACH); 
+            g_interface_stream_number = 0;
+            USB_PRINTF("----- Audio stream interface: detach event-----\r\n");
             break;
         
         default:
-            printf("Audio device: unknown data event\n\r");
+            USB_PRINTF("Audio device: unknown data event\n\r");
             //fflush(stdout);
             break;
     } /* EndSwitch */
@@ -1329,7 +1390,6 @@ uint32_t                          event_code
 void config_channel(usb_audio_ctrl_desc_fu_t* fu_ptr,uint8_t num_channel)
 {
     uint8_t i;
-    //feature_control_struct_t control_feature;
     for (i = 0; i<=num_channel; i++)
     {
         audio_com.class_control_handle = (class_handle)audio_control.class_handle;
@@ -1361,17 +1421,16 @@ void audio_mute_command(void)
     //feature_control_struct_t control_feature;
     if (( audio_stream.dev_state > USB_DEVICE_DETACHED)||(device_direction != USB_AUDIO_DEVICE_DIRECTION_IN))
     {
-        printf("  err: Audio Speaker is not connected\n\r");
-     //   return;
+        USB_PRINTF("  err: Audio Speaker is not connected\n\r");
     }
     g_cur_mute[0] = !g_cur_mute[0];
     if (g_cur_mute[0])
     {
-        printf("Mute ...\r\n");
+        //USB_PRINTF("Mute ...\r\n");
     }
     else
     {
-        printf("UnMute ...\r\n");
+        //USB_PRINTF("UnMute ...\r\n");
     }
     /* Send set mute request */
     control_feature.FU = USB_AUDIO_CTRL_FU_MUTE;
@@ -1399,16 +1458,22 @@ void audio_increase_volume_command(uint8_t channel)
     //feature_control_struct_t control_feature;
     static uint32_t i;
     uint8_t max_audio_channel;
+    max_audio_channel = frm_type_desc->bnrchannels;
+    if(channel > max_audio_channel)
+    {
+        USB_PRINTF("  err: Channel number larger than max channel\n\r");
+        return;
+    }
     if (( audio_stream.dev_state > USB_DEVICE_DETACHED)||(device_direction != USB_AUDIO_DEVICE_DIRECTION_IN))
     {
-        printf("  err: Audio Speaker is not connected\n\r");
-   //     return;
+        USB_PRINTF("  err: Audio Speaker is not connected\n\r");
+        return;
     }
     if(channel == 1)
     {
-    max_audio_channel = frm_type_desc->bnrchannels;
+    
     /* Send set mute request */
-    cur_volume = (g_cur_vol[1]<<8)|(g_cur_vol[0]);
+    
     if((host_cur_volume + HOST_VOLUME_STEP) > HOST_MAX_VOLUME)
     {
         host_cur_volume = HOST_MAX_VOLUME;
@@ -1419,9 +1484,9 @@ void audio_increase_volume_command(uint8_t channel)
         host_cur_volume += HOST_VOLUME_STEP;
         i = 1;
     }
-    cur_volume += (uint16_t)(i*HOST_VOLUME_STEP*device_volume_step);
-    g_cur_vol[0] = (uint8_t)((uint16_t)(cur_volume)&0x00FF);
-    g_cur_vol[1] = (uint8_t)((uint16_t)(cur_volume)>>8);
+    cur_volume += (int16_t)(i*HOST_VOLUME_STEP*device_volume_step);
+    g_cur_vol[0] = (int8_t)((int16_t)(cur_volume)&0x00FF);
+    g_cur_vol[1] = (int8_t)((int16_t)(cur_volume)>>8);
     
     audio_stream.dev_state = USB_DEVICE_INUSE;
     
@@ -1436,8 +1501,8 @@ void audio_increase_volume_command(uint8_t channel)
     increase_times++;
     audio_statue = AUDIO_INCREASE_VOLUME;
     
-     physic_volume = ((uint16_t)(cur_volume)*39)/10000;
-        printf("\r\n Current physical volume: %d dB",physic_volume);
+     //physic_volume = ((int16_t)(cur_volume)*39)/10000;
+     //USB_PRINTF("\n\rCurrent physical volume: %d dB\n\r",physic_volume);
     
 }
 
@@ -1458,16 +1523,23 @@ void audio_decrease_volume_command(uint8_t channel)
     //feature_control_struct_t control_feature;
     static uint32_t i;
     uint8_t max_audio_channel;
-   if(channel == 1)
+    max_audio_channel = frm_type_desc->bnrchannels;
+    if(channel > max_audio_channel)
    {
+        USB_PRINTF("  err: Channel number larger than max channel\n\r");
+        return;
+    }
     if (( audio_stream.dev_state > USB_DEVICE_DETACHED)||(device_direction != USB_AUDIO_DEVICE_DIRECTION_IN))
     {
-        printf(" err: Audio Speaker is not connected\n\r");
+        USB_PRINTF(" err: Audio Speaker is not connected\n\r");
+        return;
     }
-    max_audio_channel = frm_type_desc->bnrchannels;
+    if(channel == 1)
+    {
+
     /* Send set mute request */
     audio_com.class_control_handle = (class_handle)audio_control.class_handle;
-    cur_volume = (g_cur_vol[1]<<8)|(g_cur_vol[0]);
+
     if(host_cur_volume < (HOST_VOLUME_STEP + HOST_MIN_VOLUME))
     {
         host_cur_volume = HOST_MIN_VOLUME;
@@ -1478,9 +1550,9 @@ void audio_decrease_volume_command(uint8_t channel)
         host_cur_volume -= HOST_VOLUME_STEP;
         i = 1;
     }
-    cur_volume -= (uint16_t)(i*HOST_VOLUME_STEP*device_volume_step);
-    g_cur_vol[0] = (uint8_t)((uint16_t)(cur_volume)&0x00FF);
-    g_cur_vol[1] = (uint8_t)((uint16_t)(cur_volume)>>8);
+    cur_volume -= (int16_t)(i*HOST_VOLUME_STEP*device_volume_step);
+    g_cur_vol[0] = (int8_t)((int16_t)(cur_volume)&0x00FF);
+    g_cur_vol[1] = (int8_t)((int16_t)(cur_volume)>>8);
     
     audio_stream.dev_state = USB_DEVICE_INUSE;
     }
@@ -1495,8 +1567,8 @@ void audio_decrease_volume_command(uint8_t channel)
     decrease_times++;
     audio_statue = AUDIO_DECREASE_VOLUME;
     
-    physic_volume = ((uint16_t)(cur_volume)*39)/10000;
-    printf("\r\n Current physical volume: %d dB",physic_volume);
+    //physic_volume = ((int16_t)(cur_volume)*39)/10000;
+    //USB_PRINTF("\n\rCurrent physical volume: %d dB\n\r",physic_volume);
 }
 
 
@@ -1518,7 +1590,7 @@ void Main_Task ( uint32_t param )
     ** Infinite loop, waiting for events requiring action
     */
     for ( ; ; ) {
-    	APP_task();
+        APP_task();
     } /* Endfor */
 } /* Endbody */
 
@@ -1542,7 +1614,7 @@ static void Task_Start(void *arg)
 
     for ( ; ; ) {
 #endif
-    	APP_task();
+        APP_task();
 #if (USE_RTOS)
     } /* Endfor */
 #endif

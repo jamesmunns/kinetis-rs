@@ -28,10 +28,23 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// SDK Included Files
 #include "adc_hw_trigger.h"
 #include "fsl_pit_driver.h"
 
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
+
 extern const uint32_t gSimBaseAddr[];
+
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
 
 /*!
  * @Brief enable the trigger source of PIT0, chn0
@@ -48,16 +61,16 @@ void init_trigger_source(uint32_t adcInstance)
         .periodUs = freqUs,
     };
 
-    /* Init PIT0 module and enable run in debug */
+    // Init PIT0 module and enable run in debug
     PIT_DRV_Init(0, true);
 
-    /* Initialize PIT0 timer 0 */
+    // Initialize PIT0 timer 0
     PIT_DRV_InitChannel(0, 0, &pitUserInit);  
 
-    /* Start the PIT timer */
+    // Start the PIT timer
     PIT_DRV_StartTimer(0, 0);
 
-    /* Configure SIM for ADC hw trigger source selection */
+    // Configure SIM for ADC hw trigger source selection
     SIM_HAL_SetAdcAlternativeTriggerCmd(gSimBaseAddr[0], adcInstance, true);
     SIM_HAL_SetAdcPreTriggerMode(gSimBaseAddr[0], adcInstance, kSimAdcPretrgselA);
     SIM_HAL_SetAdcTriggerMode(gSimBaseAddr[0], adcInstance, kSimAdcTrgSelPit0);

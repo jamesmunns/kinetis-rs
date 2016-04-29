@@ -54,12 +54,8 @@
 
 /****************************************************************************
  * Global Variables
- ****************************************************************************/              
-extern usb_endpoints_t usb_desc_ep;
-extern usb_desc_request_notify_struct_t  desc_callback;
-
-//cdc_handle_t   g_app_handle;
-cdc_handle_t g_vcom_handle;
+ ****************************************************************************/
+cdc_handle_t *g_cdc_vcom_ptr;
 
 /*****************************************************************************
  * Local Types - None
@@ -68,8 +64,8 @@ cdc_handle_t g_vcom_handle;
 /*****************************************************************************
  * Local Functions Prototypes
  *****************************************************************************/
-void VCom_USB_App_Callback(uint8_t event_type, void* val,void* arg);
-uint8_t VCom_USB_Notif_Callback(uint8_t event, uint16_t value, uint8_t ** data, uint32_t* size, void* arg); 
+void VCom_USB_App_Device_Callback(uint8_t event_type, void* val,void* arg);
+uint8_t VCom_USB_App_Class_Callback(uint8_t event, uint16_t value, uint8_t ** data, uint32_t* size, void* arg); 
 void Virtual_Com_App(void);
 /*****************************************************************************
  * Local Variables 
@@ -119,13 +115,13 @@ static uint8_t g_send_size;
   *
   * @name  USB_Get_Line_Coding
   *
-  * @brief The function returns the Line Coding/Configuraion
+  * @brief The function returns the Line Coding/Configuration
   *
   * @param handle:		  handle	 
   * @param interface:	  interface number	   
   * @param coding_data:   output line coding data	  
   *
-  * @return USB_OK								When Successfull
+  * @return USB_OK								When Success
   * 		USBERR_INVALID_REQ_TYPE 			when Error
   *****************************************************************************/
  uint8_t USB_Get_Line_Coding(uint32_t handle, 
@@ -148,13 +144,13 @@ static uint8_t g_send_size;
   *
   * @name  USB_Set_Line_Coding
   *
-  * @brief The function sets the Line Coding/Configuraion
+  * @brief The function sets the Line Coding/Configuration
   *
   * @param handle: handle	  
   * @param interface:	  interface number	   
   * @param coding_data:   output line coding data	  
   *
-  * @return USB_OK								When Successfull
+  * @return USB_OK								When Success
   * 		USBERR_INVALID_REQ_TYPE 			when Error
   *****************************************************************************/
  uint8_t USB_Set_Line_Coding(uint32_t handle, 
@@ -189,7 +185,7 @@ static uint8_t g_send_size;
   * @param interface:	  interface number	   
   * @param feature_data:   output comm feature data 	
   *
-  * @return USB_OK								When Successfull
+  * @return USB_OK								When Success
   * 		USBERR_INVALID_REQ_TYPE 			when Error
   *****************************************************************************/
  uint8_t USB_Get_Abstract_State(uint32_t handle, 
@@ -218,7 +214,7 @@ static uint8_t g_send_size;
   * @param interface:	  interface number	   
   * @param feature_data:   output comm feature data 	
   *
-  * @return USB_OK								When Successfull
+  * @return USB_OK								When Success
   * 		USBERR_INVALID_REQ_TYPE 			when Error
   *****************************************************************************/
  uint8_t USB_Get_Country_Setting(uint32_t handle, 
@@ -247,7 +243,7 @@ static uint8_t g_send_size;
   * @param interface:	  interface number	   
   * @param feature_data:   output comm feature data 	
   *
-  * @return USB_OK								When Successfull
+  * @return USB_OK								When Success
   * 		USBERR_INVALID_REQ_TYPE 			when Error
   *****************************************************************************/
  uint8_t USB_Set_Abstract_State(uint32_t handle, 
@@ -280,7 +276,7 @@ static uint8_t g_send_size;
   * @param interface:	  interface number	   
   * @param feature_data:   output comm feature data 	
   *
-  * @return USB_OK								When Successfull
+  * @return USB_OK								When Success
   * 		USBERR_INVALID_REQ_TYPE 			when Error
   *****************************************************************************/
  uint8_t USB_Set_Country_Setting(uint32_t handle, 
@@ -304,7 +300,28 @@ static uint8_t g_send_size;
  }
  /*****************************************************************************
  *	
- *	 @name		  VCom_TestApp_Init
+ *	 @name		  cdc_vcom_preinit
+ * 
+ *	 @brief 	  This function pre-initializes the App.
+ * 
+ *	 @param 	  None
+ * 
+ *	 @return	  None
+ ** 			   
+ *****************************************************************************/
+void cdc_vcom_preinit(void)
+{
+#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
+    g_curr_recv_buf = (uint8_t *)OS_Mem_alloc_uncached_align(DATA_BUFF_SIZE, 32);
+    g_curr_send_buf = (uint8_t *)OS_Mem_alloc_uncached_align(DATA_BUFF_SIZE, 32);
+#endif
+    g_recv_size = 0;
+    g_send_size= 0;    
+}
+
+/*****************************************************************************
+ *	
+ *	 @name		  cdc_vcom_init
  * 
  *	 @brief 	  This function initializes the App.
  * 
@@ -313,14 +330,9 @@ static uint8_t g_send_size;
  *	 @return	  None
  ** 			   
  *****************************************************************************/
-void VCom_TestApp_Init(void)
+void cdc_vcom_init(void *param)
 {
-#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
-    g_curr_recv_buf = (uint8_t *)OS_Mem_alloc_uncached_align(DATA_BUFF_SIZE, 32);
-    g_curr_send_buf = (uint8_t *)OS_Mem_alloc_uncached_align(DATA_BUFF_SIZE, 32);
-#endif
-    g_recv_size = 0;
-    g_send_size= 0;    
+    g_cdc_vcom_ptr = (cdc_handle_t*)param;
 }
   /*****************************************************************************
   *  
@@ -333,7 +345,7 @@ void VCom_TestApp_Init(void)
   *   @return	   None
   **				
   *****************************************************************************/
- void VCom_TestApp_Task(void)
+ void cdc_vcom_task(void)
  {
 	  /* call the periodic task function */ 	 
 	  USB_CDC_Periodic_Task();			 
@@ -366,7 +378,7 @@ void Virtual_Com_App(void)
         /* Copy Buffer to Send Buff */
         for (i = 0; i < g_recv_size; i++)
         {
-            //printf("Copied: %c\n", g_curr_recv_buf[i]);
+            //USB_PRINTF("Copied: %c\n", g_curr_recv_buf[i]);
         	g_curr_send_buf[g_send_size++] = g_curr_recv_buf[i];
         }
         g_recv_size = 0;
@@ -378,7 +390,7 @@ void Virtual_Com_App(void)
         uint8_t size = g_send_size;
         g_send_size = 0;
 
-        error = USB_Class_CDC_Send_Data(g_vcom_handle, DIC_BULK_IN_ENDPOINT,
+        error = USB_Class_CDC_Send_Data(*g_cdc_vcom_ptr, DIC_BULK_IN_ENDPOINT,
         	g_curr_send_buf, size);
 
         if(error != USB_OK) 
@@ -391,7 +403,7 @@ void Virtual_Com_App(void)
 
 /******************************************************************************
  * 
- *    @name        USB_App_Callback
+ *    @name        VCom_USB_App_Device_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -402,7 +414,7 @@ void Virtual_Com_App(void)
  *    @return      None
  *
  *****************************************************************************/
-void VCom_USB_App_Callback(uint8_t event_type, void* val,void* arg) 
+void VCom_USB_App_Device_Callback(uint8_t event_type, void* val,void* arg) 
 {
     uint32_t handle;
     handle = *((uint32_t *)arg);
@@ -425,7 +437,7 @@ void VCom_USB_App_Callback(uint8_t event_type, void* val,void* arg)
 
 /******************************************************************************
  * 
- *    @name        USB_Notif_Callback
+ *    @name        VCom_USB_App_Class_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -437,7 +449,7 @@ void VCom_USB_App_Callback(uint8_t event_type, void* val,void* arg)
  *
  *****************************************************************************/
  
-uint8_t VCom_USB_Notif_Callback
+uint8_t VCom_USB_App_Class_Callback
 (
     uint8_t event, 
     uint16_t value, 
@@ -447,7 +459,6 @@ uint8_t VCom_USB_Notif_Callback
 ) 
 {
 	cdc_handle_t handle;
-    uint8_t index;
 	uint8_t error = USB_OK;
 	handle = *((cdc_handle_t *)arg);
 	switch(event)
@@ -484,16 +495,14 @@ uint8_t VCom_USB_Notif_Callback
         break;
         case USB_DEV_EVENT_DATA_RECEIVED:
         {
-            uint32_t BytesToBeCopied; 
             if((start_app == TRUE) && (start_transactions == TRUE))
             {
-                BytesToBeCopied = *size;
-                for(index = 0; index < BytesToBeCopied; index++) 
-                {
-                    g_curr_recv_buf[index] = *(*data + index);
-                    //printf("Received: %c\n", g_curr_recv_buf[index]);
-                }
-                g_recv_size = index;
+                g_recv_size = *size;
+                if(!g_recv_size)
+				        {
+					          /* Schedule buffer for next receive event */
+					          USB_Class_CDC_Recv_Data(handle, DIC_BULK_OUT_ENDPOINT, g_curr_recv_buf, DIC_BULK_OUT_ENDP_PACKET_SIZE); 
+				        }
             }
         }
         break;
@@ -505,10 +514,10 @@ uint8_t VCom_USB_Notif_Callback
 				** meaning that we want to inform the host that we do not have any additional
 				** data, so it can flush the output.
 		             */
-	            USB_Class_CDC_Send_Data(g_vcom_handle, DIC_BULK_IN_ENDPOINT, NULL, 0);
+	            USB_Class_CDC_Send_Data(*g_cdc_vcom_ptr, DIC_BULK_IN_ENDPOINT, NULL, 0);
 	        }else if((start_app == TRUE) && (start_transactions == TRUE))
             {
-				if((size != NULL) || ((size == NULL) && (*size == 0)))
+				if((*data != NULL) || ((*data == NULL) && (*size == 0)))
 				{
 					/* User: add your own code for send complete event */
 					/* Schedule buffer for next receive event */

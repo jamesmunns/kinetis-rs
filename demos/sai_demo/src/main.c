@@ -29,39 +29,37 @@
  *
  */
 
-/*******************************************************************************
- * Standard C Included Files
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdio.h>
 #include <string.h>
-/*******************************************************************************
- * SDK Included Files
- ******************************************************************************/
+// SDK Included Files
 #include "fsl_sgtl5000_driver.h"
 #include "fsl_clock_manager.h"
 #include "fsl_device_registers.h"
 #include "fsl_soundcard.h"
 #include "board.h"
-/*******************************************************************************
- * Application Included Files
- ******************************************************************************/
+// Application Included Files
 #include "audio.h"
 #include "equalizer.h"
 #include "pcm_data.h"
 #include "terminal_menu.h" 
-/*******************************************************************************
- * Definitions
- ******************************************************************************/
 
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Prototypes
+///////////////////////////////////////////////////////////////////////////////
+
 void pin_setup(void);
 void user_menu(void);
 void playback_set(uint8_t *menuData);
-/*******************************************************************************
- * Global Variables
- ******************************************************************************/
+
+////////////////////////////////////////////////////////////////////////////////
+// Variables
+////////////////////////////////////////////////////////////////////////////////
+
 extern menu_machine_t g_menuMachine[];
 extern menu_state_t g_menuState;
 
@@ -70,34 +68,41 @@ float32_t g_dspStore[2 * AUDIO_BUFFER_BLOCK_SIZE];
 float32_t g_dspResult[AUDIO_BUFFER_BLOCK_SIZE];
 float32_t g_dspInput[AUDIO_BUFFER_BLOCK_SIZE];
 #endif
-/*******************************************************************************
- * Code
- ******************************************************************************/
+
+////////////////////////////////////////////////////////////////////////////////
+// Code
+////////////////////////////////////////////////////////////////////////////////
+
 void pin_setup(void)
 {
     configure_i2s_pins(0);
 }
 
-/******************************************************************************/
 int main (void)
 { 
     hardware_init();
 
-    /* Initialize UART terminal. */
-    DbgConsole_Init(BOARD_DEBUG_UART_INSTANCE, BOARD_DEBUG_UART_BAUD, kDebugConsoleUART);
+    // Initialize UART terminal.
+    dbg_uart_init();
 
-    /* Configure SAI pins. */
+    // Configure I2C pins
+    configure_i2c_pins(BOARD_SAI_DEMO_I2C_INSTANCE);
+
+    // Configure SAI pins.
     pin_setup();
 
-    /* Print welcome message. */
+    // Initialize OSA
+    OSA_Init();
+
+    // Print welcome message.
     menu_start();
 
     while(1)
     {
-        user_menu(); /* User menu, viewable through serial terminal. */
+        user_menu(); // User menu, viewable through serial terminal.
     }
 }
-/******************************************************************************/
+
 void user_menu(void)
 {
     uint8_t menuMsg[3];
@@ -115,7 +120,7 @@ void user_menu(void)
     g_menuState = kMenuSelectPlay;
 
 }
-/******************************************************************************/
+
 void playback_set(uint8_t *menuData)
 {
 
@@ -124,30 +129,34 @@ void playback_set(uint8_t *menuData)
         case '1':
             switch(menuData[1])
             {
-                case '1':
-                    stream_audio(kFFT, menuData[2]);
-                    break;
+            case '1':
+#if __FPU_PRESENT
+                stream_audio(kFFT, menuData[2]);
+#else
+                printf("No FPU, this feature do not support.!\n\r ");
+#endif
+                break;
 
-                case '2':
-                    stream_audio(kNoDSP, menuData[2]);
-                    break;
+            case '2':
+                stream_audio(kNoDSP, menuData[2]);
+                break;
 
-                default:
-                    __asm("NOP");
-                    break;
+            default:
+                __asm("NOP");
+                break;
             }
             break;
 
         case '2':
             switch(menuData[1])
             {
-                case '1':
-                    play_wav((uint32_t *)music, menuData[2]);
-                    break;
+            case '1':
+                play_wav((uint32_t *)music, menuData[2]);
+                break;
 
-                default:
-                    __asm("NOP");
-                    break;
+            default:
+                __asm("NOP");
+                break;
             }
             break;
 
@@ -157,6 +166,3 @@ void playback_set(uint8_t *menuData)
     }
 
 }
-/******************************************************************************
- * EOF
- ******************************************************************************/

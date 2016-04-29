@@ -58,10 +58,6 @@ extern void Main_Task(uint32_t param);
 /****************************************************************************
  * Global Variables
  ****************************************************************************/              
-extern usb_endpoints_t usb_desc_ep;
-
-extern usb_desc_request_notify_struct_t  desc_callback;
-
 extern const unsigned char wav_data[];
 extern const uint16_t wav_size;
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
@@ -71,7 +67,7 @@ static uint8_t wav_buff[AUDIO_ENDPOINT_PACKET_SIZE];
 #endif
 uint32_t audio_position = 0;
 
-audio_handle_t   g_audio_handle;
+audio_handle_t*      g_audio_handle;
 
 /*****************************************************************************
  * Local Types - None
@@ -117,7 +113,7 @@ void USB_Prepare_Data(void)
  
  /*****************************************************************************
  *  
- *   @name        TestApp_Init
+ *   @name        audio_init
  * 
  *   @brief       This function is the entry for Audio generator
  * 
@@ -126,13 +122,14 @@ void USB_Prepare_Data(void)
  *   @return      None
  **                
  *****************************************************************************/
-void Audio_TestApp_Init(void)
-{  
+void audio_init(void* param)
+{
+    g_audio_handle = (audio_handle_t*)param;
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
     wav_buff = OS_Mem_alloc_uncached_align(AUDIO_ENDPOINT_PACKET_SIZE, 32);
     if(wav_buff == NULL)
     {
-        printf("OS_Mem_alloc_uncached_align fail in audio composite example \r\n");
+        USB_PRINTF("OS_Mem_alloc_uncached_align fail in audio composite example \r\n");
         return ;
     }
 #endif
@@ -144,16 +141,16 @@ void Audio_TestApp_Init(void)
 		  ;
 	   }
 	   start_app = FALSE;
-	   printf("USB_Prepare_Data \r\n");   
+	   USB_PRINTF("USB_Prepare_Data \r\n");   
 	   USB_Prepare_Data();
-	   USB_Class_Audio_Send_Data(g_audio_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);
+	   USB_Class_Audio_Send_Data(*g_audio_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);
    }
 } 
 
 
 /******************************************************************************
  * 
- *    @name        USB_App_Callback
+ *    @name        Audio_USB_App_Device_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -164,7 +161,7 @@ void Audio_TestApp_Init(void)
  *    @return      None
  *
  *****************************************************************************/
-void Audio_USB_App_Callback(uint8_t event_type, void* val,void* arg) 
+void Audio_USB_App_Device_Callback(uint8_t event_type, void* val,void* arg) 
 {
    UNUSED_ARGUMENT (arg)
    UNUSED_ARGUMENT (val)
@@ -185,7 +182,7 @@ void Audio_USB_App_Callback(uint8_t event_type, void* val,void* arg)
 }
 /******************************************************************************
  * 
- *    @name        Audio_App_Param_Callback
+ *    @name        Audio_USB_App_Class_Callback
  *    
  *    @brief       This function handles the callback for Get/Set report req  
  *                  
@@ -199,7 +196,7 @@ void Audio_USB_App_Callback(uint8_t event_type, void* val,void* arg)
  *                  else return error
  *
  *****************************************************************************/
- uint8_t Audio_App_Param_Callback
+ uint8_t Audio_USB_App_Class_Callback
  (
     uint8_t request, 
     uint16_t value, 
@@ -215,14 +212,14 @@ void Audio_USB_App_Callback(uint8_t event_type, void* val,void* arg)
 		if(arg != NULL)
 		{
 			USB_Prepare_Data();
-			USB_Class_Audio_Send_Data(g_audio_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);				
+			USB_Class_Audio_Send_Data(*g_audio_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);				
 		}
 		return error;
 	}
 
-	error = USB_Class_Get_feature(0x0,request, value,data);
+	error = USB_Class_Get_feature(0x0, value, request,data);
 	if(error == USBERR_INVALID_REQ_TYPE)
-		error = USB_Class_Set_feature(0x0,request, value,data);
+		error = USB_Class_Set_feature(0x0, value, request,data);
 	
 	return error; 
 }	

@@ -41,6 +41,7 @@
 	
 //#include "derivative.h"
 //#include "MK64F12.h"
+#include "adapter.h"
 
 #include "stdint.h"
 #include "stdbool.h"
@@ -54,9 +55,8 @@
 
 #include "fsl_uart_driver.h"
 #include "fsl_interrupt_manager.h"
-#include "fsl_uart_common.h"
 #include "board.h"
-#include "adapter.h"
+
 
 //extern IRQn_Type uart_irq_ids[5];
 //const UART_Type * uart_base_addr_cdc[] = UART_BASE_PTRS;
@@ -66,6 +66,8 @@ static inline uint32_t __get_uart_baseaddr(uint32_t uartInstance)
 	return (uint32_t)g_uartBaseAddr[uartInstance];
 }
 
+/* Table to save uart IRQ enum numbers defined in CMSIS header file */
+extern const IRQn_Type g_uartRxTxIrqId[HW_UART_INSTANCE_COUNT];
 
 /* Polled functions used */
 extern uint32_t _kuart_polled_init(kuart_init_struct_t *, void **, char *);
@@ -412,7 +414,7 @@ void _kuart_int_rx_tx_isr
    volatile int32_t                        c;
 
    /*
-   if "framming error" or "overrun" error occours 
+   if "framing error" or "overrun" error occurs
    perform 'S1' cleanup. if not, 'S1' cleanup will be 
    performed during regular reading of 'D' register.
    */

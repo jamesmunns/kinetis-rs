@@ -56,6 +56,10 @@ rem gcc_arm files
 :tool_gcc_arm
 goto os_%OS%
 
+rem kds files
+:tool_kds
+goto os_%OS%
+
 rem mqx file
 :os_mqx
 copy adapter\sources\mqx\adapter_mqx.h %OUTPUTDIR%\ /Y 

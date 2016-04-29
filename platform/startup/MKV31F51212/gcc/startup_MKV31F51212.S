@@ -2,9 +2,9 @@
 /*  @file:    startup_MKV31F51212.s                                                       */
 /*  @purpose: CMSIS Cortex-M4 Core Device Startup File                                    */
 /*            MKV31F51212                                                                 */
-/*  @version: 1.4                                                                         */
-/*  @date:    2014-5-6                                                                    */
-/*  @build:   b140611                                                                     */
+/*  @version: 1.6                                                                         */
+/*  @date:    2014-10-14                                                                  */
+/*  @build:   b141016                                                                     */
 /* ---------------------------------------------------------------------------------------*/
 /*                                                                                        */
 /* Copyright (c) 1997 - 2014 , Freescale Semiconductor, Inc.                              */
@@ -84,7 +84,7 @@ __isr_vector:
     .long   Read_Collision_IRQHandler                       /* Read Collision Interrupt*/
     .long   LVD_LVW_IRQHandler                              /* Low Voltage Detect, Low Voltage Warning*/
     .long   LLW_IRQHandler                                  /* Low Leakage Wakeup*/
-    .long   Watchdog_IRQHandler                             /* WDOG Interrupt*/
+    .long   WDOG_EWM_IRQHandler                             /* WDOG Interrupt*/
     .long   RNG_IRQHandler                                  /* RNG Interrupt*/
     .long   I2C0_IRQHandler                                 /* I2C0 interrupt*/
     .long   I2C1_IRQHandler                                 /* I2C1 interrupt*/
@@ -120,7 +120,7 @@ __isr_vector:
     .long   Reserved71_IRQHandler                           /* Reserved interrupt 71*/
     .long   DAC0_IRQHandler                                 /* DAC0 interrupt*/
     .long   MCG_IRQHandler                                  /* MCG Interrupt*/
-    .long   LPTimer_IRQHandler                              /* LPTimer interrupt*/
+    .long   LPTMR0_IRQHandler                               /* LPTimer interrupt*/
     .long   PORTA_IRQHandler                                /* Port A interrupt*/
     .long   PORTB_IRQHandler                                /* Port B interrupt*/
     .long   PORTC_IRQHandler                                /* Port C interrupt*/
@@ -322,6 +322,7 @@ __isr_vector:
     .thumb_func
     .align 2
     .globl   Reset_Handler
+    .weak    Reset_Handler
     .type    Reset_Handler, %function
 Reset_Handler:
     cpsid   i               /* Mask interrupts */
@@ -344,25 +345,30 @@ _irq_clear_end:
 #ifndef __START
 #define __START _start
 #endif
+#ifndef __ATOLLIC__
     bl    __START
+#else
+    bl    __libc_init_array
+    bl    main
+#endif
     .pool
     .size Reset_Handler, . - Reset_Handler
 
-  .align	1
-  .thumb_func
-  .weak	Default_Handler
-  .type	Default_Handler, %function
-Default_Handler:
-  b	.
-  .size	Default_Handler, . - Default_Handler
+    .align	1
+    .thumb_func
+    .weak DefaultISR
+    .type DefaultISR, %function
+DefaultISR:
+    b	DefaultISR
+    .size DefaultISR, . - DefaultISR
 
 /*    Macro to define default handlers. Default handler
  *    will be weak symbol and just dead loops. They can be
  *    overwritten by other handlers */
-  .macro	def_irq_handler	handler_name
-  .weak	\handler_name
-  .set	\handler_name, Default_Handler
-  .endm
+    .macro def_irq_handler	handler_name
+    .weak \handler_name
+    .set  \handler_name, DefaultISR
+    .endm
 
 /* Exception Handlers */
     def_irq_handler    NMI_Handler
@@ -396,7 +402,7 @@ Default_Handler:
     def_irq_handler    Read_Collision_IRQHandler
     def_irq_handler    LVD_LVW_IRQHandler
     def_irq_handler    LLW_IRQHandler
-    def_irq_handler    Watchdog_IRQHandler
+    def_irq_handler    WDOG_EWM_IRQHandler
     def_irq_handler    RNG_IRQHandler
     def_irq_handler    I2C0_IRQHandler
     def_irq_handler    I2C1_IRQHandler
@@ -432,7 +438,7 @@ Default_Handler:
     def_irq_handler    Reserved71_IRQHandler
     def_irq_handler    DAC0_IRQHandler
     def_irq_handler    MCG_IRQHandler
-    def_irq_handler    LPTimer_IRQHandler
+    def_irq_handler    LPTMR0_IRQHandler
     def_irq_handler    PORTA_IRQHandler
     def_irq_handler    PORTB_IRQHandler
     def_irq_handler    PORTC_IRQHandler
@@ -460,6 +466,5 @@ Default_Handler:
     def_irq_handler    Reserved99_IRQHandler
     def_irq_handler    Reserved100_IRQHandler
     def_irq_handler    Reserved101_IRQHandler
-    def_irq_handler    DefaultISR
 
     .end

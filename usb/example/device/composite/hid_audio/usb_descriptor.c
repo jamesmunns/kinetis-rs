@@ -38,6 +38,10 @@
 #include "usb.h"
 #include "usb_device_stack_interface.h"
 #include "usb_descriptor.h"
+
+#include "audio_generator.h"
+#include "mouse.h"
+
 #include "composite_app.h"
 /*****************************************************************************
  * Constant and Macro's
@@ -64,10 +68,12 @@ static usb_if_struct_t usb_if_audio[1] ;
 
 usb_ep_struct_t ep_hid[HID_DESC_ENDPOINT_COUNT] = 
 {
-    HID_ENDPOINT, 
-    USB_INTERRUPT_PIPE, 
-    USB_SEND,
-    HID_ENDPOINT_PACKET_SIZE
+    {
+        HID_ENDPOINT, 
+        USB_INTERRUPT_PIPE, 
+        USB_SEND,
+        HID_ENDPOINT_PACKET_SIZE,
+    }
 };
 
 /* structure containing details of all the endpoints used by this device */ 
@@ -82,27 +88,27 @@ static usb_if_struct_t usb_if_hid[1];
 
 usb_class_struct_t usb_dec_class[2] =
 {
-	{
-	  USB_CLASS_AUDIO,
-	  {
-		   1,
-		   usb_if_audio
-	   }
-	},
+    {
+      USB_CLASS_AUDIO,
+      {
+           1,
+           usb_if_audio
+       }
+    },
 
-	{
-	  USB_CLASS_HID,
-	  {
-		   1,
-		   usb_if_hid
-	   }
-	},
+    {
+      USB_CLASS_HID,
+      {
+           1,
+           usb_if_hid
+       }
+    },
 };
 
 static usb_composite_info_struct_t usb_composite_info =
 {
-	2,
-	usb_dec_class	
+    2,
+    usb_dec_class    
 };
 
 /* *********************************************************************
@@ -136,7 +142,7 @@ uint8_t g_device_descriptor[DEVICE_DESCRIPTOR_SIZE] =
                                              in the interface descriptors  */
    0x00,                                 /*  Device Protocol               */
    CONTROL_MAX_PACKET_SIZE,              /*  Max Packet size               */
-   0x04,0x25,                            /*  Vendor ID   */
+   0xa2,0x15,                            /*  Vendor ID   */
    0x00, 0x02,                           /*  Product ID  */
    0x00, 0x02,                           /*  BCD Device version */
    0x01,                                 /*  Manufacturer string index     */
@@ -476,11 +482,11 @@ uint8_t *g_string_descriptors[USB_MAX_STRING_DESCRIPTORS+1] =
 
 usb_language_t usb_lang[USB_MAX_SUPPORTED_LANGUAGES] = 
 {
-	{ 
-	   (uint16_t)0x0409,
-	   g_string_descriptors,
-	   g_string_desc_size
-	}
+    { 
+       (uint16_t)0x0409,
+       g_string_descriptors,
+       g_string_desc_size
+    }
 };
 
 usb_all_languages_t g_languages = 
@@ -595,13 +601,13 @@ uint8_t USB_Desc_Get_Descriptor
    }
    else /* invalid descriptor */
    {
-		if(type == USB_REPORT_DESCRIPTOR) 
-		{
-			type = USB_MAX_STD_DESCRIPTORS;
-			*descriptor = (uint8_t *)g_std_descriptors [type];
-			*size = g_std_desc_size[type]; 
-		}
-		else
+        if(type == USB_REPORT_DESCRIPTOR) 
+        {
+            type = USB_MAX_STD_DESCRIPTORS;
+            *descriptor = (uint8_t *)g_std_descriptors [type];
+            *size = g_std_desc_size[type]; 
+        }
+        else
            return USBERR_INVALID_REQ_TYPE;
    }
    return USB_OK;
@@ -786,7 +792,7 @@ bool USB_Desc_Remote_Wakeup
  *****************************************************************************/
 uint8_t USB_Set_Configation
 (
-	audio_handle_t handle, uint8_t config
+    audio_handle_t handle, uint8_t config
 ) 
 {
     UNUSED_ARGUMENT (handle)
@@ -808,21 +814,36 @@ uint8_t USB_Set_Configation
  *****************************************************************************/
 uint8_t USB_Desc_Get_Entity(audio_handle_t handle,entity_type type, uint32_t *object)
 {
-
-	switch(type)  
+    switch(type)
     {
         case USB_CLASS_INFO:
             break;
-		 case USB_COMPOSITE_INFO:
-			usb_if_audio[0].index = 0;
-			usb_if_audio[0].endpoints = usb_desc_ep_audio;
-			usb_if_hid[0].index = 2;
-			usb_if_hid[0].endpoints = usb_desc_ep_hid;
+        case USB_CLASS_INTERFACE_INDEX_INFO:
+            *object = 0xff;
+            for (int i = 0;i < 2;i++)
+            {
+                if (handle == (uint32_t)g_composite_device.audio_handle)
+                {
+                    *object = (uint32_t)AUDIO_INTERFACE_INDEX;
+                    break;
+                }
+                else if (handle == (uint32_t)g_composite_device.hid_mouse.app_handle)
+                {
+                    *object = (uint32_t)HID_MOUSE_INTERFACE_INDEX;
+                    break;
+                }
+            }
+            break;
+         case USB_COMPOSITE_INFO:
+            usb_if_audio[0].index = 0;
+            usb_if_audio[0].endpoints = usb_desc_ep_audio;
+            usb_if_hid[0].index = 2;
+            usb_if_hid[0].endpoints = usb_desc_ep_hid;
             *object = (unsigned long)&usb_composite_info;
             break;
-		case USB_AUDIO_UNITS:
-			*object = (unsigned long)&usb_audio_unit;
-			break;
+        case USB_AUDIO_UNITS:
+            *object = (unsigned long)&usb_audio_unit;
+            break;
         default :           
           
             break; 

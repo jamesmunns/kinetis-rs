@@ -85,7 +85,7 @@ usb_status usb_class_mass_init
    mass_class = (usb_mass_class_struct_t *)OS_Mem_alloc_zero(sizeof(usb_mass_class_struct_t));
    if (mass_class == NULL)
    {
-       printf("usb_class_mass_init fail on memory allocation\n");
+       USB_PRINTF("usb_class_mass_init fail on memory allocation\n");
        return USBERR_ERROR;
    }
    
@@ -111,7 +111,7 @@ usb_status usb_class_mass_init
            status = usb_host_open_pipe(mass_class->host_handle, &mass_class->bulk_in_pipe, &pipe_init);
            if (status != USB_OK)
            {
-               printf("usb_class_msd_init fail to open in pipe\n");
+               USB_PRINTF("usb_class_msd_init fail to open in pipe\n");
                *class_handle_ptr = (class_handle)mass_class;
                return USBERR_ERROR;
            }
@@ -129,7 +129,7 @@ usb_status usb_class_mass_init
            status = usb_host_open_pipe(mass_class->host_handle, &mass_class->bulk_out_pipe, &pipe_init);
            if (status != USB_OK)
            {
-               printf("usb_class_msd_init fail to open out pipe\n");
+               USB_PRINTF("usb_class_msd_init fail to open out pipe\n");
                *class_handle_ptr = (class_handle)mass_class;
                return USBERR_ERROR;
            }
@@ -147,14 +147,14 @@ usb_status usb_class_mass_init
    mass_class->mutex = OS_Mutex_create();
    if (mass_class->mutex == NULL)
    {
-      printf("usb_class_msd_init create mutex failed\n");
+      USB_PRINTF("usb_class_msd_init create mutex failed\n");
       *class_handle_ptr = (class_handle)mass_class;
       return USBERR_ALLOC;
    }
 
    *class_handle_ptr = (class_handle)mass_class;
 
-   /* printf("MSD class driver initialized\n"); */
+   /* USB_PRINTF("MSD class driver initialized\n"); */
    
    return USB_OK;
 } /* Endbody */
@@ -179,7 +179,7 @@ usb_status usb_class_mass_deinit
     usb_status                     status = USB_OK;
     if (mass_class == NULL)
     {
-        printf("usb_class_msd_deinit fail\n");
+        USB_PRINTF("usb_class_msd_deinit fail\n");
         return USBERR_ERROR;
     }
     
@@ -188,7 +188,7 @@ usb_status usb_class_mass_deinit
         status = usb_host_close_pipe(mass_class->host_handle, mass_class->bulk_in_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_msd_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_msd_deinit to close pipe\n");
         }
     }
     
@@ -197,7 +197,7 @@ usb_status usb_class_mass_deinit
         status = usb_host_close_pipe(mass_class->host_handle, mass_class->bulk_out_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_msd_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_msd_deinit to close pipe\n");
         }
     }
 
@@ -207,7 +207,7 @@ usb_status usb_class_mass_deinit
     }
     
     OS_Mem_free(handle);
-    /* printf("MSD class driver de-initialized\n"); */
+    /* USB_PRINTF("MSD class driver de-initialized\n"); */
     return USB_OK;
 } /* Endbody */
 
@@ -230,7 +230,7 @@ usb_status usb_class_mass_pre_deinit
     usb_status                     status = USB_OK;
     if (mass_class == NULL)
     {
-        printf("usb_class_msd_pre_deinit fail\n");
+        USB_PRINTF("usb_class_msd_pre_deinit fail\n");
         return USBERR_ERROR;
     }
     
@@ -239,7 +239,7 @@ usb_status usb_class_mass_pre_deinit
         status = usb_host_cancel(mass_class->host_handle, mass_class->bulk_in_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in usb_host_cancel to close pipe\n");
+            USB_PRINTF("error in usb_host_cancel to close pipe\n");
         }
     }
     
@@ -248,11 +248,11 @@ usb_status usb_class_mass_pre_deinit
         status = usb_host_cancel(mass_class->host_handle, mass_class->bulk_out_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in usb_host_cancel to close pipe\n");
+            USB_PRINTF("error in usb_host_cancel to close pipe\n");
         }
     }
     
-    /* printf("mass class driver pre_deinit\n"); */
+    /* USB_PRINTF("mass class driver pre_deinit\n"); */
     return USB_OK;
 } /* Endbody */
 
@@ -288,7 +288,7 @@ usb_status usb_class_mass_storage_device_command
    
    if (mass_class == NULL)
    {
-      printf("usb_class_mass_storage_device_command fail\n");
+      USB_PRINTF("usb_class_mass_storage_device_command fail\n");
       return USBERR_ERROR;
    }
 
@@ -355,7 +355,7 @@ bool usb_class_mass_storage_device_command_cancel
    
    if (mass_class == NULL)
    {
-      printf("usb_class_mass_storage_device_command_cancel fail\n");
+      USB_PRINTF("usb_class_mass_storage_device_command_cancel fail\n");
       return USBERR_ERROR;
    }
 
@@ -491,7 +491,7 @@ void usb_class_mass_call_back_cbw
 
    if (usb_host_release_tr(mass_class->host_handle, tr_ptr) != USB_OK)
    {
-       printf("_usb_host_release_tr failed\n");
+       USB_PRINTF("_usb_host_release_tr failed\n");
    }
    
    #ifdef _HOST_DEBUG_
@@ -573,7 +573,6 @@ void usb_class_mass_call_back_dphase
           cmd_ptr->STATUS = STATUS_FINISHED_DPHASE_ON_USB;
       }
       status = usb_class_mass_pass_on_usb(mass_class);
-
    } 
    else if (status == USBERR_ENDPOINT_STALLED) 
    {
@@ -626,7 +625,7 @@ void usb_class_mass_call_back_dphase
 
    if (usb_host_release_tr(mass_class->host_handle, tr_ptr) != USB_OK)
    {
-       printf("_usb_host_release_tr failed\n");
+       USB_PRINTF("_usb_host_release_tr failed\n");
    }   
    
    #ifdef _HOST_DEBUG_
@@ -824,7 +823,7 @@ void usb_class_mass_call_back_csw
 
    if (usb_host_release_tr(mass_class->host_handle, tr_ptr) != USB_OK)
    {
-       printf("_usb_host_release_tr failed\n");
+       USB_PRINTF("_usb_host_release_tr failed\n");
    }
    
    #ifdef _HOST_DEBUG_
@@ -881,7 +880,7 @@ usb_status usb_class_mass_pass_on_usb
          /* means that CBW needs to be sent.*/
          if (usb_host_get_tr(mass_class->host_handle, usb_class_mass_call_back_cbw, mass_class, &tr_ptr) != USB_OK)
          {
-            printf("error to get tr\n");
+            USB_PRINTF("error to get tr\n");
             return USBERR_ERROR;
          }
          tr_ptr->tx_buffer = (uint8_t *)cmd_ptr->CBW_PTR;
@@ -890,7 +889,7 @@ usb_status usb_class_mass_pass_on_usb
          status = usb_host_send_data(mass_class->host_handle, mass_class->bulk_out_pipe, tr_ptr);
          if (status != USB_OK)
          {
-             /* printf("\nError in usb_class_mass_pass_on_usb: %x", status); */
+             /* USB_PRINTF("\nError in usb_class_mass_pass_on_usb: %x", status); */
              usb_host_release_tr(mass_class->host_handle, tr_ptr);
              return USBERR_ERROR;
          }
@@ -905,7 +904,7 @@ usb_status usb_class_mass_pass_on_usb
             /* Commen TR setup for IN or OUT direction */
             if (usb_host_get_tr(mass_class->host_handle, usb_class_mass_call_back_dphase, mass_class, &tr_ptr) != USB_OK)
             {
-               printf("error to get tr\n");
+               USB_PRINTF("error to get tr\n");
                return USBERR_ERROR;
             }
             
@@ -920,7 +919,7 @@ usb_status usb_class_mass_pass_on_usb
                   status = usb_host_send_data(mass_class->host_handle, mass_class->bulk_out_pipe, tr_ptr);
                   if (status != USB_OK)
                   {
-                      /* printf("\nError in usb_class_mass_pass_on_usb: %x", status); */
+                      /* USB_PRINTF("\nError in usb_class_mass_pass_on_usb: %x", status); */
                       usb_host_release_tr(mass_class->host_handle, tr_ptr);
                       return USBERR_ERROR;
                   }
@@ -934,7 +933,7 @@ usb_status usb_class_mass_pass_on_usb
                   status = usb_host_recv_data(mass_class->host_handle, mass_class->bulk_in_pipe, tr_ptr);
                   if (status != USB_OK)
                   {
-                      /* printf("\nError in usb_class_mass_pass_on_usb: %x", status); */
+                      /* USB_PRINTF("\nError in usb_class_mass_pass_on_usb: %x", status); */
                       usb_host_release_tr(mass_class->host_handle, tr_ptr);
                       return USBERR_ERROR;
                   }
@@ -956,7 +955,7 @@ usb_status usb_class_mass_pass_on_usb
          /* Make a TR and send it with STATUS call back */
          if (usb_host_get_tr(mass_class->host_handle, usb_class_mass_call_back_csw, mass_class, &tr_ptr) != USB_OK)
          {
-            printf("error to get tr\n");
+            USB_PRINTF("error to get tr\n");
             return USBERR_ERROR;
          }
          tr_ptr->rx_buffer = (uint8_t *)cmd_ptr->CSW_PTR;
@@ -965,7 +964,7 @@ usb_status usb_class_mass_pass_on_usb
          status = usb_host_recv_data(mass_class->host_handle, mass_class->bulk_in_pipe, tr_ptr);
          if (status != USB_OK)
          {
-             /* printf("\nError in usb_class_mass_pass_on_usb: %x", status); */
+             /* USB_PRINTF("\nError in usb_class_mass_pass_on_usb: %x", status); */
              usb_host_release_tr(mass_class->host_handle, tr_ptr);
              return USBERR_ERROR;
          }
@@ -984,7 +983,7 @@ usb_status usb_class_mass_pass_on_usb
          } /* Endbody */
          break;
       case STATUS_FINISHED_CSW_ON_USB: /* No action */
-	     break;
+         break;
       default:
          break;
    } /* Endswitch */
@@ -1021,7 +1020,6 @@ usb_status usb_class_mass_getmaxlun_bulkonly
    usb_mass_class_struct_t *        mass_class = (usb_mass_class_struct_t *)handle;
    tr_struct_t*                     tr_ptr;
 
-#if 1
    #ifdef _HOST_DEBUG_
       DEBUG_LOG_TRACE("usb_class_mass_getmaxlun_bulkonly");
    #endif
@@ -1047,7 +1045,7 @@ usb_status usb_class_mass_getmaxlun_bulkonly
 
    if (usb_host_get_tr(mass_class->host_handle, usb_class_mass_ctrl_callback, mass_class, &tr_ptr) != USB_OK)
    {
-       printf("error to get tr mass\n");
+       USB_PRINTF("error to get tr mass\n");
        return USBERR_ERROR;
    }
    
@@ -1074,11 +1072,10 @@ usb_status usb_class_mass_getmaxlun_bulkonly
    
     if (status != USB_OK)
     {
-        printf("\nError in usb_class_mass_getmaxlun_bulkonly: %x", status);
+        USB_PRINTF("\nError in usb_class_mass_getmaxlun_bulkonly: %x", (unsigned int)status);
         usb_host_release_tr(mass_class->host_handle, tr_ptr);
         return USBERR_ERROR;
     }
-#endif
    
    #ifdef _HOST_DEBUG_
       DEBUG_LOG_TRACE("usb_class_mass_getmaxlun_bulkonly, SUCCESSFUL");
@@ -1111,33 +1108,31 @@ usb_status usb_class_mass_getvidpid
    usb_status                       status = USB_OK;/* USBERR_NO_INTERFACE; */
    usb_mass_class_struct_t *        mass_class = (usb_mass_class_struct_t *)handle;
    
-#if 1
    #ifdef _HOST_DEBUG_
-	  DEBUG_LOG_TRACE("usb_class_mass_getvidpid");
+      DEBUG_LOG_TRACE("usb_class_mass_getvidpid");
    #endif
 
    if(NULL == mass_class) 
    {
-	  #ifdef _HOST_DEBUG_
-		 DEBUG_LOG_TRACE("usb_class_mass_reset_recovery_on_usb,no matching request");
-	  #endif
-	  return (usb_status) USB_MASS_NO_MATCHING_REQUEST;
+      #ifdef _HOST_DEBUG_
+         DEBUG_LOG_TRACE("usb_class_mass_reset_recovery_on_usb,no matching request");
+      #endif
+      return (usb_status) USB_MASS_NO_MATCHING_REQUEST;
    } /* Endif */
 
    if (mass_class->dev_handle == NULL)
    {
-	   #ifdef _HOST_DEBUG_
-		  DEBUG_LOG_TRACE("_usb_hostdev_cntrl_request, invalid device handle");
-	   #endif
-	   return USBERR_DEVICE_NOT_FOUND;
+       #ifdef _HOST_DEBUG_
+          DEBUG_LOG_TRACE("_usb_hostdev_cntrl_request, invalid device handle");
+       #endif
+       return USBERR_DEVICE_NOT_FOUND;
    }
    
    *pid = usb_host_dev_mng_get_pid(mass_class->dev_handle);
    *vid = usb_host_dev_mng_get_vid(mass_class->dev_handle);
-#endif
    
    #ifdef _HOST_DEBUG_
-	  DEBUG_LOG_TRACE("usb_class_mass_getvidpid, SUCCESSFUL");
+      DEBUG_LOG_TRACE("usb_class_mass_getvidpid, SUCCESSFUL");
    #endif
 
    return USB_log_error(__FILE__,__LINE__,status);
@@ -1283,7 +1278,7 @@ usb_status usb_class_mass_reset_recovery_on_usb
 
    if (usb_host_get_tr(mass_class->host_handle, usb_class_mass_reset_callback, mass_class, &tr_ptr) != USB_OK)
    {
-       printf("error to get tr mass\n");
+       USB_PRINTF("error to get tr mass\n");
        return USBERR_ERROR;
    }
    
@@ -1313,7 +1308,7 @@ usb_status usb_class_mass_reset_recovery_on_usb
    }
    else
    {
-       printf("\nError in usb_class_mass_cntrl_common: %x", status);
+       USB_PRINTF("\nError in usb_class_mass_cntrl_common: %x", (unsigned int)status);
        usb_host_release_tr(mass_class->host_handle, tr_ptr);
        return USBERR_ERROR;
    }
@@ -1375,7 +1370,7 @@ static void usb_class_mass_reset_callback
 
    if (usb_host_release_tr(mass_class->host_handle, tr_ptr) != USB_OK)
    {
-       printf("_usb_host_release_tr failed\n");
+       USB_PRINTF("_usb_host_release_tr failed\n");
    }
    
    if (!cmd_ptr) 
@@ -1409,9 +1404,9 @@ static void usb_class_mass_reset_callback
             
             if (status == USB_OK) 
             {
-				status = _usb_host_ch9_clear_feature(mass_class->dev_handle,
-						REQ_TYPE_ENDPOINT, (uint8_t)(pPipe->endpoint_number | REQ_TYPE_IN), ENDPOINT_HALT);
-				cmd_ptr->STATUS = STATUS_RESET_BULK_IN;
+                status = _usb_host_ch9_clear_feature(mass_class->dev_handle,
+                        REQ_TYPE_ENDPOINT, (uint8_t)(pPipe->endpoint_number | REQ_TYPE_IN), ENDPOINT_HALT);
+                cmd_ptr->STATUS = STATUS_RESET_BULK_IN;
             }
             break;
 
@@ -1432,9 +1427,9 @@ static void usb_class_mass_reset_callback
             
             if (status == USB_OK) 
             {
-				status = _usb_host_ch9_clear_feature(mass_class->dev_handle,
-						REQ_TYPE_ENDPOINT, (uint8_t)(pPipe->endpoint_number | REQ_TYPE_OUT), ENDPOINT_HALT);
-				cmd_ptr->STATUS   =   STATUS_RESET_BULK_OUT;
+                status = _usb_host_ch9_clear_feature(mass_class->dev_handle,
+                        REQ_TYPE_ENDPOINT, (uint8_t)(pPipe->endpoint_number | REQ_TYPE_OUT), ENDPOINT_HALT);
+                cmd_ptr->STATUS   =   STATUS_RESET_BULK_OUT;
             }
             break;
 
@@ -1489,12 +1484,12 @@ static void usb_class_mass_ctrl_callback(void* pipe_handle, void* user_param, ui
    
    if(NULL != mass_class->ctrl_callback)
    {
-	   mass_class->ctrl_callback(pipe_handle, mass_class->ctrl_param, buffer, size, status);
+       mass_class->ctrl_callback(pipe_handle, mass_class->ctrl_param, buffer, size, status);
    }
    
    if (NULL != mass_class && usb_host_release_tr(mass_class->host_handle, pipe_handle) != USB_OK)
    {
-       printf("_usb_host_release_tr failed\n");
+       USB_PRINTF("_usb_host_release_tr failed\n");
    }
 }
 
@@ -1515,7 +1510,7 @@ static usb_status usb_class_mass_reset_in_pipe
         status = usb_host_cancel(mass_class->host_handle, mass_class->bulk_in_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in usb_host_cancel to close pipe\n");
+            USB_PRINTF("error in usb_host_cancel to close pipe\n");
         }
     }
 
@@ -1524,7 +1519,7 @@ static usb_status usb_class_mass_reset_in_pipe
         status = usb_host_close_pipe(mass_class->host_handle, mass_class->bulk_in_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_msd_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_msd_deinit to close pipe\n");
         }
     }
 
@@ -1570,7 +1565,7 @@ static usb_status usb_class_mass_reset_out_pipe
         status = usb_host_cancel(mass_class->host_handle, mass_class->bulk_out_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in usb_host_cancel to close pipe\n");
+            USB_PRINTF("error in usb_host_cancel to close pipe\n");
         }
     }
     
@@ -1579,7 +1574,7 @@ static usb_status usb_class_mass_reset_out_pipe
         status = usb_host_close_pipe(mass_class->host_handle, mass_class->bulk_out_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_msd_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_msd_deinit to close pipe\n");
         }
     }
 

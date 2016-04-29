@@ -32,7 +32,11 @@
 #if USBCFG_HOST_AUDIO
 #include "usb.h"
 #include "usb_host_stack_interface.h"
+#include "usb_host_dev_mng.h"
+#include "usb_host_ch9.h"
+#include "usb_host_common.h"
 #include "usb_host_audio.h"
+#include "usb_host.h"
 
 
 static void usb_class_audio_cntrl_callback(void* , void* , uint8_t *, uint32_t, usb_status);
@@ -128,16 +132,16 @@ static usb_audio_command_t usb_audio_endpoint_commands[NUMBER_OF_ENDPOINT_COMMAN
 *END*--------------------------------------------------------------------*/
 static void usb_class_audio_cntrl_callback
 (
-	/* [IN] Unused */
-	void*      tr_ptr,
-	/* [IN] void*  to the class interface instance */
-	void*      param,
-	/* [IN] Data buffer */
-	uint8_t *   buffer,
-	/* [IN] Length of buffer */
-	uint32_t     len,
-	/* [IN] Error code (if any) */
-	usb_status  status
+    /* [IN] Unused */
+    void*      tr_ptr,
+    /* [IN] void*  to the class interface instance */
+    void*      param,
+    /* [IN] Data buffer */
+    uint8_t *   buffer,
+    /* [IN] Length of buffer */
+    uint32_t     len,
+    /* [IN] Error code (if any) */
+    usb_status  status
 )
 { /* Body */
     usb_status usbstatus;
@@ -150,7 +154,7 @@ static void usb_class_audio_cntrl_callback
     usbstatus = usb_host_release_tr(audio_class->host_handle, tr_ptr) ;
     if (usbstatus != USB_OK)
     {
-        printf("_usb_host_release_tr failed status:%d \r\n", usbstatus);
+        USB_PRINTF("_usb_host_release_tr failed status:%d \r\n", (unsigned int)usbstatus);
     }
 
     audio_class->in_setup = FALSE;
@@ -228,7 +232,7 @@ static usb_status usb_class_audio_cntrl_common
 
     if (usb_host_get_tr(audio_class->host_handle, usb_class_audio_cntrl_callback, audio_class, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr audio \r\n");
+        USB_PRINTF("error to get tr audio \r\n");
         return USBERR_ERROR;
     }
 
@@ -245,7 +249,7 @@ static usb_status usb_class_audio_cntrl_common
     }
 
     tr_ptr->setup_packet.bmrequesttype = bmrequesttype;
-    tr_ptr->setup_packet.brequest 	  = brequest;
+    tr_ptr->setup_packet.brequest     = brequest;
     *(uint16_t*)tr_ptr->setup_packet.wvalue = USB_HOST_TO_LE_SHORT(wvalue);
     *(uint16_t*)tr_ptr->setup_packet.windex =  USB_HOST_TO_LE_SHORT(windex);//USB_HOST_TO_LE_SHORT(((interface_descriptor_t*)(audio_class->intf_handle))->bInterfaceNumber);
     *(uint16_t*)tr_ptr->setup_packet.wlength = USB_HOST_TO_LE_SHORT(wlength);
@@ -255,7 +259,7 @@ static usb_status usb_class_audio_cntrl_common
     if (status != USB_OK)
     {
         audio_class->in_setup = FALSE;
-        printf("\nError in usb_class_audio_cntrl_common: %x", status);
+        USB_PRINTF("\nError in usb_class_audio_cntrl_common: %x", (unsigned int)status);
         usb_host_release_tr(audio_class->host_handle, tr_ptr);
     }
     return status;
@@ -346,7 +350,7 @@ static void usb_class_audio_control_recv_callback
 
     if (usb_host_release_tr(audio_class->host_handle, tr_ptr) != USB_OK)
     {
-        printf("_usb_host_release_tr failed\n");
+        USB_PRINTF("_usb_host_release_tr failed\n");
     }
 
     if (audio_class->interrupt_callback)
@@ -366,8 +370,8 @@ static void usb_class_audio_control_recv_callback
 *END*--------------------------------------------------------------------*/
 usb_status usb_class_audio_control_recv_data
 (
-	/* [IN] audio control class interface void*   */
-	audio_command_t*   audio_ptr,
+    /* [IN] audio control class interface void*   */
+    audio_command_t*   audio_ptr,
 
     /* [IN] buffer pointer */
     uint8_t *               buffer,
@@ -389,7 +393,7 @@ usb_status usb_class_audio_control_recv_data
     audio_class = (audio_control_struct_t*)audio_ptr->class_control_handle;
     if ((audio_ptr == NULL) || (buffer == NULL))
     {
-        printf("input parameter error\n");
+        USB_PRINTF("input parameter error\n");
         return USBERR_ERROR;
     }
 
@@ -401,7 +405,7 @@ usb_status usb_class_audio_control_recv_data
     }
      if (usb_host_get_tr(audio_class->host_handle, usb_class_audio_control_recv_callback, audio_class, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr\n");
+        USB_PRINTF("error to get tr\n");
         return USBERR_ERROR;
     }
     
@@ -410,11 +414,11 @@ usb_status usb_class_audio_control_recv_data
     status = usb_host_recv_data(audio_class->host_handle, audio_class->interrupt_pipe, tr_ptr);
     if (status != USB_OK)
     {
-        printf("\nError in usb_class_hid_recv_data: %x", status);
+        USB_PRINTF("\nError in usb_class_hid_recv_data: %x", (unsigned int)status);
         usb_host_release_tr(audio_class->host_handle, tr_ptr);
         return USBERR_ERROR;
     }
-	 
+     
     return USB_OK;
 } /* Endbody */
 
@@ -436,7 +440,7 @@ static void usb_class_audio_recv_callback
 
     if (usb_host_release_tr(audio_class->host_handle, tr_ptr) != USB_OK)
     {
-        printf("_usb_host_release_tr failed\n");
+        USB_PRINTF("_usb_host_release_tr failed\n");
     }
     
     if (audio_class->recv_callback)
@@ -456,8 +460,8 @@ static void usb_class_audio_recv_callback
 *END*--------------------------------------------------------------------*/
 usb_status usb_class_audio_recv_data
 (
-	/* [IN] audio control class interface pointer  */
-	audio_command_t*   audio_ptr,
+    /* [IN] audio control class interface pointer  */
+    audio_command_t*   audio_ptr,
 
     /* [IN] buffer pointer */
     uint8_t *               buffer,
@@ -479,7 +483,7 @@ usb_status usb_class_audio_recv_data
     audio_class = (audio_stream_struct_t*)audio_ptr->class_stream_handle;
     if ((audio_class == NULL) || (buffer == NULL))
     {
-        printf("input parameter error\n");
+        USB_PRINTF("input parameter error\n");
         return USBERR_ERROR;
     }
 
@@ -492,7 +496,7 @@ usb_status usb_class_audio_recv_data
     }
     if (usb_host_get_tr(audio_class->host_handle, usb_class_audio_recv_callback, audio_class, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr\n");
+        USB_PRINTF("error to get tr\n");
         return USBERR_ERROR;
     }
     
@@ -501,11 +505,11 @@ usb_status usb_class_audio_recv_data
     status = usb_host_recv_data(audio_class->host_handle, audio_class->iso_in_pipe, tr_ptr);
     if (status != USB_OK)
     {
-        printf("\nError in _usb_host_recv_data: %x", status);
+        USB_PRINTF("\nError in _usb_host_recv_data: %x", (unsigned int)status);
         usb_host_release_tr(audio_class->host_handle, tr_ptr);
         return USBERR_ERROR;
     }
-	 
+     
     return USB_OK;
 } /* Endbody */
 
@@ -530,7 +534,7 @@ static void usb_class_audio_send_callback
     usbstatus = usb_host_release_tr(audio_class->host_handle, tr_ptr);
     if (usbstatus != USB_OK)
     {
-        printf("_usb_host_release_tr failed:%x\n",usbstatus);
+        USB_PRINTF("_usb_host_release_tr failed:%x\n",(unsigned int)usbstatus);
     }
     
     if (audio_class->send_callback)
@@ -557,8 +561,8 @@ usb_status usb_class_audio_send_data
     /* [IN] buffer pointer */
     uint8_t *               buffer,
     
-	/* [IN] data length */
-	uint32_t						buf_size
+    /* [IN] data length */
+    uint32_t                        buf_size
 )
 { /* Body */
 
@@ -570,14 +574,14 @@ usb_status usb_class_audio_send_data
 
     if ((audio_ptr == NULL) || (audio_ptr->class_stream_handle == NULL))
     {
-        printf("input parameter error\n");
+        USB_PRINTF("input parameter error\n");
         return USBERR_ERROR;
     }
 
     audio_class = (audio_stream_struct_t*)audio_ptr->class_stream_handle;
     if ((audio_class == NULL) || (buffer == NULL))
     {
-        printf("get audio class parameter error\n");
+        USB_PRINTF("get audio class parameter error\n");
         return USBERR_ERROR;
     }
 
@@ -586,12 +590,12 @@ usb_status usb_class_audio_send_data
 
     if (audio_class->dev_handle == NULL)
     {
-        printf("get audio class dev handle error\n");
+        USB_PRINTF("get audio class dev handle error\n");
         return USBERR_ERROR;
     }
     if (usb_host_get_tr(audio_class->host_handle, usb_class_audio_send_callback, audio_class, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr\n");
+        USB_PRINTF("error to get tr\n");
         return USBERR_ERROR;
     }
 
@@ -600,11 +604,11 @@ usb_status usb_class_audio_send_data
     status = usb_host_send_data(audio_class->host_handle, audio_class->iso_out_pipe, tr_ptr);
     if (status != USB_OK)
     {
-        printf("\nError in _usb_host_send_data: %x", status);
+        USB_PRINTF("\nError in _usb_host_send_data: %x", (unsigned int)status);
         usb_host_release_tr(audio_class->host_handle, tr_ptr);
         return USBERR_ERROR;
     }
-	 
+     
     return USB_OK;
 
 } /* Endbody */
@@ -786,11 +790,11 @@ usb_status usb_class_audio_endpoint_command
         else if (NULL!=if_ptr->iso_in_pipe)
         {
 
-			Endp_num = (if_ptr->iso_ep_num | 0x80);
+            Endp_num = (if_ptr->iso_ep_num | 0x80);
         }
         else
         {
-			Endp_num = if_ptr->iso_ep_num; 
+            Endp_num = if_ptr->iso_ep_num; 
         }/* Endif */
 
         status = usb_class_audio_cntrl_common(com_ptr,
@@ -1169,29 +1173,29 @@ usb_status usb_class_audio_get_mem_endpoint
 )
 { /* Body */
 
-	uint8_t Endp_num;
-	audio_stream_struct_t*     if_ptr;
-	usb_status status = USBERR_ERROR;
-//	pipe_struct_t* pipe_ptr; 
+    uint8_t Endp_num;
+    audio_stream_struct_t*     if_ptr;
+    usb_status status = USBERR_ERROR;
+//  pipe_struct_t* pipe_ptr; 
 
-	if_ptr = (audio_stream_struct_t*)com_ptr->class_stream_handle;
+    if_ptr = (audio_stream_struct_t*)com_ptr->class_stream_handle;
 
-	/* Any isochronous pipe is supported? */
-	if ((NULL == if_ptr->iso_in_pipe) && (NULL == if_ptr->iso_out_pipe))
-	{
-		return USBERR_INVALID_NUM_OF_ENDPOINTS;
-	}
-	else if (if_ptr->iso_in_pipe!=NULL)
-	{
-		 Endp_num = if_ptr->iso_ep_num ;
-	}
-	else
-	{
-		Endp_num = if_ptr->iso_ep_num ;
-	}/* Endif */
+    /* Any isochronous pipe is supported? */
+    if ((NULL == if_ptr->iso_in_pipe) && (NULL == if_ptr->iso_out_pipe))
+    {
+        return USBERR_INVALID_NUM_OF_ENDPOINTS;
+    }
+    else if (if_ptr->iso_in_pipe!=NULL)
+    {
+         Endp_num = if_ptr->iso_ep_num ;
+    }
+    else
+    {
+        Endp_num = if_ptr->iso_ep_num ;
+    }/* Endif */
 
-	status = usb_class_audio_cntrl_common(com_ptr,GET_REQUEST_EP,GET_MEM,
-	                                   offset,(uint16_t)Endp_num,blen,buf);
+    status = usb_class_audio_cntrl_common(com_ptr,GET_REQUEST_EP,GET_MEM,
+                                       offset,(uint16_t)Endp_num,blen,buf);
 
     return status;
 }
@@ -1233,11 +1237,11 @@ usb_status usb_class_audio_set_mem_endpoint
     }
     else if (if_ptr->iso_in_pipe!=NULL)
     {
-		 Endp_num = if_ptr->iso_ep_num ;
+         Endp_num = if_ptr->iso_ep_num ;
     }
     else
     {
-		 Endp_num = if_ptr->iso_ep_num ;
+         Endp_num = if_ptr->iso_ep_num ;
     }/* Endif */
 
     status = usb_class_audio_cntrl_common(com_ptr,SET_REQUEST_EP,SET_MEM,

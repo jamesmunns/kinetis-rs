@@ -802,7 +802,7 @@ file_device_struct_t * serl_int_get_fdev(void)
 *
 * Function Name    : sci1_init
 * Returned Value   :
-* Comments         : This function initilizes the SCI 1 baud rate.
+* Comments         : This function initializes the SCI 1 baud rate.
 *    
 *
 *END*----------------------------------------------------------------------*/

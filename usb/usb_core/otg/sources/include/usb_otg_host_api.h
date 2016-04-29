@@ -39,10 +39,10 @@
 #define OTG_A_HNP_SUPPORT     4
 
 /* Public functions */
-extern uint32_t    _usb_otg_host_a_set_b_hnp_en(usb_otg_handle otg_handle , bool b_hnp_en);
-extern uint32_t    _usb_otg_host_on_interface_event(usb_otg_handle  otg_handle, usb_device_handle  dev_handle);
-extern uint32_t    _usb_otg_host_on_detach_event(usb_otg_handle  otg_handle);
-extern uint32_t    _usb_otg_host_get_otg_attribute(usb_otg_handle  otg_handle, uint8_t bm_attributes);
-extern uint8_t     _usb_otg_host_set_feature_required(usb_otg_handle  otg_handle);
+extern uint32_t    usb_otg_host_a_set_b_hnp_en(usb_otg_handle otg_handle , bool b_hnp_en);
+extern uint32_t    usb_otg_host_on_interface_event(usb_otg_handle  otg_handle, usb_device_handle  dev_handle);
+extern uint32_t    usb_otg_host_on_detach_event(usb_otg_handle  otg_handle);
+extern uint32_t    usb_otg_host_get_otg_attribute(usb_otg_handle  otg_handle, uint8_t bm_attributes);
+extern uint8_t     usb_otg_host_set_feature_required(usb_otg_handle  otg_handle);
 
 #endif /*__usb_otg_host_api__*/

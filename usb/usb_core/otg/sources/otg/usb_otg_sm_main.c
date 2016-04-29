@@ -32,7 +32,7 @@
 #include "usb_otg_main.h"
 #include "usb_otg_sm.h"
 #include "usb_otg_private.h"
-#include "usb_otg_khci_max3353_prv.h"
+#include "usb_otg.h"
 #include "usb_host_ch9.h"
 /* Constant Definitions*********************************************************/
 
@@ -161,7 +161,7 @@ usb_status _usb_otg_load_host
     if (status != USB_OK)
     {
         #if _DEBUG
-        printf("\n HOST STACK LOAD ERROR");
+        USB_PRINTF("\n HOST STACK LOAD ERROR");
         #endif  
     }
     return status;
@@ -185,7 +185,7 @@ usb_status _usb_otg_load_device
     if (status != USB_OK)
     {
         #if _DEBUG
-        printf ("\n DEVICE STACK LOAD ERROR");
+        USB_PRINTF ("\n DEVICE STACK LOAD ERROR");
         #endif  
     }
     return status;

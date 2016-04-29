@@ -38,6 +38,8 @@
 #include "usb_device_config.h"
 #include "usb.h"
 #include "usb_device_stack_interface.h"
+#include "usb_class_hid.h"
+#include "keyboard.h"
 #include "usb_descriptor.h"
 
 /*****************************************************************************
@@ -45,10 +47,12 @@
  *****************************************************************************/
 usb_ep_struct_t g_ep[HID_DESC_ENDPOINT_COUNT] = 
 {
-    HID_ENDPOINT,
-    USB_INTERRUPT_PIPE,
-    USB_SEND,
-    HID_ENDPOINT_PACKET_SIZE
+    {
+        HID_ENDPOINT, 
+        USB_INTERRUPT_PIPE, 
+        USB_SEND,
+        HID_ENDPOINT_PACKET_SIZE,
+    }
 };
 
 /* structure containing details of all the endpoints used by this device */ 
@@ -131,7 +135,76 @@ uint8_t  g_config_descriptor[CONFIG_DESC_SIZE] =
     HID_ENDPOINT_PACKET_SIZE, 0x00,
     0x0A
 };
+#if HIGH_SPEED
+    uint8_t  g_device_qualifier_descriptor[DEVICE_QUALIFIER_DESCRIPTOR_SIZE] =
+    {
+        /* Device Qualifier Descriptor Size */
+        DEVICE_QUALIFIER_DESCRIPTOR_SIZE, 
+        /* Type of Descriptor */
+        USB_DEVQUAL_DESCRIPTOR,
+        /*  BCD USB version  */
+        0x00, 0x02,
+        /* bDeviceClass */
+        0x00,
+        /* bDeviceSubClass */
+        0x00,
+        /* bDeviceProtocol */
+        0x00,
+        /* bMaxPacketSize0 */
+        CONTROL_MAX_PACKET_SIZE,
+        /* bNumConfigurations */
+        0x00,  
+        /* Reserved : must be zero */ 
+        0x00
+    };
 
+    uint8_t  g_other_speed_config_descriptor[OTHER_SPEED_CONFIG_DESCRIPTOR_SIZE] =
+    {
+        /* Length of this descriptor */
+        CONFIG_ONLY_DESC_SIZE,     
+        /* This is a Other speed config descr */
+        USB_OTHER_SPEED_DESCRIPTOR,
+        /*  Total length of the Configuration descriptor */
+        USB_uint_16_low(CONFIG_DESC_SIZE), USB_uint_16_high(CONFIG_DESC_SIZE),
+        0x01,
+        /*value used to selct this configuration : Configuration Value */
+        1, 
+        /*  Configuration Description String Index*/   
+        0, 
+        /*  Attributes.support RemoteWakeup and self power */
+        (USB_DESC_CFG_ATTRIBUTES_D7_POS) | (USBCFG_DEV_SELF_POWER << USB_DESC_CFG_ATTRIBUTES_SELF_POWERED_SHIFT) | (USBCFG_DEV_REMOTE_WAKEUP << USB_DESC_CFG_ATTRIBUTES_REMOTE_WAKEUP_SHIFT),    
+        /*  Current draw from bus */
+        0x32, 
+
+        /* Interface Descriptor */
+        IFACE_ONLY_DESC_SIZE,
+        USB_IFACE_DESCRIPTOR,
+        0x00,
+        0x00,
+        HID_DESC_ENDPOINT_COUNT,
+        0x03,
+        0x01,
+        0x02,
+        0x00,
+
+        /* HID descriptor */
+        HID_ONLY_DESC_SIZE, 
+        USB_HID_DESCRIPTOR,
+        0x00,0x01,
+        0x00,
+        0x01,
+        0x22,
+        0x34,0x00,
+         
+        /*Endpoint descriptor */
+        ENDP_ONLY_DESC_SIZE, 
+        USB_ENDPOINT_DESCRIPTOR,
+        HID_ENDPOINT|(USB_SEND << 7),
+        USB_INTERRUPT_PIPE, 
+        HID_ENDPOINT_PACKET_SIZE, 0x00, 
+        0x0A
+    };
+#endif
 uint8_t  g_report_descriptor[REPORT_DESC_SIZE] =
 {
     0x05, 0x01,                    /* USAGE_PAGE (Generic Desktop) */
@@ -265,7 +338,7 @@ uint32_t g_std_desc_size[USB_MAX_STD_DESCRIPTORS+1] =
     0, /* string */
     0, /* Interfdace */
     0, /* Endpoint */
-    #if HIGH_SPEED_DEVICE
+    #if HIGH_SPEED
         DEVICE_QUALIFIER_DESCRIPTOR_SIZE,
         OTHER_SPEED_CONFIG_DESCRIPTOR_SIZE,
     #else
@@ -283,7 +356,7 @@ uint8_t *g_std_descriptors[USB_MAX_STD_DESCRIPTORS+1] =
     NULL, /* string */
     NULL, /* Interfdace */
     NULL, /* Endpoint */
-    #if HIGH_SPEED_DEVICE
+    #if HIGH_SPEED
         g_device_qualifier_descriptor,
         g_other_speed_config_descriptor,
     #else
@@ -311,9 +384,11 @@ uint8_t *g_string_descriptors[USB_MAX_STRING_DESCRIPTORS+1] =
 
 usb_language_t g_usb_language[USB_MAX_SUPPORTED_INTERFACES] = 
 {
-    (uint16_t)0x0409,
-    g_string_descriptors,
-    g_string_desc_size
+    {
+        (uint16_t)0x0409,
+        g_string_descriptors,
+        g_string_desc_size
+    }
 };
 
 usb_all_languages_t g_languages = 

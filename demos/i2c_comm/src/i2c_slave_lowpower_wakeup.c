@@ -28,24 +28,58 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "board.h"
-#include "fsl_i2c_slave_driver.h"
-#include "fsl_device_registers.h"
-#include "fsl_port_hal.h"
-#include "fsl_debug_console.h"
-#include "fsl_clock_manager.h"
-#include "fsl_gpio_driver.h"
-#include "fsl_uart_hal.h"
-#include "fsl_smc_hal.h"
-#include "fsl_os_abstraction.h"
+///////////////////////////////////////////////////////////////////////////////
+//  Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
 
-#define UPPER_VALUE_LIMIT       (1)     /*! This value/10 is going to be added to current Temp to set the upper boundary*/
-#define LOWER_VALUE_LIMIT       (1)     /*! This Value/10 is going to be subtracted from current Temp to set the lower boundary*/
-#define LPTMR_COMPARE_VALUE     (500)   /*! Low Power Timer interrupt time in miliseconds */
-#define UPDATE_BOUNDARIES_TIME  (20)    /*! This value indicates the number of cycles needed to update boundaries. To know the Time it will take, multiply this value times LPTMR_COMPARE_VALUE*/
+// SDK Included Files
+#include "board.h"
+#include "fsl_i2c_slave_driver.h"
+#include "fsl_smc_hal.h"
+#include "fsl_os_abstraction.h"
+
+///////////////////////////////////////////////////////////////////////////////
+//  Definitions
+///////////////////////////////////////////////////////////////////////////////
+
+#define CMD_MODE                (0)     /*! This value indicate the slave is receiving command from master */
+#define PROCESS_MODE            (1)     /*! This value indicate the slave is transfering data with master */
+
+enum _subaddress_index_e
+{
+    Subaddress_Index_0 = 0x00,
+    Subaddress_Index_1 = 0x01u,
+    Subaddress_Index_2 = 0x02u,
+    Subaddress_Index_3 = 0x03u,
+    Subaddress_Index_4 = 0x04u,
+    Subaddress_Index_5 = 0x05u,
+    Subaddress_Index_6 = 0x06u,
+    Subaddress_Index_7 = 0x07u,
+    Invalid_Subaddress_Index,
+    Max_Subaddress_Index
+};
+
+///////////////////////////////////////////////////////////////////////////////
+//  Variables
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct
+{
+    uint8_t  subAddress;
+    uint8_t  data;
+    uint8_t  state;
+} i2cData_t;
+
+uint8_t u8SlaveDataBuffer[Max_Subaddress_Index]   = {'I', '2', 'C', '-', 'C', 'O', 'M', 'M', };
+
+///////////////////////////////////////////////////////////////////////////////
+//  Code
+///////////////////////////////////////////////////////////////////////////////
 
 static void LED_turnoff_master(void)
 {
@@ -64,103 +98,102 @@ static void LED_turnoff_slave(void)
     GPIO_DRV_SetPinOutput(kGpioLED2);
 }
 
-enum _subaddress_index_e
+static void i2c_slave_event_callback_passive(uint8_t instance, i2c_slave_event_t i2cEvent,void *callParam)
 {
-    Subaddress_Index_0 = 0x00,
-    Subaddress_Index_1 = 0x01,
-    Subaddress_Index_2 = 0x02,
-    Subaddress_Index_3 = 0x03,
-    Subaddress_Index_4 = 0x04,
-    Subaddress_Index_5 = 0x05,
-    Subaddress_Index_6 = 0x06,
-    Subaddress_Index_7 = 0x07,
-    Invalid_Subaddress_Index,
-    Max_Subaddress_Index
-};
-
-
-//u8SinkData is received from I2C master
-uint8_t u8SinkData      = 0x00;
-//u8SourceData will be sent to I2C master
-uint8_t u8SourceData    = 0xCD;
-
-uint8_t u8SubaddressIndex = Invalid_Subaddress_Index;
-uint8_t u8SlaveDataBuffer[Max_Subaddress_Index]   = {'I', '2', 'C', '-', 'C', 'O', 'M', 'M', };
-
-static i2c_status_t data_sink(uint8_t sinkByte)
-{
-    if (u8SubaddressIndex == Invalid_Subaddress_Index)
+    i2c_slave_state_t * slaveState = I2C_DRV_SlaveGetHandler(instance);
+    i2cData_t *userData = (i2cData_t*)callParam;
+    switch(i2cEvent)
     {
-        //the first byte received is subaddress
-        if (sinkByte < Invalid_Subaddress_Index)
-        {
-            u8SubaddressIndex = sinkByte;
-        }
+        case kI2CSlaveTxReq:
+            slaveState ->txBuff = &u8SlaveDataBuffer[userData->subAddress];
+            slaveState ->txSize = 1;
+            slaveState ->isTxBusy = true;
 
-        LED_toggle_slave();
+            userData->state = CMD_MODE;
+            LED_toggle_slave();
+        break;
+
+        case kI2CSlaveRxReq:
+            if (userData->state == CMD_MODE)
+            {
+                slaveState ->rxBuff = &userData->subAddress;
+                userData->state = PROCESS_MODE;
+            }
+
+            slaveState ->rxSize = 1;
+            slaveState ->isRxBusy = true;
+            LED_toggle_slave();
+        break;
+
+        case kI2CSlaveRxFull:
+            if (userData->state == PROCESS_MODE)
+            {
+                // current state == PROCESS_MODE -> we need to receive data
+                slaveState ->rxBuff = &userData->data;
+                slaveState ->rxSize = 1;
+                userData->state = CMD_MODE;
+                slaveState ->isRxBusy = true;
+                LED_toggle_slave();
+            }
+            else
+            {
+                u8SlaveDataBuffer[userData->subAddress] = userData->data;
+                LED_toggle_slave();
+            }
+        break;
+
+        default:
+        break;
     }
-    else
-    {
-        //the seconde byte received is data
-        u8SlaveDataBuffer[u8SubaddressIndex] = sinkByte;
-
-        //reset index as invalid for the next data tx/rx circle.
-        u8SubaddressIndex = Invalid_Subaddress_Index;
-
-        LED_toggle_slave();
-    }
-
-    return kStatus_I2C_Success;
 }
-
-static i2c_status_t data_source(uint8_t * sourceByte)
+/*!
+ * @brief main function
+ */
+int main(void)
 {
-
-    *sourceByte = u8SlaveDataBuffer[u8SubaddressIndex];
-
-    //reset index as invalid for the next data tx/rx circle.
-    u8SubaddressIndex = Invalid_Subaddress_Index;
-
-    LED_toggle_slave();
-
-    return kStatus_I2C_Success;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// Code
-////////////////////////////////////////////////////////////////////////////////
-void main(void)
-{
-    uint8_t slaveAddress = 0x3A;
     i2c_slave_state_t slave;
-    
+
+    i2cData_t i2cData =
+    {
+      .subAddress = Invalid_Subaddress_Index,
+      .data = 0,
+      .state = CMD_MODE
+    };
+
+    i2c_slave_user_config_t userConfig =
+    {
+        .address = 0x3A,
+        .slaveListening = true,
+        .slaveCallback  = i2c_slave_event_callback_passive,
+        .callbackParam  = &i2cData,
+#if FSL_FEATURE_I2C_HAS_START_STOP_DETECT
+        .startStopDetect  = false,
+#endif
+#if FSL_FEATURE_I2C_HAS_STOP_DETECT
+        .stopDetect       = false,
+#endif
+    };
 
     // Low Power Configuration
     smc_power_mode_config_t smcConfig;
     smc_power_mode_protection_config_t smcProtConfig;
 
-    /* Init struct.*/
+    // Init struct
     memset(&smcConfig, 0, sizeof(smcConfig));
     memset(&smcProtConfig, 0, sizeof(smcProtConfig));
 
     hardware_init();
-    
     dbg_uart_init();
-    
+    configure_i2c_pins(BOARD_I2C_COMM_INSTANCE);
     OSA_Init();
-
     GPIO_DRV_Init(0, ledPins);
 
     // Initiate I2C instance module
-    I2C_DRV_SlaveInit(BOARD_I2C_COMM_INSTANCE, slaveAddress, &slave);
-
-    // Instatll slave callbacks
-    I2C_DRV_SlaveInstallDataSource(BOARD_I2C_COMM_INSTANCE, data_source);
-    I2C_DRV_SlaveInstallDataSink(BOARD_I2C_COMM_INSTANCE, data_sink);
+    I2C_DRV_SlaveInit(BOARD_I2C_COMM_INSTANCE, &userConfig, &slave);
 
     printf("\r\n====== I2C Slave ======\r\n\r\n");
 
-    //turn LED_slave on to indicate I2C slave status is waiting for date receiving.
+    // turn LED_slave on to indicate I2C slave status is waiting for date receiving
     LED_turnon_slave();
     LED_turnoff_master();
     OSA_TimeDelay(50);
@@ -170,28 +203,33 @@ void main(void)
     // set to allow entering specific modes
     smcProtConfig.vlpProt = true;
     SMC_HAL_SetProtection(SMC_BASE, &smcProtConfig);
-   
+
     // set power mode to specific Run mode
 #if FSL_FEATURE_SMC_HAS_LPWUI
     smcConfig.lpwuiOption = true;
     smcConfig.lpwuiOptionValue = kSmcLpwuiEnabled;
 #endif
+#if FSL_FEATURE_SMC_HAS_PORPO
     smcConfig.porOption = false;
+#endif
     smcConfig.powerModeName = kPowerModeWait;
+
+#if FSL_FEATURE_SMC_HAS_HIGH_SPEED_RUN_MODE
+    // If current status is HSRUN mode, change to RUN mode first.
+    if (kStatHsrun == SMC_HAL_GetStat(SMC_BASE))
+    {
+        SMC_HAL_SetRunMode(SMC_BASE, kSmcRun);
+        while (kStatRun != SMC_HAL_GetStat(SMC_BASE)) {} // Wait for stat change
+    }
+#endif
 
     // Entry to Low Power Mode
     SMC_HAL_SetMode(SMC_BASE, &smcConfig);
 
-    //LED_slave is still on during low power mode until I2C master send data to slave.
-    //Turn off LED_slave to indicate MCU wake up by I2C address matching interrupt
+    // LED_slave is still on during low power mode until I2C master send data to slave.
+    // Turn off LED_slave to indicate MCU wake up by I2C address matching interrupt
     LED_turnoff_slave();
     printf("\r\n I2C slave wakes up from low power mode by I2C address matching.\r\n");
 
     while(1);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// EOF
-////////////////////////////////////////////////////////////////////////////////
-
-

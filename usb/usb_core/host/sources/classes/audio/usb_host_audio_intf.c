@@ -31,6 +31,9 @@
 #include "usb_host_config.h"
 #include "usb.h"
 #include "usb_host_stack_interface.h"
+#include "usb_host_dev_mng.h"
+#include "usb_host_ch9.h"
+#include "usb_host_common.h"
 #include "usb_host_audio.h"
 
 
@@ -47,12 +50,12 @@
 
 usb_status usb_class_audio_control_init
 (
-	/* [IN]	the device handle related to the class driver */
-	usb_device_instance_handle		dev_handle,
-	/* [IN]	the interface handle related to the class driver */
-	usb_interface_descriptor_handle intf_handle,
-	/* [OUT] printer call struct pointer */
-	class_handle*		class_handle_ptr
+    /* [IN] the device handle related to the class driver */
+    usb_device_instance_handle      dev_handle,
+    /* [IN] the interface handle related to the class driver */
+    usb_interface_descriptor_handle intf_handle,
+    /* [OUT] printer call struct pointer */
+    class_handle*       class_handle_ptr
 
 )
 { 
@@ -62,7 +65,7 @@ usb_status usb_class_audio_control_init
     audio_class = (audio_control_struct_t*)OS_Mem_alloc(sizeof(audio_control_struct_t));
     if (audio_class == NULL)
     {
-        printf("usb_class_audio_control_init fail on memory allocation\n");
+        USB_PRINTF("usb_class_audio_control_init fail on memory allocation\n");
         return USBERR_ERROR;
     }
 
@@ -89,15 +92,15 @@ usb_status usb_class_audio_control_init
 *END*--------------------------------------------------------------------*/
 usb_status usb_class_audio_control_deinit
 (
-	  /* [IN]  the class driver handle */
-	  class_handle 	  handle
+      /* [IN]  the class driver handle */
+      class_handle    handle
 )
 { /* Body */
     audio_control_struct_t*  audio_class = (audio_control_struct_t*)handle;
     usb_status                    status = USB_OK;
     if (audio_class == NULL)
     {
-        printf("usb_class_audio_control_deinit fail\n");
+        USB_PRINTF("usb_class_audio_control_deinit fail\n");
         return USBERR_ERROR;
     }
 
@@ -106,11 +109,11 @@ usb_status usb_class_audio_control_deinit
         status = usb_host_close_pipe(audio_class->host_handle, audio_class->interrupt_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_audio_control_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_audio_control_deinit to close pipe\n");
         }
     }
     OS_Mem_free(handle);
-	handle = NULL;
+    handle = NULL;
     return USB_OK;
 } /* Endbody */
 
@@ -130,10 +133,10 @@ usb_status usb_class_audio_control_pre_deinit
      )
 {
     audio_control_struct_t*  audio_class = (audio_control_struct_t*)handle;
-    usb_status							status = USB_OK;
+    usb_status                          status = USB_OK;
     if (audio_class == NULL)
     {
-        printf("usb_class_audio_control_pre_deinit fail\n");
+        USB_PRINTF("usb_class_audio_control_pre_deinit fail\n");
         return USBERR_ERROR;
     }
 
@@ -142,7 +145,7 @@ usb_status usb_class_audio_control_pre_deinit
         status = usb_host_cancel(audio_class->host_handle, audio_class->interrupt_pipe,NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close pipe\n");
         }
     }
     return USB_OK;
@@ -160,12 +163,12 @@ usb_status usb_class_audio_control_pre_deinit
 *END*--------------------------------------------------------------------*/
 usb_status usb_class_audio_stream_init
 (
-	/* [IN]	the device handle related to the class driver */
-	usb_device_instance_handle		dev_handle,
-	/* [IN]	the interface handle related to the class driver */
-	usb_interface_descriptor_handle intf_handle,
-	/* [OUT] printer call struct pointer */
-	class_handle*		class_handle_ptr
+    /* [IN] the device handle related to the class driver */
+    usb_device_instance_handle      dev_handle,
+    /* [IN] the interface handle related to the class driver */
+    usb_interface_descriptor_handle intf_handle,
+    /* [OUT] printer call struct pointer */
+    class_handle*       class_handle_ptr
 
 )
 { /* Body */
@@ -176,18 +179,18 @@ usb_status usb_class_audio_stream_init
     uint8_t                                  ep_num;
     usb_status                          status = USB_OK;
     pipe_init_struct_t              pipe_init;
-	 
+     
     audio_class = (audio_stream_struct_t*)OS_Mem_alloc(sizeof(audio_stream_struct_t));
     if (audio_class == NULL)
     {
-        printf("usb_class_audio_stream_init fail on memory allocation\n");
+        USB_PRINTF("usb_class_audio_stream_init fail on memory allocation\n");
         return USBERR_ERROR;
     }
 
     audio_class->dev_handle = dev_handle;
     audio_class->intf_handle = intf_handle;
     audio_class->host_handle = (usb_host_handle)usb_host_dev_mng_get_host(audio_class->dev_handle);
-	  
+      
     pDeviceIntf = (usb_device_interface_struct_t*)intf_handle;
     //intf = pDeviceIntf->lpinterfaceDesc;
     audio_class->iso_in_pipe = NULL;
@@ -209,7 +212,7 @@ usb_status usb_class_audio_stream_init
             status = usb_host_open_pipe(audio_class->host_handle, &audio_class->iso_in_pipe, &pipe_init);
             if (status != USB_OK)
             {
-                printf("usb_class_hid_init fail to open in pipe\n");
+                USB_PRINTF("usb_class_hid_init fail to open in pipe\n");
                 *class_handle_ptr = (class_handle)audio_class;
                 return USBERR_ERROR;
             }
@@ -227,7 +230,7 @@ usb_status usb_class_audio_stream_init
             status = usb_host_open_pipe(audio_class->host_handle, &audio_class->iso_out_pipe, &pipe_init);
             if (status != USB_OK)
             {
-                printf("usb_class_hid_init fail to open in pipe\n");
+                USB_PRINTF("usb_class_hid_init fail to open in pipe\n");
                 *class_handle_ptr = (class_handle)audio_class;
                 return USBERR_ERROR;
             }
@@ -258,10 +261,10 @@ usb_status usb_class_audio_stream_pre_deinit
      )
 {
     audio_stream_struct_t*  audio_class = (audio_stream_struct_t*)handle;
-    usb_status							status = USB_OK;
+    usb_status                          status = USB_OK;
     if (audio_class == NULL)
     {
-        printf("usb_class_audio_stream_pre_deinit fail\n");
+        USB_PRINTF("usb_class_audio_stream_pre_deinit fail\n");
         return USBERR_ERROR;
     }
 
@@ -270,7 +273,7 @@ usb_status usb_class_audio_stream_pre_deinit
         status = usb_host_close_pipe(audio_class->host_handle, audio_class->iso_in_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_audio_stream_pre_deinit to close iso in pipe\n");
+            USB_PRINTF("error in usb_class_audio_stream_pre_deinit to close iso in pipe\n");
         }
     }
     if (audio_class->iso_out_pipe != NULL)
@@ -278,7 +281,7 @@ usb_status usb_class_audio_stream_pre_deinit
         status = usb_host_close_pipe(audio_class->host_handle, audio_class->iso_out_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_audio_stream_pre_deinit to close iso out pipe\n");
+            USB_PRINTF("error in usb_class_audio_stream_pre_deinit to close iso out pipe\n");
         }
     }
     return USB_OK;
@@ -295,15 +298,15 @@ usb_status usb_class_audio_stream_pre_deinit
 *END*--------------------------------------------------------------------*/
 usb_status usb_class_audio_stream_deinit
 (
-	  /* [IN]  the class driver handle */
-	  class_handle 	  handle
+      /* [IN]  the class driver handle */
+      class_handle    handle
 )
 { /* Body */
     audio_stream_struct_t*  audio_class = (audio_stream_struct_t*)handle;
-    usb_status							status = USB_OK;
+    usb_status                          status = USB_OK;
     if (audio_class == NULL)
     {
-        printf("usb_class_audio_stream_deinit fail\n");
+        USB_PRINTF("usb_class_audio_stream_deinit fail\n");
         return USBERR_ERROR;
     }
 
@@ -312,7 +315,7 @@ usb_status usb_class_audio_stream_deinit
         status = usb_host_cancel(audio_class->host_handle, audio_class->iso_in_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close iso in pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close iso in pipe\n");
         }
     }
     if (audio_class->iso_out_pipe != NULL)
@@ -320,11 +323,11 @@ usb_status usb_class_audio_stream_deinit
         status = usb_host_cancel(audio_class->host_handle, audio_class->iso_out_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close iso out pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close iso out pipe\n");
         }
     }
     OS_Mem_free(handle);
-	handle = NULL;
+    handle = NULL;
     return USB_OK;
 } /* Endbody */
 
@@ -342,33 +345,33 @@ usb_status usb_class_audio_stream_deinit
 usb_status usb_class_audio_control_get_descriptors
 (
     /* [IN] pointer to device instance */
-    usb_device_instance_handle      			dev_handle,
+    usb_device_instance_handle                  dev_handle,
 
     /* [IN] pointer to interface descriptor */
-    usb_interface_descriptor_handle 			intf_handle,
+    usb_interface_descriptor_handle             intf_handle,
 
     /* [OUT] pointer to header descriptor */
     usb_audio_ctrl_desc_header_t* *        header_desc,
 
     /* [OUT] pointer to input terminal descriptor */
-    usb_audio_ctrl_desc_it_t* *        	it_desc,
+    usb_audio_ctrl_desc_it_t* *         it_desc,
 
     /* [OUT] pointer to output terminal descriptor */
-    usb_audio_ctrl_desc_ot_t**        	ot_desc,
+    usb_audio_ctrl_desc_ot_t**          ot_desc,
 
     /* [OUT] pointer to feature unit descriptor */
-    usb_audio_ctrl_desc_fu_t* *     		fu_desc
+    usb_audio_ctrl_desc_fu_t* *             fu_desc
 )
 {
-	usb_device_interface_struct_t*  pDeviceIntf  = (usb_device_interface_struct_t*)intf_handle;;
-	uint8_t* pinterfaceEx = pDeviceIntf->interfaceEx;
-	usb_status                 status = USB_OK;
-	uint32_t i = 0, len = pDeviceIntf->interfaceExlength;
-	usb_audio_ctrl_func_desc_t*      fd;
+    usb_device_interface_struct_t*  pDeviceIntf  = (usb_device_interface_struct_t*)intf_handle;;
+    uint8_t* pinterfaceEx = pDeviceIntf->interfaceEx;
+    usb_status                 status = USB_OK;
+    uint32_t i = 0, len = pDeviceIntf->interfaceExlength;
+    usb_audio_ctrl_func_desc_t*      fd;
 
      while(i < len) {
-	   fd = (usb_audio_ctrl_func_desc_t*)pinterfaceEx;
-	    switch (fd->header.bdescriptorsubtype) {
+       fd = (usb_audio_ctrl_func_desc_t*)pinterfaceEx;
+        switch (fd->header.bdescriptorsubtype) {
         case USB_DESC_SUBTYPE_AUDIO_CS_HEADER:
          // if (USB_SHORT_UNALIGNED_LE_TO_HOST(((*header_desc)->bcdCDC)) > 0x0110)  
           //      status = USBERR_INIT_FAILED;
@@ -384,9 +387,9 @@ usb_status usb_class_audio_control_get_descriptors
             break;
         }
         i += fd->header.bfunctionlength;
-	   pinterfaceEx += fd->header.bfunctionlength;
+       pinterfaceEx += fd->header.bfunctionlength;
     }
-	return status;    
+    return status;    
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -412,35 +415,35 @@ usb_status usb_class_audio_stream_get_descriptors
     usb_audio_stream_desc_spepific_as_if_t* *       as_itf_desc,
 
     /* [OUT] pointer to format type descriptor */
-    usb_audio_stream_desc_format_type_t* *        	 frm_type_desc,
+    usb_audio_stream_desc_format_type_t* *           frm_type_desc,
 
     /* [OUT] pointer to specific isochronous endpoint descriptor */
-    usb_audio_stream_desc_specific_iso_endp_t* *		iso_endp_spec_desc
+    usb_audio_stream_desc_specific_iso_endp_t* *        iso_endp_spec_desc
 )
 {
-	usb_device_interface_struct_t*  pDeviceIntf  = (usb_device_interface_struct_t*)intf_handle;
+    usb_device_interface_struct_t*  pDeviceIntf  = (usb_device_interface_struct_t*)intf_handle;
     usb_device_ep_struct_t*        pep = pDeviceIntf->ep;
-	uint8_t* pinterfaceEx = pDeviceIntf->interfaceEx;
-	usb_status						status = USB_OK;
-	uint32_t i = 0, len = pDeviceIntf->interfaceExlength;
-	usb_audio_stream_func_desc_t*      fd;
+    uint8_t* pinterfaceEx = pDeviceIntf->interfaceEx;
+    usb_status                      status = USB_OK;
+    uint32_t i = 0, len = pDeviceIntf->interfaceExlength;
+    usb_audio_stream_func_desc_t*      fd;
     
-	 while(i < len) {
-		fd = (usb_audio_stream_func_desc_t*)pinterfaceEx;
-	     switch (fd->as_general.bdescriptorsubtype) {
-	        case USB_DESC_SUBTYPE_AS_CS_GENERAL:
-	            *as_itf_desc = &fd->as_general;
-	            break;
-	        case USB_DESC_SUBTYPE_AS_CS_FORMAT_TYPE:
-	            *frm_type_desc = &fd->frm_type;
-	            break;
+     while(i < len) {
+        fd = (usb_audio_stream_func_desc_t*)pinterfaceEx;
+         switch (fd->as_general.bdescriptorsubtype) {
+            case USB_DESC_SUBTYPE_AS_CS_GENERAL:
+                *as_itf_desc = &fd->as_general;
+                break;
+            case USB_DESC_SUBTYPE_AS_CS_FORMAT_TYPE:
+                *frm_type_desc = &fd->frm_type;
+                break;
         }
-		i += fd->as_general.blength;
-		pinterfaceEx += fd->as_general.blength;
-	 }
+        i += fd->as_general.blength;
+        pinterfaceEx += fd->as_general.blength;
+     }
      if (pep->endpointExlength != 0)
         *iso_endp_spec_desc = (usb_audio_stream_desc_specific_iso_endp_t*)pep->endpointEx;
-	return status;
+    return status;
 
 }
 
@@ -488,20 +491,20 @@ usb_status usb_class_audio_stream_get_sample_type
 
 usb_status usb_class_audio_control_set_descriptors
 (
-	/* [IN] Class Interface structure pointer */
-	class_handle            handle,
+    /* [IN] Class Interface structure pointer */
+    class_handle            handle,
 
-	/* [IN] header descriptor pointer */
-	usb_audio_ctrl_desc_header_t*   header_desc,
+    /* [IN] header descriptor pointer */
+    usb_audio_ctrl_desc_header_t*   header_desc,
 
-	/* [IN] input terminal descriptor pointer */
-	usb_audio_ctrl_desc_it_t*       it_desc,
+    /* [IN] input terminal descriptor pointer */
+    usb_audio_ctrl_desc_it_t*       it_desc,
 
-	/* [IN] output terminal descriptor pointer */
-	usb_audio_ctrl_desc_ot_t*       ot_desc,
+    /* [IN] output terminal descriptor pointer */
+    usb_audio_ctrl_desc_ot_t*       ot_desc,
 
-	/* [IN] feature unit descriptor pointer */
-	usb_audio_ctrl_desc_fu_t*       fu_desc
+    /* [IN] feature unit descriptor pointer */
+    usb_audio_ctrl_desc_fu_t*       fu_desc
 )
 { /* Body */
     audio_control_struct_t*  audio_class = (audio_control_struct_t*)handle;
@@ -509,7 +512,7 @@ usb_status usb_class_audio_control_set_descriptors
 
     if ((audio_class == NULL))
     {
-        printf("input parameter error\n");
+        USB_PRINTF("input parameter error\n");
         return USBERR_ERROR;
     }
 
@@ -545,8 +548,8 @@ usb_status usb_class_audio_control_set_descriptors
 *END*--------------------------------------------------------------------*/
 usb_status usb_class_audio_stream_set_descriptors
 (
-	/* [IN] Class Interface structure pointer */
-	class_handle				handle,
+    /* [IN] Class Interface structure pointer */
+    class_handle                handle,
 
     /* [IN] audio stream interface descriptor pointer */
     usb_audio_stream_desc_spepific_as_if_t*    as_itf_desc,
@@ -568,7 +571,7 @@ usb_status usb_class_audio_stream_set_descriptors
 
     if ((audio_class == NULL))
     {
-        printf("input parameter error\n");
+        USB_PRINTF("input parameter error\n");
         return USBERR_ERROR;
     }
 
@@ -578,9 +581,9 @@ usb_status usb_class_audio_stream_set_descriptors
         return USBERR_ERROR;
     }
 
-    audio_class->as_itf_desc 		= as_itf_desc;
-    audio_class->frm_type_desc 		= frm_type_desc;
-    audio_class->iso_endp_spec_desc 	= iso_endp_spec_desc;
+    audio_class->as_itf_desc        = as_itf_desc;
+    audio_class->frm_type_desc      = frm_type_desc;
+    audio_class->iso_endp_spec_desc     = iso_endp_spec_desc;
 
 #ifdef _HOST_DEBUG_
     DEBUG_LOG_TRACE("usb_class_audio_control_set_descriptors, SUCCESSFUL");

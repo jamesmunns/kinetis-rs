@@ -67,7 +67,7 @@ void usb_class_mass_q_init
    msd_class_ptr->queue.COUNT  = 0;
    for(i = 0; i < QUEUE_SIZE; i++)
    {
-	   msd_class_ptr->queue.ELEMENTS[i] = NULL;
+       msd_class_ptr->queue.ELEMENTS[i] = NULL;
    }
    /* _mem_zero(&msd_class_ptr->queue, sizeof(msd_class_ptr->queue)); */
    #ifdef _HOST_DEBUG_
@@ -156,7 +156,7 @@ void usb_class_mass_deleteq
    USB_Host_MSD_unlock();
 
    /* if (q->COUNT >1) {
-      printf("\nMASS q size now %d", q->COUNT );
+      USB_PRINTF("\nMASS q size now %d", q->COUNT );
    }
    */
    
@@ -243,12 +243,12 @@ bool usb_class_mass_cancelq
    {
       index = q->FIRST;
       for (i=0;i<q->COUNT;i++) 
-	  {
+      {
          if (q->ELEMENTS[index] == pCmd) 
-		 {
+         {
             q->ELEMENTS[index] = NULL;
             result = TRUE;
-            /* printf("\nMASS q entry cancelled!!!" ); */
+            /* USB_PRINTF("\nMASS q entry cancelled!!!" ); */
             break;
          }   
          index = MASSQ_NEXT(index);

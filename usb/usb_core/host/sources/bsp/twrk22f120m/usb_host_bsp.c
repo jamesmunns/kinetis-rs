@@ -43,6 +43,8 @@
 #include "MK22F51212.h"
 #endif
 
+extern uint8_t soc_get_usb_vector_number(uint8_t controller_id);
+
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #define BSP_USB_INT_LEVEL                (4)
 #define USB_CLK_RECOVER_IRC_EN (*(volatile unsigned char *)0x40072144)
@@ -53,7 +55,7 @@ static int32_t bsp_usb_host_io_init
    int32_t i
 )
 {
-	int32_t ret = 0;
+    int32_t ret = 0;
     if (i == 0)
     {
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
@@ -82,6 +84,7 @@ static int32_t bsp_usb_host_io_init
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
         /* USB Clock Gating */
         HW_SIM_SCGC4_SET(SIM_SCGC4_USBOTG_MASK);
+
         /* PLL/FLL selected as CLK source */
         HW_SIM_SOPT2_CLR(SIM_SOPT2_PLLFLLSEL_MASK);
         HW_SIM_SOPT2_SET(SIM_SOPT2_USBSRC_MASK | SIM_SOPT2_PLLFLLSEL(0x01));
@@ -100,36 +103,24 @@ static int32_t bsp_usb_host_io_init
         extern uint32_t SystemCoreClock;
         if (SystemCoreClock == 120000000)
         {
-			/* USB clock divider */
-			if(kClockManagerSuccess != CLOCK_SYS_SetDivider(kClockDividerUsbDiv, 4U))
-			{
-			 ret = -1;
-			}
-			if(kClockManagerSuccess != CLOCK_SYS_SetDivider(kClockDividerUsbFrac, 1U))
-			{
-			 ret = -1;
-			}
+            /* USB clock divider */
+            CLOCK_SYS_SetUsbfsDiv(i, 4U, 1U);
         }
         else
         {
-            printf("clock error\r\n");
+            USB_PRINTF("clock error\r\n");
         }
-		/* PLL/FLL selected as CLK source */
-		if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockUsbSrc, 1U))
-		{
-		 ret = -1;
-		}
-		if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockPllfllSel, 1U))
-		{
-		 ret = -1;
-		}
-		/* USB Clock Gating */
-		CLOCK_SYS_EnableUsbClock(i);
+        /* PLL/FLL selected as CLK source */
+        CLOCK_SYS_SetUsbfsSrc(i, kClockUsbfsSrcPllFllSel);
+        CLOCK_SYS_SetPllfllSel(kClockPllFllSelPll);
+
+        /* USB Clock Gating */
+        CLOCK_SYS_EnableUsbfsClock(i);
         /* Weak pull downs */
         HW_USB_USBCTRL_WR(USB0_BASE, 0x40);
     #if USBCFG_HOST_PORT_NATIVE
-		/* Enable clock gating to ports C */
-		CLOCK_SYS_EnablePortClock(3);
+        /* Enable clock gating to ports C */
+        CLOCK_SYS_EnablePortClock(2);
         /* Souce the P5V0_K22_USB. Set PTC9 to high */
         BW_PORT_PCRn_MUX(PORTC_BASE, 9, 1); /* GPIO mux */
         HW_GPIO_PDDR_SET(PTC_BASE, 1<<9);        /* Set output */
@@ -164,14 +155,17 @@ int32_t bsp_usb_host_init(uint8_t controller_id)
         /* reset USB CTRL register */
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
         USB0_USBCTRL = (0x0);
-#elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
-        HW_USB_USBCTRL_WR(USB0_BASE, 0);
-#else
-        HW_USB_USBCTRL_WR(0);
-#endif
-
         /* setup interrupt */
         OS_intr_init(soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
+#elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
+        HW_USB_USBCTRL_WR(USB0_BASE, 0);
+        /* setup interrupt */
+        OS_intr_init((IRQn_Type)soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
+#else
+        HW_USB_USBCTRL_WR(0);
+        /* setup interrupt */
+        OS_intr_init((IRQn_Type)soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
+#endif
     }
     else
     {

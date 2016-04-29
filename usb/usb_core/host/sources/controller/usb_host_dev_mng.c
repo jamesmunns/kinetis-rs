@@ -44,7 +44,7 @@
 #endif
 usb_status USB_log_error(char* file, uint32_t line, usb_status error);
 bool  usb_host_driver_info_match(dev_instance_t*, interface_descriptor_t*, usb_host_driver_info_t*);
-static void* usb_host_dev_get_instance(usb_host_handle, uint8_t, uint8_t, uint8_t);
+void* _usb_host_dev_get_instance(usb_host_handle, uint8_t, uint8_t, uint8_t);
 /*FUNCTION*----------------------------------------------------------------
 *
 * Function Name  : usb_host_dev_mng_get_address
@@ -107,7 +107,15 @@ uint8_t usb_host_dev_mng_get_speed(usb_device_instance_handle dev_handle)
 *END*--------------------------------------------------------------------*/
 uint8_t usb_host_dev_mng_get_hub_speed(usb_device_instance_handle dev_handle)
 {
-    return dev_handle ? ((dev_instance_t*)dev_handle)->hub_instance->speed : 0xFF;
+      if ((dev_instance_t*)dev_handle == NULL)
+         return 0;
+      else 
+      {
+          if (((dev_instance_t*)dev_handle)->hub_instance != NULL)
+            return ((dev_instance_t*)dev_handle)->hub_instance->speed;
+          else
+            return 0;
+      }
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -172,7 +180,17 @@ uint8_t usb_host_dev_mng_get_level(usb_device_instance_handle dev_handle)
 *END*--------------------------------------------------------------------*/
 uint8_t usb_host_dev_mng_get_hs_hub_no(usb_device_instance_handle dev_handle)
 {
-    return dev_handle ? ((dev_instance_t*)dev_handle)->hub_instance->hs_hub_no : 0xFF;
+
+      if ((dev_instance_t*)dev_handle == NULL)
+         return 0;
+      else 
+      {
+        if (((dev_instance_t*)dev_handle)->hub_instance != NULL)
+          return ((dev_instance_t*)dev_handle)->hub_instance->hs_hub_no;
+        else
+          return 0;
+      }
+        
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -185,7 +203,15 @@ uint8_t usb_host_dev_mng_get_hs_hub_no(usb_device_instance_handle dev_handle)
 *END*--------------------------------------------------------------------*/
 uint8_t usb_host_dev_mng_get_hs_port_no(usb_device_instance_handle dev_handle)
 {
-    return dev_handle ? ((dev_instance_t*)dev_handle)->hub_instance->hs_port_no : 0xFF;
+      if ((dev_instance_t*)dev_handle == NULL)
+         return 0;
+      else 
+      {
+        if (((dev_instance_t*)dev_handle)->hub_instance != NULL)
+         return ((dev_instance_t*)dev_handle)->hub_instance->hs_port_no;
+        else
+         return 0;
+      }
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -230,19 +256,19 @@ usb_device_interface_info_struct_t* usb_host_dev_mng_get_interface_info(usb_devi
     dev_instance_t*                     dev_ptr = (dev_instance_t*)dev_handle;
     usb_device_interface_info_struct_t* lpinterface_info = NULL;
     uint8_t                              intf_no;
-    usb_host_state_struct_t*            usb_host_ptr = (usb_host_state_struct_t*)dev_ptr->host;
-    USB_Host_lock();
+    //usb_host_state_struct_t*            usb_host_ptr = (usb_host_state_struct_t*)dev_ptr->host;
+    //USB_Host_lock();
     /* Check that there is an available interface pointer */
     for (intf_no = 0; intf_no < dev_ptr->num_of_interfaces;intf_no++)
     {
         lpinterface_info = &dev_ptr->interface_info[intf_no];
         if ((lpinterface_info->lphostintf != NULL) && (intf == lpinterface_info->lphostintf->lpinterfaceDesc))
         {
-            USB_Host_unlock();
+            //USB_Host_unlock();
             return lpinterface_info;
         }
     }
-    USB_Host_unlock();
+    //USB_Host_unlock();
     return NULL;
 }
 
@@ -279,7 +305,7 @@ usb_status usb_host_dev_mng_attach
        DEBUG_LOG_TRACE("usb_dev_list_attach_device attach device");
     #endif
     usb_host_ptr = (usb_host_state_struct_t*)handle;
-    //printf("a %d %d %d\n", hub_no, port_no, level);
+    //USB_PRINTF("a %d %d %d\n", hub_no, port_no, level);
  
     /* Allocate new device instance */
     new_instance_ptr = (dev_instance_t*) OS_Mem_alloc_uncached_zero(sizeof(dev_instance_t));
@@ -288,7 +314,7 @@ usb_status usb_host_dev_mng_attach
         #ifdef _HOST_DEBUG_
            DEBUG_LOG_TRACE("usb_dev_list_attach_device failed to malloc device handle");
         #endif
-        printf("memory allocation failed in usb_host_dev_mng_attach\n");
+        USB_PRINTF("memory allocation failed in usb_host_dev_mng_attach\n");
         return USB_log_error(__FILE__,__LINE__, USBERR_GET_MEMORY_FAILED);
     } /* EndIf */
  
@@ -302,10 +328,12 @@ usb_status usb_host_dev_mng_attach
     new_instance_ptr->attached = (uint8_t)TRUE;
     new_instance_ptr->pre_detached = (uint8_t)FALSE;
     new_instance_ptr->to_be_detached = (uint8_t)FALSE;
+    new_instance_ptr->stall_retries = USBCFG_HOST_CTRL_FAILED_RETRY;
+    new_instance_ptr->ctrl_retries = USBCFG_HOST_CTRL_STALL_RETRY;
 
-    //printf("l1\n");
+    //USB_PRINTF("l1\n");
     USB_Host_lock();
-    //printf("l2\n");
+    //USB_PRINTF("l2\n");
     dev_instance_ptr = usb_host_ptr->device_list_ptr;
     while (dev_instance_ptr != NULL)
     {
@@ -314,7 +342,7 @@ usb_status usb_host_dev_mng_attach
         {
             USB_Host_unlock();
             OS_Mem_free((void*)new_instance_ptr);
-            printf("invalidate attach\n");
+            USB_PRINTF("invalidate attach\n");
             *handle_ptr = NULL;
             return USBERR_ERROR;
         }
@@ -323,7 +351,7 @@ usb_status usb_host_dev_mng_attach
             dev_instance_ptr = dev_instance_ptr->next;
         }
     }
-    //printf("l3\n");
+    //USB_PRINTF("l3\n");
     /* Find unused address from 1 - 127 for this host */
     dev_instance_ptr = usb_host_ptr->device_list_ptr;
     if ((dev_instance_ptr == NULL) || (dev_instance_ptr->address != 1))
@@ -353,7 +381,7 @@ usb_status usb_host_dev_mng_attach
             #ifdef _HOST_DEBUG_
                DEBUG_LOG_TRACE("usb_dev_list_attach_device out of addresses");
             #endif
-            printf("no valid address for the device\n");
+            USB_PRINTF("no valid address for the device\n");
             *handle_ptr = NULL;
             return USB_log_error(__FILE__,__LINE__, USBERR_ADDRESS_ALLOC_FAILED);
         } /* EndIf */
@@ -361,7 +389,7 @@ usb_status usb_host_dev_mng_attach
         new_instance_ptr->next = dev_instance_ptr;
         dev_instance_prev_ptr->next = new_instance_ptr;
     };
-    //printf("l4\n");   
+    //USB_PRINTF("l4\n");   
     USB_Host_unlock();
  
     /*-----------------------------------------------------------**
@@ -386,7 +414,7 @@ usb_status usb_host_dev_mng_attach
         #ifdef _HOST_DEBUG_
             DEBUG_LOG_TRACE("usb_dev_list_attach_device open pipe failed");
         #endif
-        printf("can't open control pipe\n");
+        USB_PRINTF("can't open control pipe\n");
         return USB_log_error(__FILE__,__LINE__, USBERR_PIPE_OPENED_FAILED);
     } /* Endif */
  
@@ -403,7 +431,7 @@ usb_status usb_host_dev_mng_attach
         #ifdef _HOST_DEBUG_
             DEBUG_LOG_TRACE("usb_dev_list_attach_device FAILED");
         #endif
-        printf("get descriptor error\n");
+        USB_PRINTF("get descriptor error\n");
         *handle_ptr = (usb_device_instance_handle)new_instance_ptr;
         return USB_log_error(__FILE__,__LINE__, USBERR_NO_DESCRIPTOR);
     }
@@ -412,7 +440,7 @@ usb_status usb_host_dev_mng_attach
         DEBUG_LOG_TRACE("usb_dev_list_attach_device SUCCESSFUL");
     #endif
     *handle_ptr = (usb_device_instance_handle)new_instance_ptr;
-    //printf("attach done\n");
+    //USB_PRINTF("attach done\n");
     return USB_OK;
 } /* EndBody */
  
@@ -444,7 +472,7 @@ usb_status  usb_host_dev_mng_pre_detach
 
     /* search device list for the one being detached */
     USB_Host_lock();
-    dev_instance_ptr = (dev_instance_t*)usb_host_dev_get_instance(handle, hub_no, port_no, (uint8_t)0);
+    dev_instance_ptr = (dev_instance_t*)_usb_host_dev_get_instance(handle, hub_no, port_no, (uint8_t)0);
     
     if (dev_instance_ptr == NULL)
     {
@@ -461,11 +489,14 @@ usb_status  usb_host_dev_mng_pre_detach
         USB_Host_unlock();
         return  USB_OK;
     }
+    dev_instance_ptr->pre_detached = (uint8_t)TRUE;
 
     if (NULL != dev_instance_ptr->control_pipe)
     {
+        USB_Host_unlock();
         /* Close control pipe */
         usb_host_cancel(handle, (pipe_struct_t*)dev_instance_ptr->control_pipe, (tr_struct_t*)NULL);
+        USB_Host_lock();
     }
 
     for (interface_index = 0; interface_index < dev_instance_ptr->configuration.interface_count; interface_index++)
@@ -480,13 +511,14 @@ usb_status  usb_host_dev_mng_pre_detach
         class_map = lpinterface_info->lpClassDriverMap;
         if (class_map != NULL)
         {
+            USB_Host_unlock();
             class_map->class_pre_deinit(lpinterface_info->lpClassHandle);
+            USB_Host_lock();
         }
     }
-    dev_instance_ptr->pre_detached = (uint8_t)TRUE;
 
     USB_Host_unlock();
-    if (dev_instance_ptr->state <= DEVSTATE_SET_CFG)
+    if (dev_instance_ptr->state <= DEVSTATE_SET_INTF)
     {
         if (dev_instance_ptr->control_pipe != NULL)
         {
@@ -533,7 +565,7 @@ usb_status  usb_host_dev_mng_detach
     usb_host_dev_mng_pre_detach(handle, hub_no, port_no);
     /* search device list for the one being detached */
     USB_Host_lock();
-    dev_instance_ptr = (dev_instance_t*)usb_host_dev_get_instance(handle, hub_no, port_no, (uint8_t)1);
+    dev_instance_ptr = (dev_instance_t*)_usb_host_dev_get_instance(handle, hub_no, port_no, (uint8_t)1);
 
     if (dev_instance_ptr == NULL)
     {
@@ -552,7 +584,7 @@ usb_status  usb_host_dev_mng_detach
         /* Notify the application of unavailable interfaces */
         usb_host_dev_notify(dev_instance_ptr,USB_DETACH_EVENT);     
 #ifdef USBCFG_OTG
-        _usb_otg_host_on_detach_event(usb_host_ptr->otg_handle);
+        usb_otg_host_on_detach_event(usb_host_ptr->otg_handle);
 #endif 
     }
     else
@@ -602,7 +634,7 @@ bool  usb_host_dev_mng_check_configuration
    
     if (pConfigurationDesc->bMaxPower > USBCFG_HOST_MAX_POWER)
     {
-        printf("Error, MAX power exceed host can offer\n");
+        USB_PRINTF("Error, MAX power exceed host can offer\n");
         return FALSE;
     }
 
@@ -726,14 +758,14 @@ usb_status usb_host_dev_mng_parse_configuration_descriptor(usb_device_instance_h
             {
                 if (ptr1.intf->bNumEndpoints > USBCFG_HOST_MAX_EP_PER_INTERFACE)
                 {
-                    printf("too many endpoints in one interface, please increase the USBCFG_HOST_MAX_EP_PER_INTERFACE value\n");
+                    USB_PRINTF("too many endpoints in one interface, please increase the USBCFG_HOST_MAX_EP_PER_INTERFACE value\n");
                     ret = USBERR_ERROR;
                     break;
                 }
 
                 if (pConfiguration->interface_count >= USBCFG_HOST_MAX_INTERFACE_PER_CONFIGURATION)
                 {
-                    printf("too many interfaces in one configuration, please increase the USBCFG_HOST_MAX_INTERFACE_PER_CONFIGURATION value\n");
+                    USB_PRINTF("Unsupported Device attached\r\n too many interfaces in one configuration, please increase the USBCFG_HOST_MAX_INTERFACE_PER_CONFIGURATION value\n");
                     ret = USBERR_ERROR;
                     break;
                 }
@@ -773,7 +805,7 @@ usb_status usb_host_dev_mng_parse_configuration_descriptor(usb_device_instance_h
                 /* now the ptr1 should point to endpoint descriptor */
                 if (ptr1.common->bDescriptorType != USB_DESC_TYPE_EP)
                 {
-                    printf("interface descriptor error\n");
+                    USB_PRINTF("interface descriptor error\n");
                     ret = USBERR_ERROR;
                     break;
                 }
@@ -783,7 +815,7 @@ usb_status usb_host_dev_mng_parse_configuration_descriptor(usb_device_instance_h
                     if ((ptr1.ndpt->bDescriptorType != USB_DESC_TYPE_EP) ||
                         (ptr1.word >= ptr2.word))
                     {
-                        printf("endpoint descriptor error\n");
+                        USB_PRINTF("endpoint descriptor error\n");
                         ret = USBERR_ERROR;
                         break;
                     }
@@ -876,7 +908,7 @@ bool  usb_host_dev_notify
  
         if (dev_ptr->interface_info[interface_index].lphostintf == NULL)
         {
-            //printf("error in usb_host_dev_notify event_code 0x%x\n", event_code);
+            //USB_PRINTF("error in usb_host_dev_notify event_code 0x%x\n", event_code);
             // means there is no interface registered by user can match this interface
             continue;
         }
@@ -884,7 +916,7 @@ bool  usb_host_dev_notify
         lpInterfaceInfo = &dev_ptr->interface_info[interface_index];
         if (lpInterfaceInfo == NULL)
         {
-            printf("error to get lpInterfaceInfo \n");
+            USB_PRINTF("error to get lpInterfaceInfo \n");
             return FALSE;
         }
 
@@ -920,7 +952,7 @@ bool  usb_host_dev_notify
     return TRUE;
 }
 
-static void* usb_host_dev_get_instance
+void* _usb_host_dev_get_instance
 (
     usb_host_handle    handle,
     uint8_t            hub_no,
@@ -933,7 +965,7 @@ static void* usb_host_dev_get_instance
     dev_instance_t*                     dev_instance_ptr_pre;
     dev_instance_t*                     device_root = (dev_instance_t*)usb_host_ptr->device_list_ptr;
 
-    USB_Host_lock();    
+    //USB_Host_lock();    
     dev_instance_ptr_pre = device_root;
     for (dev_instance_ptr = device_root; dev_instance_ptr != NULL; dev_instance_ptr = dev_instance_ptr->next)
     {
@@ -958,7 +990,7 @@ static void* usb_host_dev_get_instance
         }
         break;
     }
-    USB_Host_unlock();
+    //USB_Host_unlock();
 
     return (void*)dev_instance_ptr;
 }

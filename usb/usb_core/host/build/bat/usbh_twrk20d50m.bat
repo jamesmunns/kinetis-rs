@@ -21,7 +21,7 @@ copy %USBROOTDIR%\usb_core\include\usb_opt.h %OUTPUTDIR%\usb_opt.h /Y
 copy %USBROOTDIR%\usb_core\include\usb_types.h %OUTPUTDIR%\usb_types.h /Y
 copy %USBROOTDIR%\adapter\sources\adapter.h %OUTPUTDIR%\adapter.h /Y
 copy %USBROOTDIR%\adapter\sources\adapter_types.h %OUTPUTDIR%\adapter_types.h /Y
-copy %USBROOTDIR%\usb_core\host\include\MK20D50M\usb_host_config.h %OUTPUTDIR%\usb_host_config.h /Y
+copy %USBROOTDIR%\usb_core\host\include\twrk20d50m\usb_host_config.h %OUTPUTDIR%\usb_host_config.h /Y
 copy %USBROOTDIR%\usb_core\host\include\usb_host_stack_interface.h %OUTPUTDIR%\usb_host_stack_interface.h /Y
 copy %USBROOTDIR%\usb_core\host\sources\classes\hid\usb_host_hid.h %OUTPUTDIR%\usb_host_hid.h /Y
 copy %USBROOTDIR%\usb_core\host\sources\classes\hub\usb_host_hub.h %OUTPUTDIR%\usb_host_hub.h /Y
@@ -54,6 +54,10 @@ rem gcc_arm files
 :tool_gcc_arm
 goto os_%OS%
 
+rem kds files
+:tool_kds
+goto os_%OS%
+
 rem mqx file
 :os_mqx
 copy %USBROOTDIR%\adapter\sources\mqx\adapter_mqx.h %OUTPUTDIR%\adapter_mqx.h /Y 
@@ -64,12 +68,6 @@ rem bm file
 :os_bm
 copy %USBROOTDIR%\adapter\sources\bm\adapter_bm.h %OUTPUTDIR%\adapter_bm.h /Y 
 copy %USBROOTDIR%\adapter\sources\bm\adapter_cfg.h %OUTPUTDIR%\adapter_cfg.h /Y
-goto copy_end
-
-rem sdk file
-:os_sdk
-copy %USBROOTDIR%\adapter\sources\sdk\adapter_sdk.h %OUTPUTDIR%\adapter_sdk.h /Y 
-copy %USBROOTDIR%\adapter\sources\sdk\adapter_cfg.h %OUTPUTDIR%\adapter_cfg.h /Y
 goto copy_end
 
 rem sdk file

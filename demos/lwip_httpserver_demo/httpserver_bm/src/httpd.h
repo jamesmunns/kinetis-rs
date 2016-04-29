@@ -36,30 +36,36 @@
 #ifndef __HTTPD_H__
 #define __HTTPD_H__
 
+////////////////////////////////////////////////////////////////////////////////
+// Includes
+////////////////////////////////////////////////////////////////////////////////
+
 #include "lwip/opt.h"
 #include "lwip/err.h"
 #include "lwip/pbuf.h"
 
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 
-/** Set this to 1 to support CGI */
+// Set this to 1 to support CGI
 #ifndef LWIP_HTTPD_CGI
 #define LWIP_HTTPD_CGI            0
 #endif
 
-/** Set this to 1 to support SSI (Server-Side-Includes) */
+// Set this to 1 to support SSI (Server-Side-Includes)
 #ifndef LWIP_HTTPD_SSI
 #define LWIP_HTTPD_SSI            0
 #endif
 
-/** Set this to 1 to support HTTP POST */
+// Set this to 1 to support HTTP POST
 #ifndef LWIP_HTTPD_SUPPORT_POST
 #define LWIP_HTTPD_SUPPORT_POST   0
 #endif
 
-
 #if LWIP_HTTPD_CGI
 
-/*
+/*!
  * Function pointer for a CGI script handler.
  *
  * This function is called each time the HTTPD server is asked for a file
@@ -91,7 +97,7 @@
 typedef const char *(*tCGIHandler)(int iIndex, int iNumParams, char *pcParam[],
                              char *pcValue[]);
 
-/*
+/*!
  * Structure defining the base filename (URL) of a CGI and the associated
  * function which is to be called when that URL is requested.
  */
@@ -103,25 +109,26 @@ typedef struct
 
 void http_set_cgi_handlers(const tCGI *pCGIs, int iNumHandlers);
 
-
-/* The maximum number of parameters that the CGI handler can be sent. */
+// The maximum number of parameters that the CGI handler can be sent.
 #ifndef LWIP_HTTPD_MAX_CGI_PARAMETERS
 #define LWIP_HTTPD_MAX_CGI_PARAMETERS 16
 #endif
 
-#endif /* LWIP_HTTPD_CGI */
+#endif // LWIP_HTTPD_CGI
 
 #if LWIP_HTTPD_SSI
 
-/** LWIP_HTTPD_SSI_MULTIPART==1: SSI handler function is called with 2 more
+/*! 
+ * LWIP_HTTPD_SSI_MULTIPART==1: SSI handler function is called with 2 more
  * arguments indicating a counter for insert string that are too long to be
  * inserted at once: the SSI handler function must then set 'next_tag_part'
- * which will be passed back to it in the next call. */
+ * which will be passed back to it in the next call. 
+ */
 #ifndef LWIP_HTTPD_SSI_MULTIPART
 #define LWIP_HTTPD_SSI_MULTIPART    0
 #endif
 
-/*
+/*!
  * Function pointer for the SSI tag handler callback.
  *
  * This function will be called each time the HTTPD server detects a tag of the
@@ -153,32 +160,33 @@ void http_set_cgi_handlers(const tCGI *pCGIs, int iNumHandlers);
 typedef u16_t (*tSSIHandler)(int iIndex, char *pcInsert, int iInsertLen
 #if LWIP_HTTPD_SSI_MULTIPART
                              , u16_t current_tag_part, u16_t *next_tag_part
-#endif /* LWIP_HTTPD_SSI_MULTIPART */
+#endif // LWIP_HTTPD_SSI_MULTIPART
 #if LWIP_HTTPD_FILE_STATE
                              , void *connection_state
-#endif /* LWIP_HTTPD_FILE_STATE */
+#endif // LWIP_HTTPD_FILE_STATE
                              );
 
 void http_set_ssi_handler(tSSIHandler pfnSSIHandler,
                           const char **ppcTags, int iNumTags);
 
-/* The maximum length of the string comprising the tag name */
+// The maximum length of the string comprising the tag name
 #ifndef LWIP_HTTPD_MAX_TAG_NAME_LEN
 #define LWIP_HTTPD_MAX_TAG_NAME_LEN 8
 #endif
 
-/* The maximum length of string that can be returned to replace any given tag */
+// The maximum length of string that can be returned to replace any given tag
 #ifndef LWIP_HTTPD_MAX_TAG_INSERT_LEN
 #define LWIP_HTTPD_MAX_TAG_INSERT_LEN 192
 #endif
 
-#endif /* LWIP_HTTPD_SSI */
+#endif // LWIP_HTTPD_SSI
 
 #if LWIP_HTTPD_SUPPORT_POST
 
 /* These functions must be implemented by the application */
 
-/** Called when a POST request has been received. The application can decide
+/*!
+ * @brief Called when a POST request has been received. The application can decide
  * whether to accept it or not.
  *
  * @param connection Unique connection identifier, valid until httpd_post_end
@@ -200,7 +208,8 @@ err_t httpd_post_begin(void *connection, const char *uri, const char *http_reque
                        u16_t http_request_len, int content_len, char *response_uri,
                        u16_t response_uri_len, u8_t *post_auto_wnd);
 
-/** Called for each pbuf of data that has been received for a POST.
+/*! 
+ * @brief Called for each pbuf of data that has been received for a POST.
  * ATTENTION: The application is responsible for freeing the pbufs passed in!
  *
  * @param connection Unique connection identifier.
@@ -210,7 +219,8 @@ err_t httpd_post_begin(void *connection, const char *uri, const char *http_reque
  */
 err_t httpd_post_receive_data(void *connection, struct pbuf *p);
 
-/** Called when all data is received or when the connection is closed.
+/*! 
+ * @brief Called when all data is received or when the connection is closed.
  * The application must return the filename/URI of a file to send in response
  * to this POST request. If the response_uri buffer is untouched, a 404
  * response is returned.
@@ -227,10 +237,10 @@ void httpd_post_finished(void *connection, char *response_uri, u16_t response_ur
 
 #if LWIP_HTTPD_POST_MANUAL_WND
 void httpd_post_data_recved(void *connection, u16_t recved_len);
-#endif /* LWIP_HTTPD_POST_MANUAL_WND */
+#endif // LWIP_HTTPD_POST_MANUAL_WND
 
-#endif /* LWIP_HTTPD_SUPPORT_POST */
+#endif // LWIP_HTTPD_SUPPORT_POST
 
 void httpd_init(void);
 
-#endif /* __HTTPD_H__ */
+#endif // __HTTPD_H__

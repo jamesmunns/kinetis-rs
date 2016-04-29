@@ -39,28 +39,15 @@
  * Includes
  *****************************************************************************/
 #include "usb_class.h"
-
-/******************************************************************************
- * Constants - None
- *****************************************************************************/
-#define CDC_IMPLEMENT_QUEUING            (0)/* 1: TRUE; 0: FALSE*/
+#include "usb_cdc_config.h"
 
 /******************************************************************************
  * Macro's
  *****************************************************************************/
-#define MDLM_SPECIFIC_NOTIF_MASK         (0x5F)
-
 /* other macros */
 #define NOTIF_PACKET_SIZE                (0x08)
 #define NOTIF_REQUEST_TYPE               (0xA1)
-#define PSTN_SUBCLASS_NOTIF_SUPPORT      (1)/*TRUE*/
 
-#if CDC_IMPLEMENT_QUEUING
-/* macros for queuing */
-#define CDC_MAX_QUEUE_ELEMS              (4)  
-#endif
-#define MAX_CDC_DEVICE                   (0x01)
-#define MAX_CDC_EP_NUM                   (4)
  
 /*****************************************************************************
  * Local Functions
@@ -132,7 +119,9 @@ typedef struct _cdc_variable_struct
     /* rndis specific configuration */
     usb_rndis_info_struct_t                      rndis_info;
 #endif
+#if CDC_IMPLEMENT_QUEUING
     os_mutex_handle							     mutex;
+#endif
     bool							             has_sent_state;
  }cdc_device_struct_t;
  
@@ -143,13 +132,13 @@ typedef struct _cdc_variable_struct
  *
  * @name  USB_Pstn_Init
  *
- * @brief The funtion initializes the Pstn Module 
+ * @brief The function initializes the Pstn Module 
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
  * @param class_callback:       event callback 
  *
  * @return status       
- *         USB_OK           : When Successfull 
+ *         USB_OK           : When Successful 
  *         Others           : Errors
  *
  *****************************************************************************/
@@ -162,13 +151,13 @@ usb_status USB_Pstn_Init
  *
  * @name  USB_Pstn_Deinit
  *
- * @brief The funtion initializes the Pstn Module 
+ * @brief The function initializes the Pstn Module 
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
  * @param class_callback:       event callback 
  *
  * @return status       
- *         USB_OK           : When Successfull 
+ *         USB_OK           : When Successful 
  *         Others           : Errors
  *
  *****************************************************************************/
@@ -183,7 +172,7 @@ usb_status USB_Pstn_Deinit
  * @brief  This function is called in response to GetLineCoding request
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received      
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -203,7 +192,7 @@ extern usb_status PSTN_Get_Line_Coding(cdc_device_struct_t * cdc_obj_ptr,
  * @brief  This function is called in response to SetLineCoding request
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received      
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -223,12 +212,12 @@ extern usb_status PSTN_Set_Line_Coding(cdc_device_struct_t * cdc_obj_ptr,
  * @brief  This function is called in response to Set Control Line State 
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received      
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
  * @return status:       
- *                        USB_OK : When Successfull       
+ *                        USB_OK : When Successful       
  *                        Others : When Error
  *
  *****************************************************************************/ 
@@ -244,12 +233,12 @@ extern usb_status PSTN_Set_Ctrl_Line_State(cdc_device_struct_t * cdc_obj_ptr,
  * @brief  This function is called in response to Set Config request
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received      
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
  * @return status:       
- *                        USB_OK : When Successfull       
+ *                        USB_OK : When Successful       
  *                        Others : When Error
  *
  *****************************************************************************/ 
@@ -265,7 +254,7 @@ extern usb_status PSTN_Set_Ctrl_Line_State(cdc_device_struct_t * cdc_obj_ptr,
  * @brief  This function is called in response to GetCommFeature request
  *
  * @param cdc_obj_ptr :     Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received      
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -285,7 +274,7 @@ extern usb_status PSTN_Get_Comm_Feature(cdc_device_struct_t * cdc_obj_ptr,
  * @brief  This function is called in response to SetCommFeature request
  *
  * @param cdc_obj_ptr :     Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received      
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -330,7 +319,7 @@ extern void PSTN_Response_Available(cdc_device_struct_t * cdc_obj_ptr);
  * @brief  This function is called in response to PSTN_Rndis_Message_Set 
  *
  * @param cdc_obj_ptr :     Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received      
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -349,7 +338,7 @@ extern void PSTN_Response_Available(cdc_device_struct_t * cdc_obj_ptr);
  * @brief  This function is called in response to PSTN_Rndis_Message_Get
  *
  * @param cdc_obj_ptr :     Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received      
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *

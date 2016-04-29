@@ -67,6 +67,7 @@
 #define USBERR_NOT_FOUND                    (0x9C)
 #define USBERR_HOST_BUSY                    (0x9D)
 #define USBERR_INVALID_PARAM                (0x9E)
+#define USBERR_TR_RETRY_FAILED              (0x9F)
 
 #define USBERR_DEVICE_NOT_FOUND             (0xC0)
 #define USBERR_DEVICE_BUSY                  (0xC1)

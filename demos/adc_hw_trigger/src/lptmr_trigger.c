@@ -28,14 +28,24 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// SDK Included Files
 #include "adc_hw_trigger.h"
 #include "fsl_lptmr_driver.h"
-#include "fsl_gpio_hal.h"
-#include "fsl_port_hal.h"
+
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
 
 extern const uint32_t gSimBaseAddr[];
-
 static lptmr_state_t gLPTMRState;
+
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
 
 /*!
  * @Brief enable the trigger source of LPTimer
@@ -48,22 +58,22 @@ void init_trigger_source(uint32_t adcInstance)
     {
         .timerMode = kLptmrTimerModeTimeCounter,
         .freeRunningEnable = false,
-        .prescalerEnable = false, /* bypass perscaler */
-        .prescalerClockSource = kLptmrPrescalerClockSourceMcgIrcClk, /* use MCGIRCCLK, 4M or 32KHz */
+        .prescalerEnable = false, // bypass perscaler
+        .prescalerClockSource = kClockLptmrSrcMcgIrClk, // use MCGIRCCLK, 4M or 32KHz
         .isInterruptEnabled = false
     };
     
-    /* Init LPTimer driver */
+    // Init LPTimer driver
     LPTMR_DRV_Init(0, &lptmrUserConfig, &gLPTMRState);
 
-    /* Set the LPTimer period */
+    // Set the LPTimer period
     freqUs = 1000000U/(INPUT_SIGNAL_FREQ*NR_SAMPLES)*2;
     LPTMR_DRV_SetTimerPeriodUs(0, freqUs);
 
-    /* Start the LPTimer */
+    // Start the LPTimer
     LPTMR_DRV_Start(0);
 
-    /* Configure SIM for ADC hw trigger source selection */
+    // Configure SIM for ADC hw trigger source selection
     SIM_HAL_SetAdcAlternativeTriggerCmd(gSimBaseAddr[0], adcInstance, true);
     SIM_HAL_SetAdcPreTriggerMode(gSimBaseAddr[0], adcInstance, kSimAdcPretrgselA);
     SIM_HAL_SetAdcTriggerMode(gSimBaseAddr[0], adcInstance, kSimAdcTrgSelLptimer);

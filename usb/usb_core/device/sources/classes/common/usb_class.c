@@ -200,8 +200,8 @@ class_handle_t USB_Class_Init
     }
 #endif    
 #if USBCFG_DEV_COMPOSITE
-	/* Suppose only one class handle can be assigned */
-	s_class_handle = (class_handle_t)class_object_ptr;
+    /* Suppose only one class handle can be assigned */
+    s_class_handle = (class_handle_t)class_object_ptr;
 #endif
     return (class_handle_t)class_object_ptr;     
 }
@@ -231,8 +231,8 @@ usb_status USB_Class_Deinit
     error = USB_Class_Free_Handle((usb_class_object_struct_t*)class_handle);
 
 #if USBCFG_DEV_COMPOSITE
-	/* Suppose only one class handle can be assigned */
-	s_class_handle = USB_UNINITIALIZED_VAL_32;
+    /* Suppose only one class handle can be assigned */
+    s_class_handle = USB_UNINITIALIZED_VAL_32;
 #endif
     
     return error;     
@@ -292,66 +292,7 @@ void USB_Class_Periodic_Task(void)
         USB_Framework_Periodic_Task();
     #endif  
 }
-#if 0
-/**************************************************************************//*!
- *
- * @name  USB_Class_Get_Desc
- *
- * @brief  This function is called in to get the discriptor as specified in cmd.
- *
- * @param handle:           USB class handle. Received from
- *                          USB_Class_Init      
- * @param cmd:              command for USB discriptor to get.
- * @param in_data:          input to the Application functions.
- * @param in_buff           buffer which will contian the discriptors.
- * @return status:       
- *                        USB_OK : When Successfull       
- *                        Others : When Error
- *
- *****************************************************************************/
-usb_status USB_Class_Get_Desc(class_handle_t handle,/*[IN]*/
-int32_t cmd,/*[IN]*/
-uint8_t input_data,/*[IN]*/
-uint8_t * *in_buf /*[OUT]*/
-)
-{
-   USB_CLASS_OBJECT_STRUCT_PTR class_object_ptr = (USB_CLASS_OBJECT_STRUCT_PTR)handle;
-   if (class_object_ptr == NULL)
-        return USBERR_ERROR;
-   
-   return USB_Framework_GetDesc(class_object_ptr->usb_fw_handle,cmd,input_data,in_buf);
-            
-}
-/**************************************************************************//*!
- *
- * @name  USB_Class_Set_Desc
- *
- * @brief  This function is called in to Set the discriptor as specified in cmd.
- *
- * @param handle:           USB class handle. Received from
- *                          USB_Class_Init      
- * @param cmd:              command for USB discriptor to get.
- * @param in_data:          input to the Application functions.
- * @param in_buff           buffer which will contian the discriptors.
- * @return status:       
- *                        USB_OK : When Successfull       
- *                        Others : When Error
- *
- *****************************************************************************/
-usb_status USB_Class_Set_Desc(class_handle_t handle,/*[IN]*/
-int32_t cmd,/*[IN]*/
-uint8_t input_data,/*[IN]*/
-uint8_t * *out_buf /*[IN]*/
-)
-{
-   USB_CLASS_OBJECT_STRUCT_PTR class_object_ptr = (USB_CLASS_OBJECT_STRUCT_PTR)handle;
-   if (class_object_ptr == NULL)
-        return USBERR_ERROR;
-   
-   return USB_Framework_SetDesc(class_object_ptr->usb_fw_handle,cmd,input_data,out_buf);
-            
-}
-#endif
+
 #if USBCFG_DEV_COMPOSITE
 /**************************************************************************//*!
  *

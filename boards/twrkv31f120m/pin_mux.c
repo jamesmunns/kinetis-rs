@@ -37,10 +37,8 @@
 
 /* MODULE hardware_init. */
 
-//#include "fsl_platform_types.h"
 #include "fsl_device_registers.h"
 #include "fsl_port_hal.h"
-#include "fsl_gpio_common.h"
 #include "pin_mux.h"
 
 
@@ -49,41 +47,41 @@ void configure_gpio_pins(uint32_t instance)
   switch(instance) {
     case 0:                             /* PTA */
       /* PORTA_PCR4 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[0],4u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTA_BASE,4u,kPortMuxAsGpio);
       break;
     case 1:                             /* PTB */
       /* PORTB_PCR0 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[1],16u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTB_BASE,16u,kPortMuxAsGpio);
       /* PORTB_PCR1 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[1],17u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTB_BASE,17u,kPortMuxAsGpio);
       /* PORTB_PCR6 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[1],19u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTB_BASE,19u,kPortMuxAsGpio);
       break;
     case 2:                             /* PTC */
       /* PORTC_PCR6 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[2],6u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTC_BASE,6u,kPortMuxAsGpio);
       /* PORTC_PCR7 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[2],11u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTC_BASE,11u,kPortMuxAsGpio);
       break;
     case 3:                             /* PTD */
       /* PORTD_PCR0 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[3],0u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTD_BASE,0u,kPortMuxAsGpio);
       /* PORTD_PCR1 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[3],1u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTD_BASE,1u,kPortMuxAsGpio);
       /* PORTD_PCR4 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[3],4u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTD_BASE,4u,kPortMuxAsGpio);
       /* PORTD_PCR7 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[3],7u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTD_BASE,7u,kPortMuxAsGpio);
       break;
     case 4:                             /* PTE */
       /* PORTE_PCR0 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],0u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTE_BASE,0u,kPortMuxAsGpio);
       /* PORTE_PCR1 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],1u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTE_BASE,1u,kPortMuxAsGpio);
       /* PORTE_PCR24 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],24u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTE_BASE,24u,kPortMuxAsGpio);
       /* PORTE_PCR25 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],25u,kPortMuxAsGpio);
+      PORT_HAL_SetMuxMode(PORTE_BASE,25u,kPortMuxAsGpio);
       break;
     default:
       break;
@@ -95,19 +93,25 @@ void configure_i2c_pins(uint32_t instance)
   switch(instance) {
     case 0:                             /* I2C0 */
       /* PORTD_PCR2 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[3],2u,kPortMuxAlt7);
-      PORT_HAL_SetOpenDrainCmd(g_portBaseAddr[3],2u,true);
+      PORT_HAL_SetMuxMode(PORTD_BASE,2u,kPortMuxAlt7);
+      PORT_HAL_SetOpenDrainCmd(PORTD_BASE,2u,true);
       /* PORTD_PCR3 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[3],3u,kPortMuxAlt7);
-      PORT_HAL_SetOpenDrainCmd(g_portBaseAddr[3],3u,true);
+      PORT_HAL_SetMuxMode(PORTD_BASE,3u,kPortMuxAlt7);
+      PORT_HAL_SetOpenDrainCmd(PORTD_BASE,3u,true);
       break;
     case 1:                             /* I2C1 */
+      /* TODO: Currently, I2C1 isn't wired to Elevator, 
+       * though we keep its pins configuration but there is notes that:
+       * - If PTE0 is configured as I2C1_SDA, will conflict with LED2
+       * - If PTE1 is configured as I2C1_SCL, will conflict with LED1
+       * - If PTC11 is configured as I2C1_SDA, will conflict with SW2
+       */
       /* PORTE_PCR0 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],0u,kPortMuxAlt6);
-      PORT_HAL_SetOpenDrainCmd(g_portBaseAddr[4],0u,true);
+      PORT_HAL_SetMuxMode(PORTE_BASE,0u,kPortMuxAlt6);
+      PORT_HAL_SetOpenDrainCmd(PORTE_BASE,0u,true);
       /* PORTE_PCR1 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],1u,kPortMuxAlt6);
-      PORT_HAL_SetOpenDrainCmd(g_portBaseAddr[4],1u,true);
+      PORT_HAL_SetMuxMode(PORTE_BASE,1u,kPortMuxAlt6);
+      PORT_HAL_SetOpenDrainCmd(PORTE_BASE,1u,true);
       break;
     default:
       break;
@@ -117,7 +121,7 @@ void configure_i2c_pins(uint32_t instance)
 void configure_rtc_pins(uint32_t instance)
 {
   /* PORTE_PCR26 */
-  PORT_HAL_SetMuxMode(g_portBaseAddr[4],26u,kPortMuxAlt6);
+  PORT_HAL_SetMuxMode(PORTE_BASE,26u,kPortMuxAlt6);
 }
 
 void configure_spi_pins(uint32_t instance)
@@ -125,23 +129,23 @@ void configure_spi_pins(uint32_t instance)
   switch(instance) {
     case 0:                             /* SPI0 */
       /* PORTE_PCR16 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],16u,kPortMuxAlt2);
+      PORT_HAL_SetMuxMode(PORTE_BASE,16u,kPortMuxAlt2);
       /* PORTE_PCR17 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],17u,kPortMuxAlt2);
+      PORT_HAL_SetMuxMode(PORTE_BASE,17u,kPortMuxAlt2);
       /* PORTE_PCR18 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],18u,kPortMuxAlt2);
+      PORT_HAL_SetMuxMode(PORTE_BASE,18u,kPortMuxAlt2);
       /* PORTE_PCR19 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],19u,kPortMuxAlt2);
+      PORT_HAL_SetMuxMode(PORTE_BASE,19u,kPortMuxAlt2);
       break;
     case 1:                             /* SPI1 */
       /* PORTB_PCR10 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[1],10u,kPortMuxAlt2);
+      PORT_HAL_SetMuxMode(PORTB_BASE,10u,kPortMuxAlt2);
       /* PORTE_PCR1 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],1u,kPortMuxAlt2);
+      PORT_HAL_SetMuxMode(PORTE_BASE,1u,kPortMuxAlt2);
       /* PORTB_PCR11 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[1],11u,kPortMuxAlt2);
+      PORT_HAL_SetMuxMode(PORTB_BASE,11u,kPortMuxAlt2);
       /* PORTE_PCR3 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[4],3u,kPortMuxAlt2);
+      PORT_HAL_SetMuxMode(PORTE_BASE,3u,kPortMuxAlt2);
       break;
     default:
       break;
@@ -150,18 +154,18 @@ void configure_spi_pins(uint32_t instance)
 
 void configure_spi_cs0_pins(uint32_t instance)
 {
-  PORT_HAL_SetMuxMode(g_portBaseAddr[4],16u,kPortMuxAsGpio);
+  PORT_HAL_SetMuxMode(PORTE_BASE,16u,kPortMuxAsGpio);
 }
 
 void configure_spi_cs1_pins(uint32_t instance)
 {
-  PORT_HAL_SetMuxMode(g_portBaseAddr[2],3u,kPortMuxAsGpio);
+  PORT_HAL_SetMuxMode(PORTC_BASE,3u,kPortMuxAsGpio);
 }
 
 void configure_gpio_i2c_pins(uint32_t instance)
 {
-  PORT_HAL_SetMuxMode(g_portBaseAddr[3],2u,kPortMuxAsGpio);
-  PORT_HAL_SetMuxMode(g_portBaseAddr[3],3u,kPortMuxAsGpio);
+  PORT_HAL_SetMuxMode(PORTD_BASE,2u,kPortMuxAsGpio);
+  PORT_HAL_SetMuxMode(PORTD_BASE,3u,kPortMuxAsGpio);
 }
 
 void configure_uart_pins(uint32_t instance)
@@ -169,9 +173,9 @@ void configure_uart_pins(uint32_t instance)
   switch(instance) {
     case 0:                             /* UART0 */
       /* PORTB_PCR16 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[1],16u,kPortMuxAlt3);
+      PORT_HAL_SetMuxMode(PORTB_BASE,16u,kPortMuxAlt3);
       /* PORTB_PCR17 */
-      PORT_HAL_SetMuxMode(g_portBaseAddr[1],17u,kPortMuxAlt3);
+      PORT_HAL_SetMuxMode(PORTB_BASE,17u,kPortMuxAlt3);
       break;
     default:
       break;
@@ -184,12 +188,24 @@ void configure_ftm_pins(uint32_t instance)
   switch(instance) {
     case 0:                             /* FTM0 */
     /* PORTD_PCR7 (D7 - Green) */
-    PORT_HAL_SetMuxMode(g_portBaseAddr[3], 7u, kPortMuxAlt4);
+    PORT_HAL_SetMuxMode(PORTD_BASE, 7u, kPortMuxAlt4);
     break;
 
     default:
       break;
   }
+}
+
+void configure_cmp_pins(uint32_t instance)
+{
+    switch (instance)
+    {
+        case 0U:
+            PORT_HAL_SetMuxMode(PORTC_BASE, 7U, kPortPinDisabled); /* PTC7 - CMP0_IN7. */
+            break;
+        default:
+            break;
+    }
 }
 
 /* END hardware_init. */

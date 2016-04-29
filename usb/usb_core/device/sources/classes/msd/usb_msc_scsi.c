@@ -62,7 +62,7 @@ mode_parameter_header_struct_t mode_param_header =
   0x0000,/*no followng data available because of reason given below*/
   0x00,/* 0x00 indicates current/default medium */
   0x00,/* for write_protect and DPOFUA - no write protection available*/
-  0x00,0x00,0x00,0x00 /* reserved bytes are always to be set to zero */
+  {0x00,0x00,0x00,0x00} /* reserved bytes are always to be set to zero */
 };
 
 /*****************************************************************************
@@ -71,7 +71,7 @@ mode_parameter_header_struct_t mode_param_header =
 /****************************************************************************
  * Global Variables
  ****************************************************************************/
-msc_scsi_struct_t g_msc_scsi;
+msc_scsi_struct_t g_msc_scsi[MAX_MSC_DEVICE];
 /* Add all the variables needed for usb_msc.c to this structure */
 /*****************************************************************************
  * Local Types - None
@@ -84,12 +84,61 @@ usb_status msc_thirteen_cases_check(msc_device_struct_t *  msc_obj_ptr,msc_thirt
 /*****************************************************************************
  * Local Variables
  *****************************************************************************/
-static read_capacity_data_struct_t read_capacity;
-static uint8_t format_capacity_response_data[sizeof(capacity_list_header_struct_t) + sizeof(curr_max_capacity_desc_struct_t)+
-        sizeof(formattable_cap_desc_t) * 3];
+//static read_capacity_data_struct_t read_capacity;
+//static read_capacity16_data_struct_t read_capacity16;
+//static uint8_t format_capacity_response_data[sizeof(capacity_list_header_struct_t) + sizeof(curr_max_capacity_desc_struct_t)+
+//        sizeof(formattable_cap_desc_t) * 3];
  /*****************************************************************************
  * Local Functions
  *****************************************************************************/
+  /*************************************************************************//*!
+ *
+ * @name  USB_SCSI_Allocate_Handle
+ *
+ * @brief The funtion reserves entry in device array and returns the index.
+ *
+ * @param none.
+ * @return returns the reserved handle or if no entry found device busy.      
+ *
+ *****************************************************************************/
+static usb_status USB_SCSI_Allocate_Handle(msc_scsi_struct_t** handle)
+{
+    uint32_t cnt = 0;
+    for (;cnt< MAX_MSC_DEVICE;cnt++)
+    {
+        if (g_msc_scsi[cnt].is_used == 0)
+        {
+            g_msc_scsi[cnt].is_used = 1;
+            *handle = (msc_scsi_struct_t*)&g_msc_scsi[cnt];
+            return USB_OK;
+        }
+    }
+    return USBERR_DEVICE_BUSY;
+}
+ /*************************************************************************//*!
+ *
+ * @name  USB_SCSI_Free_Handle
+ *
+ * @brief The funtion releases entry in device array .
+ *
+ * @param handle  index in device array to be released..
+ * @return returns and error code or USB_OK.      
+ *
+ *****************************************************************************/
+
+static usb_status USB_SCSI_Free_Handle(msc_scsi_struct_t* handle)
+{
+    int32_t cnt = 0;
+    for (;cnt< MAX_MSC_DEVICE;cnt++)
+    {
+        if ((&g_msc_scsi[cnt]) == handle)
+        {
+            OS_Mem_zero((void*)handle, sizeof(msc_scsi_struct_t));
+            return USB_OK;
+        }
+    }
+    return USBERR_INVALID_PARAM;
+}
 /**************************************************************************//*!
  *
  * @name  msc_thirteen_cases_check
@@ -176,16 +225,18 @@ msc_thirteen_case_struct_t* msc_check_event
                         msc_check_event->device_expected_data_len); 
                 }
 
-                if(msc_check_event->device_expected_data_len%
-                    msc_obj_ptr->bulk_in_endpoint_packet_size == 0)
-                {   /* need to send zero bytes of data to tell host that device
-                       does not have any more data. This is needed only if the 
-                       bytes send to host are integral multiple of max packet 
-                       size of Bulk In endpoint */
-                    error |= USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle,
-                        msc_check_event->buffer_ptr,0);                                 
-                }
-                
+//            if ((READ_10_COMMAND != msc_obj_ptr->cbw_ptr->command_block[0]) &&
+//                (READ_12_COMMAND != msc_obj_ptr->cbw_ptr->command_block[0]) &&
+//                (msc_check_event->device_expected_data_len%
+//                    msc_obj_ptr->bulk_in_endpoint_packet_size == 0))
+//                {   /* need to send zero bytes of data to tell host that device
+//                       does not have any more data. This is needed only if the 
+//                       bytes send to host are integral multiple of max packet 
+//                       size of Bulk In endpoint */
+//                    error |= USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle,
+//                        msc_check_event->buffer_ptr,0);                                 
+//                }
+            
                 if(error == USB_OK)
                 {
                     *(msc_check_event->csw_status_ptr) = COMMAND_PASSED;    
@@ -196,6 +247,8 @@ msc_thirteen_case_struct_t* msc_check_event
                     scsi_ptr->request_sense.sense_key = MEDIUM_ERROR;
                     scsi_ptr->request_sense.add_sense_code = UNRECOVERED_READ_ERROR;
                 }
+                /* BULK IN PIPE TO BE STALLED for status phase */
+                error = USBERR_ENDPOINT_STALLED;  
             }
             else if(msc_check_event->host_expected_data_len == 
                 msc_check_event->device_expected_data_len)
@@ -232,8 +285,12 @@ msc_thirteen_case_struct_t* msc_check_event
                            intends to send*/
                 *(msc_check_event->csw_residue_ptr) = 0;
                 
-                if(scsi_ptr->thirteen_case.lba_txrx_select == TRUE)    
+                if (scsi_ptr->thirteen_case.lba_txrx_select == TRUE)    
                 {
+                    msc_check_event->lba_info.lba_transfer_num = 
+                      msc_check_event->host_expected_data_len / 
+                        scsi_ptr->length_of_each_lab;   
+                    *(msc_check_event->csw_residue_ptr) = msc_check_event->host_expected_data_len - msc_check_event->lba_info.lba_transfer_num * scsi_ptr->length_of_each_lab;
                     error = USB_MSC_LBA_Transfer(msc_obj_ptr,USB_SEND,
                         &msc_check_event->lba_info);
                 }
@@ -246,7 +303,14 @@ msc_thirteen_case_struct_t* msc_check_event
 
                 if(error == USB_OK)
                 {
-                    *(msc_check_event->csw_status_ptr) = COMMAND_PASSED;    
+                    if (scsi_ptr->thirteen_case.lba_txrx_select == TRUE)  /* READ_COMMAND OR WRITE_COMMAND */
+                    {
+                        *(msc_check_event->csw_status_ptr) = PHASE_ERROR;
+                    }
+                    else
+                    {
+                        *(msc_check_event->csw_status_ptr) = COMMAND_PASSED;
+                    }
                 }
                 else
                 {
@@ -277,7 +341,8 @@ msc_thirteen_case_struct_t* msc_check_event
                 msc_check_event->host_expected_data_len;
             *(msc_check_event->csw_status_ptr) = COMMAND_FAILED;
             /* BULK OUT PIPE STALLED */
-            error = USBERR_ENDPOINT_STALLED;                    
+            msc_obj_ptr->out_stall_flag = TRUE;
+            error = USBERR_ENDPOINT_STALLED;
         }
         else if(msc_check_event->device_expected_direction)
         {   /*CASE10: device intends to send data to host */        
@@ -286,6 +351,7 @@ msc_thirteen_case_struct_t* msc_check_event
                 msc_check_event->host_expected_data_len;
             *(msc_check_event->csw_status_ptr) = PHASE_ERROR;
             /* BULK OUT PIPE STALLED */
+            msc_obj_ptr->out_stall_flag = TRUE;
             error = USBERR_ENDPOINT_STALLED;
         }
         else
@@ -363,6 +429,7 @@ msc_thirteen_case_struct_t* msc_check_event
                     msc_check_event->lba_info.lba_transfer_num = 
                       msc_check_event->host_expected_data_len / 
                         scsi_ptr->length_of_each_lab;   
+                    *(msc_check_event->csw_residue_ptr) = msc_check_event->host_expected_data_len - msc_check_event->lba_info.lba_transfer_num * scsi_ptr->length_of_each_lab;
                     error = USB_MSC_LBA_Transfer(msc_obj_ptr,USB_RECV,
                         &msc_check_event->lba_info);
                 }
@@ -372,13 +439,23 @@ msc_thirteen_case_struct_t* msc_check_event
                         msc_check_event->buffer_ptr,
                         msc_check_event->host_expected_data_len);
                 }
-
-                if(error != USB_OK)
+                
+                if (error == USB_OK)
+                {
+                    if (scsi_ptr->thirteen_case.lba_txrx_select == TRUE)  /* READ_COMMAND OR WRITE_COMMAND */
+                    {
+                        *(msc_check_event->csw_status_ptr) = PHASE_ERROR;
+                    }
+                    else
+                    {
+                        *(msc_check_event->csw_status_ptr) = COMMAND_PASSED;
+                    }
+                }
+                else
                 {
                     scsi_ptr->request_sense.sense_key = MEDIUM_ERROR;
                     scsi_ptr->request_sense.add_sense_code = WRITE_FAULT;
-                }
-                *(msc_check_event->csw_status_ptr) = PHASE_ERROR;                           
+                }                        
             }                               
         }       
     }
@@ -412,9 +489,15 @@ usb_status USB_MSC_SCSI_Init
 )
 {
     msc_scsi_struct_t* scsi_ptr = NULL;
+    usb_status error = USBERR_ERROR;
     /* initialize the Global Variable Structure */
 
-    scsi_ptr = &g_msc_scsi;
+    error = USB_SCSI_Allocate_Handle(&scsi_ptr);
+    if (USB_OK != error)
+    {
+        return error;
+    }
+    
     /* save input parameters */
     scsi_ptr->scsi_callback.callback = cb->callback;
     scsi_ptr->scsi_callback.arg = cb->arg;
@@ -432,7 +515,7 @@ usb_status USB_MSC_SCSI_Init
     scsi_ptr->request_sense.add_sense_code = NO_SENSE;
     scsi_ptr->request_sense.add_sense_code_qual = NO_SENSE;
 
-	if(scsi_ptr->scsi_callback.callback != NULL)
+    if(scsi_ptr->scsi_callback.callback != NULL)
     {
         scsi_ptr->scsi_callback.callback(USB_MSC_DEVICE_GET_INFO,USB_REQ_VAL_INVALID,NULL,(uint32_t *)device_info_ptr,NULL);
     }
@@ -442,8 +525,10 @@ usb_status USB_MSC_SCSI_Init
     scsi_ptr->length_of_each_lab = 
         device_info_ptr->length_of_each_lab_of_device;
     
-    read_capacity.last_logical_block_address = USB_LONG_BE_TO_HOST(scsi_ptr->total_logical_add_block -1);
-    read_capacity.block_size = USB_LONG_BE_TO_HOST((uint32_t) scsi_ptr->length_of_each_lab);
+    scsi_ptr->read_capacity.last_logical_block_address = USB_LONG_BE_TO_HOST(scsi_ptr->total_logical_add_block -1);
+    scsi_ptr->read_capacity.block_size = USB_LONG_BE_TO_HOST((uint32_t) scsi_ptr->length_of_each_lab);
+    scsi_ptr->read_capacity16.last_logical_block_address1 = USB_LONG_BE_TO_HOST(scsi_ptr->total_logical_add_block -1);
+    scsi_ptr->read_capacity16.block_size = USB_LONG_BE_TO_HOST((uint32_t) scsi_ptr->length_of_each_lab);
 
     msc_obj_ptr->scsi_object_ptr = scsi_ptr;
     return USB_OK;
@@ -470,6 +555,7 @@ usb_status USB_MSC_SCSI_Deinit
     {
         return USBERR_ERROR;
     }
+    USB_SCSI_Free_Handle(msc_obj_ptr->scsi_object_ptr);
 
     return USB_OK;
 }
@@ -967,12 +1053,19 @@ usb_status msc_read_capacity_command
     scsi_ptr->thirteen_case.host_expected_data_len = cbw_ptr->data_length;
     scsi_ptr->thirteen_case.host_expected_direction = 
         (uint8_t)(cbw_ptr->flag >> USB_CBW_DIRECTION_SHIFT);
-                                      
-    scsi_ptr->thirteen_case.device_expected_data_len = READ_CAPACITY_DATA_LENGTH;
+    if(cbw_ptr->command_block[0] == READ_CAPACITY_10_COMMAND)
+    {
+        scsi_ptr->thirteen_case.device_expected_data_len = READ_CAPACITY_DATA_LENGTH;
+        scsi_ptr->thirteen_case.buffer_ptr = (uint8_t *)&(scsi_ptr->read_capacity);
+    }
+    else
+    {
+        scsi_ptr->thirteen_case.device_expected_data_len = READ_CAPACITY16_DATA_LENGTH;
+        scsi_ptr->thirteen_case.buffer_ptr = (uint8_t *)&(scsi_ptr->read_capacity16);
+    }
     scsi_ptr->thirteen_case.device_expected_direction = USB_SEND;
     scsi_ptr->thirteen_case.csw_status_ptr = csw_status_ptr;
     scsi_ptr->thirteen_case.csw_residue_ptr = csw_residue_ptr;
-    scsi_ptr->thirteen_case.buffer_ptr = (uint8_t *)&read_capacity;
     scsi_ptr->thirteen_case.lba_txrx_select = FALSE;
     
     error = msc_thirteen_cases_check(msc_obj_ptr, &scsi_ptr->thirteen_case);
@@ -1015,7 +1108,7 @@ usb_status msc_read_format_capacity_command
     curr_max_capacity_desc_struct_t curr_max_cap_header;
     uint8_t desc_code;
     formattable_cap_desc_t formattable_cap_descriptor;
-    capacity_list_header_struct_t capacity_list_header= {0x00,0x00,0x00,0x00};
+    capacity_list_header_struct_t capacity_list_header= {{0x00,0x00,0x00},0x00};
     usb_status error = USBERR_TX_FAILED;
     
     scsi_ptr = (msc_scsi_struct_t*)msc_obj_ptr->scsi_object_ptr;
@@ -1057,22 +1150,22 @@ usb_status msc_read_format_capacity_command
         response_size = allocation_length;
     }
 
-    if(sizeof(format_capacity_response_data) < response_size)
+    if(sizeof(scsi_ptr->format_capacity_response_data) < response_size)
     {
-        printf("format_capacity_response_data buff size less than need\n");
+        USB_PRINTF("format_capacity_response_data buff size less than need\n");
     }
-    OS_Mem_zero(format_capacity_response_data, response_size);
+    OS_Mem_zero(scsi_ptr->format_capacity_response_data, response_size);
     
-    OS_Mem_copy(&capacity_list_header, format_capacity_response_data,
+    OS_Mem_copy(&capacity_list_header, scsi_ptr->format_capacity_response_data,
         sizeof(capacity_list_header));
-    OS_Mem_copy(&curr_max_cap_header, format_capacity_response_data +
+    OS_Mem_copy(&curr_max_cap_header, scsi_ptr->format_capacity_response_data +
         sizeof(capacity_list_header),sizeof(curr_max_cap_header));
 
     if(scsi_ptr->formatted_disk)
     {
         for(i = 0; i < num_formattable_cap_desc; i++)
         {
-            OS_Mem_copy(&formattable_cap_descriptor, format_capacity_response_data +
+            OS_Mem_copy(&formattable_cap_descriptor, scsi_ptr->format_capacity_response_data +
                 sizeof(capacity_list_header) + sizeof(curr_max_cap_header)+
                 sizeof(formattable_cap_descriptor) * i,
                 sizeof(formattable_cap_descriptor));
@@ -1087,7 +1180,7 @@ usb_status msc_read_format_capacity_command
     scsi_ptr->thirteen_case.device_expected_direction = USB_SEND;
     scsi_ptr->thirteen_case.csw_status_ptr = csw_status_ptr;
     scsi_ptr->thirteen_case.csw_residue_ptr = csw_residue_ptr;
-    scsi_ptr->thirteen_case.buffer_ptr = format_capacity_response_data;
+    scsi_ptr->thirteen_case.buffer_ptr = scsi_ptr->format_capacity_response_data;
     scsi_ptr->thirteen_case.lba_txrx_select = FALSE;
     
     error = msc_thirteen_cases_check(msc_obj_ptr, &scsi_ptr->thirteen_case);

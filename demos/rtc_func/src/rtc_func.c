@@ -28,61 +28,64 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
-#include <stdlib.h>
+///////////////////////////////////////////////////////////////////////////////
+//  Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdio.h>
 
-#include "device/fsl_device_registers.h"
+// SDK Included Files
 #include "fsl_rtc_driver.h"
-#include "fsl_interrupt_manager.h"
-#include "fsl_debug_console.h"
-#include "fsl_sim_hal.h"
-#include "fsl_misc_utilities.h"
 #include "fsl_clock_manager.h"
 #include "board.h"
 
 
-/*******************************************************************************
- * Defination
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+//  Definitions
+///////////////////////////////////////////////////////////////////////////////
+
 static volatile uint8_t gAlarmPending = 0;
 static volatile bool gSecsFlag;
 
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-
-/*******************************************************************************
- * Variables
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+//  Variables
+///////////////////////////////////////////////////////////////////////////////
 
 static const char gStrMenu[] = "\r\n"
     "Please choose the sub demo to run:\r\n"
     "1) Get current date time.\r\n"
     "2) Set current date time.\r\n"
+    "NOTE: Accuracy maybe affected by a few seconds if RTC counter clock is not 32KHz.\r\n"
     "3) Alarm trigger show.\r\n"
+    "NOTE: Alarm will be delayed if RTC counter clock is not 32KHz.\r\n"
     "4) Second interrupt show (demo for 20s).\r\n"
+    "NOTE: Interrupt will be delayed if RTC counter clock is not 32KHz.\r\n"
     "5) Set RTC compensation.\r\n";
 
 static const char gStrNewline[] = "\r\n";
 static const char gStrInvalid[] = "Invalid input format\r\n";
 
-/*******************************************************************************
- * Code
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+//  Code
+///////////////////////////////////////////////////////////////////////////////
 
-/* override the RTC IRQ handler */
+/*!
+ * @brief override the RTC IRQ handler
+ */
 void RTC_IRQHandler(void)
 {
     if (RTC_DRV_IsAlarmPending(0))
     {
         gAlarmPending = 1;
-        /* disable alarm interrupt */
+        // disable alarm interrupt
         RTC_DRV_SetAlarmIntCmd(0, false);
     }
 }
 
-/* override the RTC Second IRQ handler */
+/*!
+ * @brief override the RTC Second IRQ handler
+ */
 void RTC_Seconds_IRQHandler(void)
 {
     gSecsFlag = true;
@@ -105,31 +108,36 @@ static void cmd_alarm(uint8_t offsetSec)
         printf(gStrInvalid);
         return;
     }
-    /* get date time and convert to seconds */
+    // get date time and convert to seconds
     RTC_DRV_GetDatetime(0, &date);
 
-    /* convert to sec and add offset */
+    // convert to sec and add offset
     RTC_HAL_ConvertDatetimeToSecs(&date, &seconds);
     seconds += offsetSec;
     RTC_HAL_ConvertSecsToDatetime(&seconds, &date);
 
-    /* set the datetime for alarm */
-    RTC_DRV_SetAlarm(0, &date, true);
-
-    /* check for interrupt */
-    while (!gAlarmPending)
+    // set the datetime for alarm
+    if (RTC_DRV_SetAlarm(0, &date, true))
     {
-     ;
+        /* Alarm was successfully set, wait for alarm interrupt */
+        while (!gAlarmPending)
+        {
+         ;
+        }
     }
-
-    /* interrupt done */
-    RTC_DRV_GetAlarm(0, &date);
+    else
+    {
+        printf("Failed to set alarm. Alarm time is not in the future\r\n");
+        return;
+    }
+    // interrupt done
+    RTC_DRV_GetDatetime(0, &date);
     printf("Triggered Alarm: %02d:%02d:%02d\r\n",
             date.hour, date.minute, date.second);
 
     gAlarmPending = 0;
 
-    /* disable the alarm interrupt and clear TAF */
+    // disable the alarm interrupt and clear TAF
     RTC_DRV_SetAlarm(0, &date, false);
 }
 
@@ -159,15 +167,19 @@ static void cmd_seconds(void)
     char sourceBuff[] = "\r10:10:00";
 
     gSecsFlag = false;
-    /* enable Sec interrupt */
+    // enable Sec interrupt
     RTC_DRV_SetSecsIntCmd(0, true);
 
+    /* If the RTC counter clock is not 32KHz, the seconds interrupt will be delayed and
+     * will not occur every second. For eg: if the RTC counter clock is 1KHz, the seconds
+     * interrupt will occur after 32 seconds
+     */
     while (count < 20U)
     {
-        /* If seconds interrupt ocurred, print new time */
+        // If seconds interrupt ocurred, print new time
         if (gSecsFlag)
         {
-            /* Build up the word */
+            // Build up the word
             gSecsFlag = false;
             count ++;
             RTC_DRV_GetDatetime(0, &date);
@@ -180,11 +192,11 @@ static void cmd_seconds(void)
             sourceBuff[6] = (date.second & 0x01) ? ':':' ';
             sourceBuff[7] = ((date.second/10) +0x30);
             sourceBuff[8] = ((date.second%10) +0x30);
-            /* print the time */
+            // print the time
             printf(sourceBuff);
         }
     }
-    /* disable Sec interrupt */
+    // disable Sec interrupt
     RTC_DRV_SetSecsIntCmd(0, false);
     printf(gStrNewline);
 }
@@ -202,7 +214,7 @@ static void cmd_comp(uint32_t cycles, uint32_t interval)
 
     if ((cycles <= 32896U) && (cycles >= 32641U) && (interval < 256U))
     {
-        /* set compensation interval and cycles */
+        // set compensation interval and cycles
         value = (uint8_t)((32896U - cycles) + 0x80U);
         RTC_DRV_SetTimeCompensation(0, value, interval);
     }
@@ -234,21 +246,22 @@ int main(void)
 {
     rtc_datetime_t date;
 
-    /* init hardware and debug uart */
+    // init hardware and debug uart
     hardware_init();
     dbg_uart_init();
 
     printf("\r\nRTC Demo running...\r\n");
 
 #ifndef FRDM_K22F120M
-    configure_rtc_pins(0);
+    // Configure RTC pins
+    configure_rtc_pins(BOARD_RTC_FUNC_INSTANCE);
 #endif
-    /* select the 1Hz for RTC_CLKOUT */
-    CLOCK_SYS_SetSource(kClockRtcClkoutSel, 0);
+    // select the 1Hz for RTC_CLKOUT
+    CLOCK_SYS_SetRtcOutSrc(kClockRtcoutSrc1Hz);
 
     RTC_DRV_Init(0);
 
-    /* Set a start date time and start RTC */
+    // Set a start date time and start RTC
     date.year = 2014U;
     date.month = 4U;
     date.day = 30U;
@@ -257,7 +270,7 @@ int main(void)
     date.second = 0U;
     RTC_DRV_SetDatetime(0, &date);
 
-    /* start loop */
+    // start loop
     while (1)
     {
         uint8_t index;
@@ -265,10 +278,10 @@ int main(void)
         char recvBuf[20];
         uint32_t cycles, result;
 
-        /* print the user information */
+        // print the user information
         printf(gStrMenu);
         printf("\r\nSelect:");
-        /* get user input */
+        // get user input
         index = getchar();
         putchar(index);
         printf(gStrNewline);
@@ -282,7 +295,7 @@ int main(void)
             printf("Input date time like: \"2014-04-22 16:40:00\"\r\n");
             recv_from_console(recvBuf, 19);
             result = sscanf(recvBuf, "%04hd-%02hd-%02hd %02hd:%02hd:%02hhd",
-	                   &date.year, &date.month, &date.day,
+                       &date.year, &date.month, &date.day,
                            &date.hour, &date.minute, &date.second);
             printf(gStrNewline);
             if (result != 6)
@@ -294,6 +307,7 @@ int main(void)
             {
                 printf(gStrInvalid);
             }
+            cmd_get_datetime();
             break;
         case '3':
             printf("Input the alarm seconds from now on (1s~9s):");

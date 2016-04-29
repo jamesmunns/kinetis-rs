@@ -167,7 +167,7 @@ uint8_t USB_Class_Set_Cur_Mute
    {
       /* set cur mute data*/
       g_cur_mute = **coding_data;
-      printf("Mute: %d\n", g_cur_mute);
+      USB_PRINTF("Mute: %d\n", g_cur_mute);
       return USB_OK;
    }
    return USBERR_INVALID_REQ_TYPE;
@@ -244,7 +244,7 @@ uint16_t volume;
       g_cur_volume[0] = **coding_data;
       g_cur_volume[1] = *(*coding_data+1);
       volume = (g_cur_volume[1] << 8) | g_cur_volume[0];
-      printf("Volume : %x\n", volume);
+      USB_PRINTF("Volume : %x\n", volume);
       return USB_OK;    
    }
    return USBERR_INVALID_REQ_TYPE;
@@ -529,7 +529,7 @@ UNUSED_ARGUMENT(handle)
    {
       /* set current bass data*/
       g_cur_bass = **coding_data;
-      printf("bass: %d\n", g_cur_bass);
+      USB_PRINTF("bass: %d\n", g_cur_bass);
       return USB_OK;
    }
 
@@ -1659,7 +1659,7 @@ uint8_t USB_Class_Set_Cur_Automatic_Gain
    {
       /* set current automatic data*/
       g_cur_automatic_gain = **coding_data;
-      printf("AGC: %d\n", g_cur_automatic_gain);
+      USB_PRINTF("AGC: %d\n", g_cur_automatic_gain);
       return USB_OK;
    }
    return USBERR_INVALID_REQ_TYPE;

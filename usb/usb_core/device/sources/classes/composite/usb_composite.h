@@ -38,11 +38,8 @@
  * Includes
  *****************************************************************************/
 #include "usb_class_composite.h"
-#include "usb_class_hid.h"
-#include "usb_class_audio.h"
-#include "usb_class_msc.h"
-#include "usb_class_cdc.h"
-#include "usb_class_phdc.h"
+#include "usb_composite_config.h"
+
 
 /******************************************************************************
  * Constants - None
@@ -64,11 +61,6 @@ typedef struct composite_device_struct
     usb_device_handle             handle;
     uint32_t                      user_handle;
     class_handle_t                class_handle;
-    hid_handle_t                  hid_handle;
-    audio_handle_t                audio_handle;
-    cdc_handle_t                  cdc_handle;
-    msd_handle_t                  msc_handle;
-    phdc_handle_t                 phdc_handle;	
     class_config_struct_t*        class_app_callback;
     usb_composite_info_struct_t*  class_composite_info;
     /* Number of class support */

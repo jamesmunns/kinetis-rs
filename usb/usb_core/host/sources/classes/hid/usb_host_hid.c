@@ -78,7 +78,7 @@ usb_status usb_class_hid_init
     if (hid_class == NULL)
     {
 #ifdef _DEBUG
-        printf("usb_class_hid_init fail on memory allocation\n");
+        USB_PRINTF("usb_class_hid_init fail on memory allocation\n");
 #endif
         return USBERR_ERROR;
     }
@@ -107,7 +107,7 @@ usb_status usb_class_hid_init
             if (status != USB_OK)
             {
 #ifdef _DEBUG
-                printf("usb_class_hid_init fail to open in pipe\n");
+                USB_PRINTF("usb_class_hid_init fail to open in pipe\n");
 #endif
                 *class_handle_ptr = (class_handle)hid_class;
                 return USBERR_ERROR;
@@ -123,7 +123,7 @@ usb_status usb_class_hid_init
     
     *class_handle_ptr = (class_handle)hid_class;
 
-    //printf("HID class driver initialized\n");
+    //USB_PRINTF("HID class driver initialized\n");
     
     return USB_OK;
    
@@ -149,7 +149,7 @@ usb_status usb_class_hid_deinit
     if (hid_class == NULL)
     {
 #ifdef _DEBUG
-        printf("usb_class_hid_deinit fail\n");
+        USB_PRINTF("usb_class_hid_deinit fail\n");
 #endif
         return USBERR_ERROR;
     }
@@ -160,13 +160,13 @@ usb_status usb_class_hid_deinit
         if (status != USB_OK)
         {
 #ifdef _DEBUG
-            printf("error in usb_class_hid_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_hid_deinit to close pipe\n");
 #endif
         }
     }
     
     OS_Mem_free(handle);
-    //printf("HID class driver de-initialized\n");
+    //USB_PRINTF("HID class driver de-initialized\n");
     return USB_OK;
 } /* Endbody */
 
@@ -191,7 +191,7 @@ usb_status usb_class_hid_pre_deinit
     if (hid_class == NULL)
     {
 #ifdef _DEBUG    
-        printf("_usb_host_cancel_call_interface fail\n");
+        USB_PRINTF("_usb_host_cancel_call_interface fail\n");
 #endif
         return USBERR_ERROR;
     }
@@ -202,12 +202,12 @@ usb_status usb_class_hid_pre_deinit
         if (status != USB_OK)
         {
 #ifdef _DEBUG
-            printf("error in _usb_host_cancel_call_interface to close pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close pipe\n");
 #endif
         }
     }
 
-    //printf("HID class driver pre_deinit\n");
+    //USB_PRINTF("HID class driver pre_deinit\n");
     return USB_OK;
 } /* Endbody */
 
@@ -238,7 +238,7 @@ static void usb_class_hid_cntrl_callback
     if (usb_host_release_tr(hid_class->host_handle, tr_ptr) != USB_OK)
     {
 #ifdef _DEBUG
-        printf("_usb_host_release_tr failed\n");
+        USB_PRINTF("_usb_host_release_tr failed\n");
 #endif
     }
     
@@ -246,10 +246,6 @@ static void usb_class_hid_cntrl_callback
     if (hid_class->ctrl_callback)
     {
         hid_class->ctrl_callback(NULL, hid_class->ctrl_param, buffer, len, status);
-        if(status == USBERR_ENDPOINT_STALLED)
-        {
-          status = _usb_host_ch9_clear_feature((usb_device_instance_handle)hid_class->dev_handle, REQ_TYPE_ENDPOINT, 0, ENDPOINT_HALT);
-        } 
     }
 } /* Endbody */
 
@@ -280,7 +276,7 @@ static void usb_class_hid_recv_callback
     if (usb_host_release_tr(hid_class->host_handle, tr_ptr) != USB_OK)
     {
 #ifdef _DEBUG
-        printf("_usb_host_release_tr failed\n");
+        USB_PRINTF("_usb_host_release_tr failed\n");
 #endif
     }
     
@@ -354,7 +350,7 @@ static usb_status usb_class_hid_cntrl_common
     if (usb_host_get_tr(hid_class->host_handle, usb_class_hid_cntrl_callback, hid_class, &tr_ptr) != USB_OK)
     {
 #ifdef _DEBUG
-        printf("error to get tr hid\n");
+        USB_PRINTF("error to get tr hid\n");
 #endif
         return USBERR_ERROR;
     }
@@ -382,7 +378,7 @@ static usb_status usb_class_hid_cntrl_common
     if (status != USB_OK)
     {
 #ifdef _DEBUG
-        printf("\nError in usb_class_hid_cntrl_common: %x", status);
+        USB_PRINTF("\nError in usb_class_hid_cntrl_common: %x", status);
 #endif
         hid_class->in_setup = FALSE;
         usb_host_release_tr(hid_class->host_handle, tr_ptr);
@@ -423,7 +419,7 @@ usb_status usb_class_hid_recv_data
     if ((hid_class == NULL) || (buffer == NULL))
     {
 #ifdef _DEBUG
-        printf("input parameter error\n");
+        USB_PRINTF("input parameter error\n");
 #endif
         return USBERR_ERROR;
     }
@@ -438,14 +434,14 @@ usb_status usb_class_hid_recv_data
 #if 0
     if (sleep_test)
     {
-        printf("begin to sleep 3000ms \n");
+        USB_PRINTF("begin to sleep 3000ms \n");
         OS_Time_delay(3000);
     }
 #endif
     if (usb_host_get_tr(hid_class->host_handle, usb_class_hid_recv_callback, hid_class, &tr_ptr) != USB_OK)
     {
 #ifdef _DEBUG
-        printf("error to get tr\n");
+        USB_PRINTF("error to get tr\n");
 #endif
         return USBERR_ERROR;
     }
@@ -456,7 +452,7 @@ usb_status usb_class_hid_recv_data
     if (status != USB_OK)
     {
 #ifdef _DEBUG
-        printf("\nError in usb_class_hid_recv_data: %x", status);
+        USB_PRINTF("\nError in usb_class_hid_recv_data: %x", status);
 #endif
         usb_host_release_tr(hid_class->host_handle, tr_ptr);
         return USBERR_ERROR;

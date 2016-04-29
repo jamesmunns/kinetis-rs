@@ -131,8 +131,13 @@ usb_pipe_handle usb_host_dev_mng_get_control_pipe(usb_device_instance_handle dev
 bool  usb_host_dev_mng_check_configuration(usb_device_instance_handle dev_handle);
 usb_status usb_host_dev_mng_parse_configuration_descriptor(usb_device_instance_handle dev_handle);
 bool  usb_host_dev_notify(dev_instance_t* dev_ptr, uint32_t event_code);
+
+uint8_t usb_host_dev_mng_get_hub_speed(usb_device_instance_handle dev_handle);
+uint8_t usb_host_dev_mng_get_hs_hub_no(usb_device_instance_handle dev_handle);
+uint8_t usb_host_dev_mng_get_hs_port_no(usb_device_instance_handle dev_handle);
+
 #ifdef USBCFG_OTG
-extern uint32_t _usb_otg_host_on_detach_event(usb_otg_handle  otg_handle);
+extern uint32_t usb_otg_host_on_detach_event(usb_otg_handle  otg_handle);
 #endif
 #ifdef __cplusplus
 }

@@ -72,6 +72,7 @@ extern "C" {
 #define  USB_SERVICE_ERROR                     (0x16)
 //#define  USB_SERVICE_STALL                                (0x17)
 #define  USB_SERVICE_REQUEST                   (0x18)
+#define  USB_SERVICE_DETACH                    (0x19)
 
 #define  USB_CONTROL_ENDPOINT                  (0)
 #define  USB_SETUP_PKT_SIZE                    (8)/* Setup Packet Size */
@@ -93,6 +94,7 @@ extern "C" {
 #define  USB_DEV_EVENT_TYPE_CLR_REMOTE_WAKEUP  (0x12)
 #define  USB_DEV_EVENT_TYPE_SET_EP_HALT        (0x13)
 #define  USB_DEV_EVENT_TYPE_CLR_EP_HALT        (0x14)
+#define  USB_DEV_EVENT_DETACH                  (0x15)
 
 /* Macros for description of class, configuration, interface */
 #define  USB_DESC_INTERFACE(index, ep_cnt, ep) \
@@ -139,6 +141,7 @@ typedef enum {
     USB_RNDIS_INFO,
     USB_PHDC_QOS_INFO,
     USB_MSC_LBA_INFO,
+    USB_CLASS_INTERFACE_INDEX_INFO,
 } entity_type;
 
 typedef enum {
@@ -150,58 +153,93 @@ typedef enum {
     USB_CLASS_ALL,
     USB_CLASS_INVALID
 } class_type;
-
+/*!
+ * @brief Obtains the endpoint data structure.
+ *
+ * Define the endpoint data structure. 
+ *
+ */
 typedef struct _usb_ep_struct
 {
-    uint8_t               ep_num;      /* endpoint number         */
-    uint8_t               type;        /* type of endpoint        */
-    uint8_t               direction;   /* direction of endpoint   */
-    uint32_t              size;        /* buffer size of endpoint */
+    uint8_t               ep_num;      /*!< endpoint number*/
+    uint8_t               type;        /*!< type of endpoint*/
+    uint8_t               direction;   /*!< direction of endpoint*/
+    uint32_t              size;        /*!< maximum packet size of endpoint*/
 } usb_ep_struct_t;
 
-/* Strucutre Representing Endpoints and number of endpoints user want*/
+/*!
+ * @brief Obtains the endpoint group.
+ *
+ * Strucutre Representing Endpoints and number of endpoints user want. 
+ *
+ */
 typedef struct _usb_endpoints
 {
-    uint8_t               count;
-    usb_ep_struct_t*      ep; 
+    uint8_t               count;    /*!< how many endpoints are described*/
+    usb_ep_struct_t*      ep;       /*!< detailed information of each endpoint*/
 } usb_endpoints_t;
 
-/* Strucutre Representing interface*/
+/*!
+ * @brief Obtains the interface data structure.
+ *
+ * Strucutre Representing interface.
+ *
+ */
 typedef struct _usb_if_struct
 {
-    uint8_t               index;
-    usb_endpoints_t       endpoints;
+    uint8_t               index;        /*!< interface index*/
+    usb_endpoints_t       endpoints;    /*!< endpoints in this interface*/
 } usb_if_struct_t;
 
-/* Strucutre Representing how many interfaces in one class type*/
+/*!
+ * @brief Obtains the interface group.
+ *
+ * Strucutre Representing how many interfaces in one class type.
+ *
+ */
 typedef struct _usb_interfaces_struct
 {
-    uint8_t               count;
-    usb_if_struct_t*      interface;
+    uint8_t               count;        /*!< how many interfaces are described*/
+    usb_if_struct_t*      interface;    /*!< detailed information of each interface*/
 } usb_interfaces_struct_t;
 
-/* Strucutre Representing class info*/
+/*!
+ * @brief Obtains the class data structure.
+ *
+ * Strucutre Representing class info.
+ *
+ */
 typedef struct _usb_class_struct
 {
-    class_type              type;
-    usb_interfaces_struct_t interfaces;
+    class_type              type;          /*!< class type*/
+    usb_interfaces_struct_t interfaces;    /*!< interfaces in this class*/
 } usb_class_struct_t;
 
-/* Strucutre Representing composite info*/
+/*!
+ * @brief Obtains the composite information data structure.
+ *
+ * Strucutre Representing composite info.
+ *
+ */
 typedef struct _usb_composite_info_struct
 {
-    uint8_t               count;
-    usb_class_struct_t*   class;
+    uint8_t               count;    /*!< how many classes in the composite device*/
+    usb_class_struct_t*   class;    /*!< detailed information of each class*/
 } usb_composite_info_struct_t;
 
-/* Common Data Structures */
+/*!
+ * @brief Obtains the setup packet information data structure.
+ *
+ * Strucutre Representing setup packet. 
+ *
+ */
 typedef struct _usb_setup_struct
 {
-    uint8_t               request_type;
-    uint8_t               request;
-    uint16_t              value;
-    uint16_t              index;
-    uint16_t              length;
+    uint8_t               request_type;    /*!< type of request*/
+    uint8_t               request;         /*!< id of request*/
+    uint16_t              value;           /*!< value of request*/
+    uint16_t              index;           /*!< interface index*/
+    uint16_t              length;          /*!< data length of request*/
 } usb_setup_struct_t;
 
 /* USB Specs define CONTROL_MAX_PACKET_SIZE for High Speed device as only 64,
@@ -212,13 +250,19 @@ typedef struct _usb_setup_struct
 #error "For High Speed CONTROL_MAX_PACKET_SIZE should be 64"
 #endif
 
+/*!
+ * @brief Obtains the evnet information.
+ *
+ * Strucutre Representing event for an endpoint.
+ *
+ */
 typedef struct _usb_event_struct
 {
     usb_device_handle     handle;             /* conttroler device handle*/
     uint8_t*              buffer_ptr;         /* void* to buffer       */
-    uint32_t              len;                /* the buffer len had been done */
-                                              /* special case: 0xFFFFFFFF means transfer cancel
-                                              0xFFFFFFFE means tansfer error */
+    uint32_t              len;                /* the buffer len had been done
+                                                                              * special case: 0xFFFFFFFF means transfer cancel
+                                                                              * 0xFFFFFFFE means tansfer error */
     uint8_t               ep_num;             /* endpoint number */
     uint8_t               type;
     bool                  setup;              /* is setup packet         */
@@ -237,62 +281,335 @@ typedef usb_status (_CODE_PTR_ usb_request_notify_t)(usb_setup_struct_t *,
 typedef void(_CODE_PTR_ usb_event_service_t)(usb_event_struct_t*, void*);
 
 
+/*!
+ * @brief Obtains the data structure of the descriptor related callback function. The application needs to implement them and passes it as the configuration parameter.
+ *
+ * Strucutre Representing the descriptor related callback function. 
+ *
+ */
 typedef struct _usb_desc_request_notify_struct
 {
 #ifdef USBCFG_OTG
         uint32_t handle;
 #endif
     uint8_t (_CODE_PTR_ get_desc)(uint32_t handle,uint8_t type,uint8_t desc_index,
-        uint16_t index,uint8_t * *descriptor,uint32_t *size);  
+        uint16_t index,uint8_t * *descriptor,uint32_t *size);    /*!< to get the descriptor whose type is specified by the type*/
     uint8_t (_CODE_PTR_ get_desc_interface)(uint32_t handle,uint8_t interface,
-        uint8_t * alt_interface);
+        uint8_t * alt_interface);    /*!< to get the interface's alternate setting*/
     uint8_t (_CODE_PTR_ set_desc_interface)(uint32_t handle,uint8_t interface,
-        uint8_t alt_interface);
-    uint8_t (_CODE_PTR_ set_configuration)(uint32_t handle, uint8_t config);  
-    uint8_t (_CODE_PTR_ get_desc_entity)(uint32_t handle, entity_type type, uint32_t * object);
+        uint8_t alt_interface);    /*!< to set the interface's alternate setting*/
+    uint8_t (_CODE_PTR_ set_configuration)(uint32_t handle, uint8_t config);  /*!< to inform the application whose configuration is active */
+    uint8_t (_CODE_PTR_ get_desc_entity)(uint32_t handle, entity_type type, uint32_t * object);    /*!< to get the descriptor/device related information*/
 } usb_desc_request_notify_struct_t;
 
-/* Structure application request class callback */
+/*!
+ * @brief Obtains the callback for application.
+ *
+ * Strucutre Representing information for application callback. 
+ *
+ */
 typedef struct usb_application_callback_struct
 {
-    usb_device_notify_t     callback;
-    void*                 arg;
+    usb_device_notify_t     callback;    /*!< application callback function*/
+    void*                 arg;           /*!< parameter for callback function*/
 }usb_application_callback_struct_t;
 
-/* Structure vendor request class callback */
+/*!
+ * @brief Obtains the callback for vendor reqeust.
+ *
+ * Strucutre Representing information for vendor request callback. 
+ *
+ */
 typedef struct usb_vendor_req_callback_struct
 {
-    usb_request_notify_t  callback;
-    void*                 arg;
+    usb_request_notify_t  callback;    /*!< vendor request callback function*/
+    void*                 arg;         /*!< parameter for callback function*/
 }usb_vendor_req_callback_struct_t;
 
+/*!
+ * @brief Initializes the USB device controller.
+ *
+ * The function initializes the device controller specified by the controller_id and a device
+ * handle can be returned from the handle.
+ *
+ * @param controller_id controller ID, such as USB_CONTROLLER_KHCI_0
+ * @param handle  USB Device handle
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_init(uint8_t, usb_device_handle * );
+
+/*!
+ * @brief Un-initializes the USB device controller.
+ *
+ * The function un-initializes the device controller specified by the handle.
+ *
+ * @param handle  USB Device handle
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_deinit(usb_device_handle);
+
+/*!
+ * @brief Receives data from a specified endpoint.
+ *
+ * The function is used to receive data from a specified endpoint.
+ *
+ * @param handle USB Device handle
+ * @param ep_index endpoint index
+ * @param buff_ptr memory address to receive the data
+ * @param size length of the packet to be received
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_recv_data(usb_device_handle, uint8_t, uint8_t *, uint32_t);
+
+/*!
+ * @brief Sends data from a specified endpoint.
+ *
+ * The function is used to send data to a specified endpoint.
+ *
+ * @param handle USB Device handle
+ * @param ep_index endpoint index
+ * @param buff_ptr memory address hold the data need to be sent
+ * @param size length of the packet to be sent
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_send_data(usb_device_handle, uint8_t, uint8_t *, uint32_t);
+
 #if USBCFG_DEV_ADVANCED_CANCEL_ENABLE
+/*!
+ * @brief Cancels all the pending transfers in a specified endpoint.
+ *
+ * The function is used to cancel all the pending transfer in a specified endpoint which
+ * is determined by the endpoint index and the direction
+ *
+ * @param handle USB Device handle
+ * @param ep_index endpoint index
+ * @param direction direction of the endpoint
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_cancel_transfer(usb_device_handle, uint8_t, uint8_t);
+
 #endif
+/*!
+ * @brief Registers a callback function for one specified endpoint.
+ *
+ * The function is used to register a callback function for one specified endpoint.
+ *
+ * @param handle USB Device handle
+ * @param type service type, type & 0xF is the endpoint index
+ * @param service callback function
+ * @param arg second parameter for the callback function
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_register_service(usb_device_handle, uint8_t, usb_event_service_t, void* arg);
+
+/*!
+ * @brief Unregisters a callback function for one specified endpoint.
+ *
+ * The function is used to unregister a callback function for one specified endpoint.
+ *
+ * @param handle USB Device handle
+ * @param type service type, type & 0xF is the endpoint index
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_unregister_service(usb_device_handle, uint8_t);
+
 #if USBCFG_DEV_ADVANCED_SUSPEND_RESUME
+/*!
+ * @brief Resume the process of usb.
+ *
+ * The function resumes the process of usb.
+ *
+ * @param handle  USB Device handle
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_assert_resume(usb_device_handle);
+
 #endif
+/*!
+ * @brief Initializes the specified endpoint.
+ *
+ * The function is used to initialize a specific endpoint which is determined by the ep_ptr.
+ *
+ * @param handle USB Device handle
+ * @param ep_ptr endpoint information
+ * @param flag whether the ZLT is enabled for this endpoint
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_init_endpoint(usb_device_handle, usb_ep_struct_t*, uint8_t);
+
+/*!
+ * @brief Stalls the specified endpoint.
+ *
+ * The function is used to stall a specific endpoint which is determined by the endpoint
+ * index and endpoint direction.
+ *
+ * @param handle USB Device handle
+ * @param ep_num endpoint index
+ * @param direction endpoint direction
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_stall_endpoint(usb_device_handle, uint8_t, uint8_t);
+
+/*!
+ * @brief Un-stalls the specified endpoint.
+ *
+ * The function is used to un-stall a specific endpoint which is determined by the endpoint
+ * index and endpoint direction
+ *
+ * @param handle USB Device handle
+ * @param ep_num endpoint index
+ * @param direction endpoint direction
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_unstall_endpoint(usb_device_handle, uint8_t, uint8_t);
+
+/*!
+ * @brief Un-initializes the specified endpoint.
+ *
+ * The function is used to un-initialize a specific endpoint which is determined by the endpoint
+ * index and endpoint direction.
+ *
+ * @param handle USB Device handle
+ * @param ep_num endpoint index
+ * @param direction endpoint direction
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_deinit_endpoint(usb_device_handle, uint8_t, uint8_t);
+
+/*!
+ * @brief Registers the callback function for the application related event.
+ *
+ * The function is used to register a callback function for the application related event.
+ * Currently the following events are supported:
+ * Event	                                              Description
+ * USB_DEV_EVENT_BUS_RESET A BUS      reset is received.
+ * USB_DEV_EVENT_ENUM_COMPLETE       The device enumerated process completes.
+ * USB_DEV_EVENT_CONFIG_CHANGED	Host sends a set_configuration.
+ * USB_DEV_EVENT_ERROR                      Error.
+ *
+ * @param handle USB Device handle
+ * @param device_notify_callback callback function
+ * @param device_notify_param parameter for the callback function
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_register_application_notify(usb_device_handle, usb_device_notify_t, void*);
+
+/*!
+ * @brief Registers the callback function for the vendor class related event.
+ *
+ * The function is used to register a callback function for the vendor class request related event.
+ * Currently the vendor class is not implemented, so both the request_notify_callback and
+ * request_notify_param can be set to NULL.
+ * 
+ * @param handle USB Device handle
+ * @param request_notify_callback callback function
+ * @param request_notify_param parameter for the callback function
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_register_vendor_class_request_notify(usb_device_handle, usb_request_notify_t, void*);
+
+/*!
+ * @brief Registers the callback functions for the device descriptor related request.
+ *
+ * The function is used to register a set of callback functions for the device descriptor related event.
+ *
+ * @param handle USB Device handle
+ * @param desc_request_notify_callback callback function
+ * @param desc_request_notify_param parameter for the callback function
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_register_desc_request_notify(usb_device_handle,usb_desc_request_notify_struct_t*, void*);
+
+/*!
+ * @brief Gets the internal USB device state.
+ *
+ * The function is used to get the status of the specified component. The supported components include:
+ * 	 USB_STATUS_DEVICE_STATE
+ * 	 USB_STATUS_OTG
+ * 	 USB_STATUS_DEVICE
+ * 	 USB_STATUS_ENDPOINT, the LSB nibble carries the endpoint number
+ * 
+ * @param handle USB Device handle
+ * @param component callback function
+ * @param status requested status
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_get_status(usb_device_handle, uint8_t, uint16_t*);
+
+/*!
+ * @brief Sets the internal USB device state.
+ *
+ * The function is used to set the status of the specified component. The supported components include:
+ * 	 USB_STATUS_DEVICE_STATE
+ * 	 USB_STATUS_OTG
+ * 	 USB_STATUS_DEVICE
+ *
+ * @param handle USB Device handle
+ * @param component callback function
+ * @param status status to set
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_set_status(usb_device_handle, uint8_t, uint16_t);
+
+/*!
+ * @brief Reset the USB device controller.
+ *
+ * The function reset the device controller specified by the device handle
+ *
+ * @param handle  USB Device handle
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_reset(usb_device_handle);
 
+/*!
+ * @brief Initializes the USB device controller.
+ *
+ * The function starts the initialization process that cannot be done in the usb_device_init() API.
+ * For example, the call back functions need to be registered after the device handle can be
+ * obtained from the usb_device_init() API. Therefore, the USB interrupt cannot be enabled in
+ * usb_device_init(); otherwise, the USB interrupt can be issued before the callback functions are
+ * registered. To avoid this issue, the USB interrupt will be enabled in the post initialization process.
+ *
+ * @param controller_id controller ID, such as USB_CONTROLLER_KHCI_0
+ * @param handle  USB Device handle
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status usb_device_postinit(uint8_t, usb_device_handle);
+
 #ifdef USBCFG_OTG
+/*!
+ * @brief Initializes the USB device OTG.
+ *
+ * The function initializes the device OTG specified by the device handle.
+ *
+ * @param handle  USB Device handle
+ * @param otg_attributes Attributes used to initialize otg. Currently supported are
+ * OTG_SRP_SUPPORT OTG_HNP_SUPPORT
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_otg_init(usb_device_handle, uint8_t);
+
+/*!
+ * @brief Get the status of whether OTG hnp is supported.
+ *
+ * The function get the status of whether OTG hnp is supported.
+ *
+ * @param handle  USB Device handle
+ * @param hnp_support_ptr  TRUE-supported/FALSE-not supported
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_otg_get_hnp_support(usb_device_handle, uint8_t*);
+
+/*!
+ * @brief Enable the OTG hnp.
+ *
+ * The function enable the OTG hnp feature.
+ *
+ * @param handle  USB Device handle
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status usb_device_otg_set_hnp_enable(usb_device_handle);
+
 #endif
 #ifdef __cplusplus
 }

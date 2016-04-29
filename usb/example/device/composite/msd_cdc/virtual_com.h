@@ -73,15 +73,15 @@
 /*****************************************************************************
  * Global variables
  *****************************************************************************/
-
+   
 /*****************************************************************************
  * Global Functions
  *****************************************************************************/
-void Virtual_Com_App(void);
-uint8_t VCom_USB_Notif_Callback(uint8_t event, uint16_t value, uint8_t ** data, uint32_t* size, void* arg);
-void VCom_USB_App_Callback(uint8_t event_type, void* val,void* arg);
-void VCom_TestApp_Init(void);
-void VCom_TestApp_Task(void);
+void cdc_vcom_init(void *param);
+void cdc_vcom_preinit(void);
+uint8_t VCom_USB_App_Class_Callback(uint8_t event, uint16_t value, uint8_t ** data, uint32_t* size, void* arg);
+void VCom_USB_App_Device_Callback(uint8_t event_type, void* val,void* arg);
+void cdc_vcom_task(void);
 #endif 
 
 

@@ -99,7 +99,7 @@ static usb_class_struct_t usb_dec_class[USB_CDC_CLASS_MAX] =
 
 uint8_t g_device_descriptor[DEVICE_DESCRIPTOR_SIZE] =
 {
-    /* "Device Dexcriptor Size */
+    /* "Device Descriptor Size */
     DEVICE_DESCRIPTOR_SIZE,               
     /* "Device" Type of descriptor */   
     USB_DEVICE_DESCRIPTOR,                
@@ -114,7 +114,7 @@ uint8_t g_device_descriptor[DEVICE_DESCRIPTOR_SIZE] =
     /* Max Packet size */
     CONTROL_MAX_PACKET_SIZE,
     /* Vendor ID */
-    0x04,0x25,
+    0xa2,0x15,
     /* Product ID */
     0x00,0x03,  
     /* BCD Device version */
@@ -164,14 +164,14 @@ uint8_t g_config_descriptor[CONFIG_DESC_SIZE] =
     CDC_CALL_MANAG_DESC_SIZE,/* Size of this descriptor */
     USB_CS_INTERFACE, /* descriptor type*/
     CALL_MANAGEMENT_FUNC_DESC,   
-    0x01,/*D0(if set): device handales call management itself
+    0x01,/*D0(if set): device handles call management itself
            D1(if set): process commands multiplexed over the data interface*/
     0x01,/* Indicates multiplexed commands are handled via data interface */
    
     CDC_ABSTRACT_DESC_SIZE,             /* Size of this descriptor */
     USB_CS_INTERFACE, /* descriptor type*/
     ABSTRACT_CONTROL_FUNC_DESC, 
-    0x06,/* Device supports request send break, device supports reuest 
+    0x06,/* Device supports request send break, device supports request
             combination o set_line_coding, set_control_line_state, 
             get_line_coding and the notification serial state */
    
@@ -255,7 +255,7 @@ uint8_t g_config_descriptor[CONFIG_DESC_SIZE] =
         /*  Total length of the Configuration descriptor */   
         USB_uint_16_low(CONFIG_DESC_SIZE), USB_uint_16_high(CONFIG_DESC_SIZE),
         CONFIG_DESC_NUM_INTERFACES_SUPPOTED,
-        /*value used to selct this configuration : Configuration Value */      
+        /*value used to select this configuration : Configuration Value */
         1, 
         /*  Configuration Description String Index*/   
         0, 
@@ -284,14 +284,14 @@ uint8_t g_config_descriptor[CONFIG_DESC_SIZE] =
     CDC_CALL_MANAG_DESC_SIZE,/* Size of this descriptor */
     USB_CS_INTERFACE, /* descriptor type*/
     CALL_MANAGEMENT_FUNC_DESC,   
-    0x01,/*D0(if set): device handales call management itself
+    0x01,/*D0(if set): device handles call management itself
            D1(if set): process commands multiplexed over the data interface*/
     0x01,/* Indicates multiplexed commands are handled via data interface */
    
     CDC_ABSTRACT_DESC_SIZE,             /* Size of this descriptor */
     USB_CS_INTERFACE, /* descriptor type*/
     ABSTRACT_CONTROL_FUNC_DESC, 
-    0x06,/* Device supports request send break, device supports reuest 
+    0x06,/* Device supports request send break, device supports request
             combination o set_line_coding, set_control_line_state, 
             get_line_coding and the notification serial state */
    
@@ -349,7 +349,7 @@ uint8_t USB_STR_0[USB_STR_0_SIZE+USB_STR_DESC_SIZE] =
                                     {sizeof(USB_STR_0),    
                                      USB_STRING_DESCRIPTOR, 
                                       0x09,
-                                      0x04/*equiavlent to 0x0409*/ 
+                                      0x04/*equivalent to 0x0409*/ 
                                     };
                                     
 uint8_t USB_STR_1[USB_STR_1_SIZE+USB_STR_DESC_SIZE] 
@@ -433,14 +433,14 @@ uint8_t g_std_desc_size[USB_MAX_STD_DESCRIPTORS+1] =
     DEVICE_DESCRIPTOR_SIZE,
     CONFIG_DESC_SIZE,
     0, /* string */
-    0, /* Interfdace */
+    0, /* Interface */
     0, /* Endpoint */
     #if HIGH_SPEED_DEVICE
         DEVICE_QUALIFIER_DESCRIPTOR_SIZE,
         OTHER_SPEED_CONFIG_DESCRIPTOR_SIZE
     #else                                       
          0, /* Device Qualifier */
-         0 /* other spped config */
+         0 /* other speed config */
     #endif
 };   
                                              
@@ -450,14 +450,14 @@ uint8_t *g_std_descriptors[USB_MAX_STD_DESCRIPTORS+1] =
       g_device_descriptor,
       g_config_descriptor,
       NULL, /* string */
-      NULL, /* Interfdace */
+      NULL, /* Interface */
       NULL, /* Endpoint */
       #if HIGH_SPEED_DEVICE
           g_device_qualifier_descriptor,
           g_other_speed_config_descriptor
       #else
           NULL, /* Device Qualifier */
-          NULL /* other spped config*/
+          NULL /* other speed config*/
       #endif
  }; 
    
@@ -476,9 +476,11 @@ uint8_t *g_string_descriptors[USB_MAX_STRING_DESCRIPTORS+1] =
                                                           };    
 usb_language_t   usb_lang[USB_MAX_LANGUAGES_SUPPORTED] = 
                                    { 
-                                    (uint16_t)0x0409,
-                                    g_string_descriptors,
-                                    g_string_desc_size
+                                       {
+                                           (uint16_t)0x0409,
+                                           g_string_descriptors,
+                                           g_string_desc_size,
+                                       },
                                   };                                                                                              
 usb_all_languages_t g_languages = { USB_STR_0, sizeof(USB_STR_0),
 								                    USB_MAX_LANGUAGES_SUPPORTED,
@@ -516,7 +518,7 @@ static uint8_t g_alternate_interface[USB_MAX_SUPPORTED_INTERFACES];
  *
  * @name  USB_Desc_Get_Descriptor
  *
- * @brief The function returns the correponding descriptor
+ * @brief The function returns the corresponding descriptor
  *
  * @param handle:        handle     
  * @param type:          type of descriptor requested     
@@ -525,7 +527,7 @@ static uint8_t g_alternate_interface[USB_MAX_SUPPORTED_INTERFACES];
  * @param descriptor:    output descriptor pointer
  * @param size:          size of descriptor returned
  *
- * @return USB_OK                              When Successfull
+ * @return USB_OK                              When Success
  *         USBERR_INVALID_REQ_TYPE             when Error
  *****************************************************************************/
 uint8_t USB_Desc_Get_Descriptor(
@@ -538,7 +540,7 @@ uint8_t USB_Desc_Get_Descriptor(
 {
      UNUSED_ARGUMENT(handle)
 
-    /* string descriptors are handled saperately */
+    /* string descriptors are handled separately */
     if (type == USB_STRING_DESCRIPTOR)
     { 
         if(index == 0) 
@@ -601,7 +603,7 @@ uint8_t USB_Desc_Get_Descriptor(
  * @param interface:      interface number     
  * @param alt_interface:  output alternate interface     
  *
- * @return USB_OK                              When Successfull
+ * @return USB_OK                              When Success
  *         USBERR_INVALID_REQ_TYPE             when Error
  *****************************************************************************/
 uint8_t USB_Desc_Get_Interface(uint32_t handle, 
@@ -631,7 +633,7 @@ uint8_t USB_Desc_Get_Interface(uint32_t handle,
  * @param interface:      interface number     
  * @param alt_interface:  input alternate interface     
  *
- * @return USB_OK                              When Successfull
+ * @return USB_OK                              When Success
  *         USBERR_INVALID_REQ_TYPE             when Error
  *****************************************************************************/
 uint8_t USB_Desc_Set_Interface(uint32_t handle, 

@@ -28,42 +28,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __FSL_SDHC_CARD_DISK_H__
-#define __FSL_SDHC_CARD_DISK_H__
+#ifndef __FSL_SD_CARD_DISK_H__
+#define __FSL_SD_CARD_DISK_H__
 
-#include "fsl_sdhc_card.h"
+#include <stdint.h>
 #include "diskio.h"
-
-/*! @addtogroup sdhc_card_drv_data_types */
-/*! @{ */
 
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
 
-/*! @} */
-
-/*! @addtogroup sdhc_carddrv */
-/*! @{ */
-
-/*************************************************************************************************
- * API
- ************************************************************************************************/
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
+/*************************************************************************************************
+ * API
+ ************************************************************************************************/
 DSTATUS sdcard_disk_initialize(uint8_t pdrv);
 DSTATUS sdcard_disk_status(uint8_t pdrv);
 DRESULT sdcard_disk_read(uint8_t pdrv, uint8_t *buf, uint32_t sector, uint8_t count);
 DRESULT sdcard_disk_write(uint8_t pdrv, const uint8_t *buf, uint32_t sector, uint8_t count);
 DRESULT sdcard_disk_ioctl(uint8_t pdrv, uint8_t cmd, void *buff);
 
-/*@} */
 #if defined(__cplusplus)
 }
 #endif
-/*! @} */
 #endif
 
 /*************************************************************************************************

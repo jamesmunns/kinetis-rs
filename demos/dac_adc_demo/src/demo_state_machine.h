@@ -31,51 +31,22 @@
 
 #ifndef __TERMINAL_MENU_H__
 #define __TERMINAL_MENU_H__
-/*******************************************************************************
- * Standard C Included Files
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdint.h>
-/*******************************************************************************
- * SDK Included Files
- ******************************************************************************/
+// SDK Included Files
 #include "fsl_dac_driver.h"
-#include "fsl_adc_driver.h"
+#include "fsl_adc16_driver.h"
 #include "fsl_uart_driver.h"
 #include "fsl_debug_console.h"
 #include "board.h"
-/*******************************************************************************
- * Application Included Files
- ******************************************************************************/
 
-/*******************************************************************************
- * Constants
- ******************************************************************************/
-
-#if defined(TWR_K64F120M)
-
-#define DAC_INSTANCE  0U
-#define ADC_INSTANCE  1U
-#define ADC_CHANNEL  10U
-
-#elif defined(FRDM_K64F120M)
-
-#define DAC_INSTANCE  0U
-#define ADC_INSTANCE  0U
-#define ADC_CHANNEL  12U
-
-#elif defined(TWR_K22F120M) || defined(TWR_K22F120M128R) || defined(TWR_K22F120M256R) || defined(FRDM_K22F120M)
-
-#define DAC_INSTANCE  0U
-#define ADC_INSTANCE  0U
-#define ADC_CHANNEL   8U
-
-#elif defined(TWR_KV31F120M) || defined(TWR_KV31F120M128R) || defined(TWR_KV31F120M256R)
-    
-#define DAC_INSTANCE  0U
-#define ADC_INSTANCE  1U
-#define ADC_CHANNEL   6U
-
-#endif
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 
 #define DAC_1_0_VOLTS  1241U
 #define DAC_1_5_VOLTS  1862U
@@ -86,8 +57,8 @@
 #define VREF_BRD  3.300
 #define SE_12BIT  4096.0
 
- typedef enum Demo_States
- {
+typedef enum Demo_States
+{
     kStart,
     kConfigDevice,
     kSetDAC,
@@ -96,19 +67,19 @@
     kDeinitDevice,
     kEndState,
     kStop
- }demo_state_t;
-/*******************************************************************************
- * Data Structures
- ******************************************************************************/
+}demo_state_t;
+
 typedef struct Demo_StateMachine
 {
     demo_state_t state;
     uint8_t (*demo_func)(demo_state_t *prevState);
 }demo_machine_t;
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-/* 
+
+///////////////////////////////////////////////////////////////////////////////
+// Prototypes
+///////////////////////////////////////////////////////////////////////////////
+
+/*!
  * @brief Function to print out welcome message and pins required by demo.
  *
  * @param *prevState Pointer to previous state for state machine.
@@ -117,7 +88,7 @@ typedef struct Demo_StateMachine
  */
 uint8_t demo_start(demo_state_t *prevState);
 
-/* 
+/*!
  * @brief Function configure DAC and ADC. DAC is configured for software updates. The ADC is set in 'Blocking Mode'.
  *
  * @param *prevState Pointer to previous state for state machine.
@@ -126,7 +97,7 @@ uint8_t demo_start(demo_state_t *prevState);
  */
 uint8_t device_config(demo_state_t *prevState);
 
-/* 
+/*!
  * @brief Function sets output level on DAC.
  *
  * @param *prevState Pointer to previous state for state machine.
@@ -135,7 +106,7 @@ uint8_t device_config(demo_state_t *prevState);
  */
 uint8_t dac_set(demo_state_t *prevState);
 
-/* 
+/*!
  * @brief Function to perform a wait and possible state change based on *prevState.
  *
  * @param *prevState Pointer to previous state for state machine.
@@ -144,7 +115,7 @@ uint8_t dac_set(demo_state_t *prevState);
  */
 uint8_t wait_state(demo_state_t *prevState);
 
-/* 
+/*!
  * @brief Function to get ADC values from channel connected to DAC output.
  *
  * @param *prevState Pointer to previous state for state machine.
@@ -153,7 +124,7 @@ uint8_t wait_state(demo_state_t *prevState);
  */
 uint8_t adc_get(demo_state_t *prevState);
 
-/* 
+/*!
  * @brief Function deinitializes the DAC and ADC module following a user command to do terminate demo. Will also free allocated memory.
  *
  * @param *prevState Pointer to previous state for state machine.
@@ -162,7 +133,7 @@ uint8_t adc_get(demo_state_t *prevState);
  */
 uint8_t device_deinit(demo_state_t *prevState);
 
-/* 
+/*!
  * @brief Function indicates to the user that the demo has been terminated.
  *
  * @param *prevState Pointer to previous state for state machine.
@@ -171,8 +142,4 @@ uint8_t device_deinit(demo_state_t *prevState);
  */
 uint8_t demo_end(demo_state_t *prevState);
 
-#endif /* __TERMINAL_MENU_H__ */
-
-/******************************************************************************
- * EOF
- ******************************************************************************/
+#endif // __TERMINAL_MENU_H__

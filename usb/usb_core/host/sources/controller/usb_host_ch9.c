@@ -116,49 +116,59 @@ static void  usb_host_cntrl_transaction_done
 
     if (usb_host_release_tr(usb_host_ptr, tr_ptr) != USB_OK)
     {
-        printf("_usb_host_release_tr failed\n");
+        USB_PRINTF("_usb_host_release_tr failed\n");
     }
 
     switch (status)
     {
         case USB_OK:
-            dev_inst_ptr->ctrl_retries = USBCFG_HOST_CTRL_RETRY;
-            dev_inst_ptr->stall_retries = USBCFG_HOST_CTRL_RETRY;
+            dev_inst_ptr->ctrl_retries = USBCFG_HOST_CTRL_FAILED_RETRY;
+            dev_inst_ptr->stall_retries = USBCFG_HOST_CTRL_STALL_RETRY;
             break;
   
         case USBERR_TR_FAILED:
         case USBERR_ENDPOINT_STALLED:
         
-            //printf("TR failed buffer : %x\n\r", buffer);
+            //USB_PRINTF("TR failed buffer : %x\n\r", buffer);
             dev_inst_ptr->ctrl_retries--;
             dev_inst_ptr->stall_retries--;
             if ((status == USBERR_ENDPOINT_STALLED)&&(dev_inst_ptr->stall_retries))
             {
-               printf("USBERR_ENDPOINT_STALLED\n");
-               status = _usb_host_ch9_clear_feature((usb_device_instance_handle)dev_inst_ptr, REQ_TYPE_ENDPOINT, 0, ENDPOINT_HALT);
+               status = USB_OK;
+               //USB_PRINTF("USBERR_ENDPOINT_STALLED\n");
+               //status = _usb_host_ch9_clear_feature((usb_device_instance_handle)dev_inst_ptr, REQ_TYPE_ENDPOINT, 0, ENDPOINT_HALT);
             }
             else if ((dev_inst_ptr->stall_retries == 0) || ((dev_inst_ptr->ctrl_retries)&&(status == USBERR_TR_FAILED)))
             {
-                /* if hub level is 1 will do port reset */
-				if(dev_inst_ptr->level == 1)
+                if (dev_inst_ptr->state > DEVSTATE_SET_CFG)
                 {
-                    host_api = (usb_host_api_functions_struct_t*)usb_host_ptr->host_controller_api;
-
-                    if (host_api->host_bus_control != NULL)
+                    if ((dev_inst_ptr->control_callback != NULL))
                     {
-                        host_api->host_bus_control(usb_host_ptr->controller_handle, 1);
+                        dev_inst_ptr->control_callback(tr_ptr, dev_inst_ptr->control_callback_param, buffer, length, USBERR_TR_RETRY_FAILED);
                     }
-                    status = _usb_host_ch9_get_descriptor((usb_device_instance_handle)dev_inst_ptr,
-                                                              USB_DESC_TYPE_DEV << 8, 0, 8, 
-                                                              (uint8_t *)buffer);
-                    dev_inst_ptr->state = DEVSTATE_DEVDESC8;
                 }
-                else  
+                else
                 {
-#if USBCFG_HOST_HUB                   
-                    usb_host_hub_Port_Reset(dev_inst_ptr->hub_instance, dev_inst_ptr->port_no);
-                    usb_host_dev_mng_detach(dev_inst_ptr->host, dev_inst_ptr->hub_no, dev_inst_ptr->port_no);
-#endif
+                    /* if hub level is 1 will do port reset */
+                    if(dev_inst_ptr->level == 1)
+                    {
+                        host_api = (usb_host_api_functions_struct_t*)usb_host_ptr->host_controller_api;
+                        if (host_api->host_bus_control != NULL)
+                        {
+                            host_api->host_bus_control(usb_host_ptr->controller_handle, 1);
+                        }
+                        status = _usb_host_ch9_get_descriptor((usb_device_instance_handle)dev_inst_ptr,
+                                                                  USB_DESC_TYPE_DEV << 8, 0, 8, 
+                                                                  (uint8_t *)buffer);
+                        dev_inst_ptr->state = DEVSTATE_DEVDESC8;
+                    }
+                    else  
+                    {
+    #if USBCFG_HOST_HUB                   
+                        usb_host_hub_Port_Reset(dev_inst_ptr->hub_instance, dev_inst_ptr->port_no);
+                        usb_host_dev_mng_detach(dev_inst_ptr->host, dev_inst_ptr->hub_no, dev_inst_ptr->port_no);
+    #endif
+                    }
                 }
             }
 
@@ -188,16 +198,16 @@ static void  usb_host_cntrl_transaction_done
                     * dev_inst_ptr->dev_descriptor which contains the 
                     * max packet size for this control endpoint 
                     */
-            //printf("dev8\n");
+            //USB_PRINTF("dev8\n");
             pipe_ptr->max_packet_size = dev_inst_ptr->dev_descriptor.bMaxPacketSize;
-            //printf("DEVSTATE_DEVDESC8 %d\n",dev_inst_ptr->dev_descriptor.bMaxPacketSize);
+            //USB_PRINTF("DEVSTATE_DEVDESC8 %d\n",dev_inst_ptr->dev_descriptor.bMaxPacketSize);
               
             /* Notify device driver of MaxPacketSize0 for this device */
             status = _usb_host_update_max_packet_size_call_interface (usb_host_ptr, pipe_ptr);
            
             if (status != USB_OK)
             {
-                printf("update max packet size error\n");
+                USB_PRINTF("update max packet size error\n");
                 usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                 break;
             }
@@ -213,7 +223,7 @@ static void  usb_host_cntrl_transaction_done
             
             if (status != USB_OK)
             {
-                printf("set address error\n");
+                USB_PRINTF("set address error\n");
                 usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                 break;
             }
@@ -221,19 +231,19 @@ static void  usb_host_cntrl_transaction_done
             break;
        case DEVSTATE_ADDR_SET:     /* address set */
             //pipe_ptr->DEVICE_ADDRESS = dev_inst_ptr->address;
-         //   printf("add set %d\n", dev_inst_ptr->target_address);
+         //   USB_PRINTF("add set %d\n", dev_inst_ptr->target_address);
             dev_inst_ptr->address = dev_inst_ptr->target_address;
             /* Notify device driver of USB device's new address */
             status = _usb_host_update_device_address_call_interface (usb_host_ptr, pipe_ptr);
             
             if (status != USB_OK)
             {
-                printf("update device address error\n");
+                USB_PRINTF("update device address error\n");
                 usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                 break;
             }
             dev_inst_ptr->state = DEVSTATE_DEV_DESC;
-            //printf("descriptor address 0x%x\n", &dev_inst_ptr->dev_descriptor);
+            //USB_PRINTF("descriptor address 0x%x\n", &dev_inst_ptr->dev_descriptor);
             /* Now get the full descriptor */
             status = _usb_host_ch9_get_descriptor((usb_device_instance_handle)dev_inst_ptr,
                 USB_DESC_TYPE_DEV << 8, 
@@ -243,7 +253,7 @@ static void  usb_host_cntrl_transaction_done
                
             if (status != USB_OK)
             {
-                printf("get device descriptor error\n");
+                USB_PRINTF("get device descriptor error\n");
                 usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                 break;
             }
@@ -253,7 +263,7 @@ static void  usb_host_cntrl_transaction_done
             /* Now lets get the first 9 bytes of the configuration descriptor 
                     */
             desc.pntr = &dev_inst_ptr->buffer;
-            //printf("dev %d cfg, c %d 0x%x\n", dev_inst_ptr->dev_descriptor.bNumConfigurations, dev_inst_ptr->cfg_value, desc.pntr);
+            //USB_PRINTF("dev %d cfg, c %d 0x%x\n", dev_inst_ptr->dev_descriptor.bNumConfigurations, dev_inst_ptr->cfg_value, desc.pntr);
             dev_inst_ptr->state = DEVSTATE_GET_CFG9;
             status = _usb_host_ch9_get_descriptor((usb_device_instance_handle)dev_inst_ptr,
                USB_DESC_TYPE_CFG << 8 | dev_inst_ptr->cfg_value, 
@@ -263,7 +273,7 @@ static void  usb_host_cntrl_transaction_done
                
             if (status != USB_OK)
             {
-                printf("get 9 byte configuration(%d) error\n", dev_inst_ptr->cfg_value);
+                USB_PRINTF("get 9 byte configuration(%d) error\n", dev_inst_ptr->cfg_value);
                 usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                 break;
             }
@@ -276,7 +286,7 @@ static void  usb_host_cntrl_transaction_done
                     */
             desc.cfig = (usb_configuration_descriptor_t*)dev_inst_ptr->buffer;
             config_size = USB_SHORT_UNALIGNED_LE_TO_HOST(desc.cfig->wTotalLength);
-            
+            aligned_config_size = config_size;
             /* for KHCI, the start address and the length should be 4 byte align */
             if ((config_size && 0x3) != 0)
             {
@@ -293,12 +303,12 @@ static void  usb_host_cntrl_transaction_done
        
             if (dev_inst_ptr->lpConfiguration == NULL)
             {
-                printf("get memory for full configuration(%d) error\n", dev_inst_ptr->cfg_value);
+                USB_PRINTF("get memory for full configuration(%d) error\n", dev_inst_ptr->cfg_value);
                 usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                 break;
             }
            
-            //printf("Get CFG9 %d %d %d\n",dev_inst_ptr->cfg_value, config_size,dev_inst_ptr->dev_descriptor.bNumConfigurations);
+            //USB_PRINTF("Get CFG9 %d %d %d\n",dev_inst_ptr->cfg_value, config_size,dev_inst_ptr->dev_descriptor.bNumConfigurations);
        
             /* We can only read one config descriptor at a time */
             status = _usb_host_ch9_get_descriptor((usb_device_instance_handle)dev_inst_ptr,
@@ -309,7 +319,7 @@ static void  usb_host_cntrl_transaction_done
                
             if (status != USB_OK)
             {
-                printf("get full configuration(%d) error\n", dev_inst_ptr->cfg_value);
+                USB_PRINTF("get full configuration(%d) error\n", dev_inst_ptr->cfg_value);
                 usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                 break;
             }    
@@ -351,15 +361,15 @@ static void  usb_host_cntrl_transaction_done
                (desc.otg->bmAttributes & OTG_HNP_SUPPORT))
             {
                 otg_hnp_support = TRUE;
-                if(_usb_otg_host_get_otg_attribute(usb_host_ptr->otg_handle,desc.otg->bmAttributes) == USB_OK)
+                if(usb_otg_host_get_otg_attribute(usb_host_ptr->otg_handle,desc.otg->bmAttributes) == USB_OK)
                 {
-                    if(_usb_otg_host_set_feature_required(usb_host_ptr->otg_handle))
+                    if(usb_otg_host_set_feature_required(usb_host_ptr->otg_handle))
                     {
                         status = _usb_host_ch9_set_feature(dev_inst_ptr, 0, 0, OTG_A_HNP_SUPPORT);
                        
                         if (status != USB_OK)
                         {
-                            printf("set feature for otg error\n");
+                            USB_PRINTF("set feature for otg error\n");
                             usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                             break;
                         }
@@ -389,18 +399,18 @@ static void  usb_host_cntrl_transaction_done
         case  DEVSTATE_SET_HNP_OK:
             if(dev_inst_ptr->state == DEVSTATE_SET_HNP_OK)
             {
-                _usb_otg_host_a_set_b_hnp_en(usb_host_ptr->otg_handle, TRUE);
+                usb_otg_host_a_set_b_hnp_en(usb_host_ptr->otg_handle, TRUE);
             }
 #endif  
         case DEVSTATE_CFG_READ:
             dev_inst_ptr->cfg_value++;
-            //printf("cfg %d, %d\n", dev_inst_ptr->cfg_value,dev_inst_ptr->dev_descriptor.bNumConfigurations);
+            //USB_PRINTF("cfg %d, %d\n", dev_inst_ptr->cfg_value,dev_inst_ptr->dev_descriptor.bNumConfigurations);
             if (usb_host_dev_mng_parse_configuration_descriptor(dev_inst_ptr) == USB_OK)
             {
-                //printf("parse cfg\n");
+                //USB_PRINTF("parse cfg\n");
                 if (usb_host_dev_mng_check_configuration(dev_inst_ptr))
                 {
-                    //printf("check cfg\n");
+                    //USB_PRINTF("check cfg\n");
                     usb_host_dev_notify(dev_inst_ptr, USB_ATTACH_EVENT);
                     /* enumeration done */
                     dev_inst_ptr->state = DEVSTATE_SET_CFG;
@@ -408,18 +418,18 @@ static void  usb_host_cntrl_transaction_done
                     status = _usb_host_ch9_set_configuration(dev_inst_ptr, dev_inst_ptr->configuration.lpconfigurationDesc->bConfigurationValue);
                     if (status != USB_OK)
                     {
-                        printf("set configuration(%d) error\n", dev_inst_ptr->cfg_value);
+                        USB_PRINTF("set configuration(%d) error\n", dev_inst_ptr->cfg_value);
                         usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                         break;
                     }
                 }
                 else
                 {
-                    //printf("cfg %d %d\n", dev_inst_ptr->cfg_value,dev_inst_ptr->dev_descriptor.bNumConfigurations);
+                    //USB_PRINTF("cfg %d %d\n", dev_inst_ptr->cfg_value,dev_inst_ptr->dev_descriptor.bNumConfigurations);
                     /* get next configuration */
                     if (dev_inst_ptr->cfg_value < dev_inst_ptr->dev_descriptor.bNumConfigurations)
                     {
-                        //printf("invalid cfg re\n");
+                        //USB_PRINTF("invalid cfg re\n");
                         desc.pntr = &dev_inst_ptr->buffer;
                         dev_inst_ptr->state = DEVSTATE_GET_CFG9;
                         status = _usb_host_ch9_get_descriptor((usb_device_instance_handle)dev_inst_ptr,
@@ -429,14 +439,19 @@ static void  usb_host_cntrl_transaction_done
                             desc.bufr);
                         if (status != USB_OK)
                         {
-                            printf("get 9 byte configuration(%d) error\n", dev_inst_ptr->cfg_value);
+                            USB_PRINTF("get 9 byte configuration(%d) error\n", dev_inst_ptr->cfg_value);
                             usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                             break;
                         }
                    }
                    else
                    {
-                       printf("unsupported device attached\n");
+                       #if !USBCFG_HOST_HUB
+                       if (dev_inst_ptr->dev_descriptor.bDeviceClass == USB_CLASS_HUB )
+                           USB_PRINTF("unsupported hub attached\n");
+                       else
+                       #endif
+                           USB_PRINTF("unsupported device attached\n");
                        usb_host_dev_notify(dev_inst_ptr, USB_ATTACH_DEVICE_NOT_SUPPORT);
                        usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                        break;
@@ -445,16 +460,16 @@ static void  usb_host_cntrl_transaction_done
             }
             else
             {
-                printf("parse configuration(%d) error\n", dev_inst_ptr->cfg_value);
+                USB_PRINTF("parse configuration(%d) error\n", dev_inst_ptr->cfg_value);
                 usb_host_dev_mng_pre_detach(dev_inst_ptr->host,dev_inst_ptr->hub_no,dev_inst_ptr->port_no);
                 break;
             }
             break;
         case DEVSTATE_SET_CFG:     /* config descriptor [0..8] */
-            dev_inst_ptr->state = DEVSTATE_ENUM_OK;
+            dev_inst_ptr->state = DEVSTATE_SET_INTF;
             usb_host_dev_notify(dev_inst_ptr, USB_CONFIG_EVENT);
 #ifdef USBCFG_OTG
-            _usb_otg_host_on_interface_event(usb_host_ptr->otg_handle, dev_inst_ptr);
+            usb_otg_host_on_interface_event(usb_host_ptr->otg_handle, dev_inst_ptr);
 #endif
             break;
 
@@ -519,7 +534,7 @@ static usb_status  usb_host_ch9_dev_req
 
     if (usb_host_get_tr(dev_ptr->host, dev_ptr->control_callback, dev_ptr->control_callback_param, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr ch9\n");
+        USB_PRINTF("error to get tr ch9\n");
         return USBERR_ERROR;
     }
 

@@ -50,14 +50,12 @@
 //#include "fsl_usb_features.h"
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
-//#include "board.h"
+#include "board.h"
 #include "fsl_debug_console.h"
-#include "fsl_gpio_common.h"
-
 #include "fsl_port_hal.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "uart/fsl_uart_driver.h"
+#include "fsl_uart_driver.h"
 #endif
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
@@ -251,7 +249,7 @@ uint32_t kbd_hid_get_buffer()
         kbd_buffer = (uint8_t*)OS_Mem_alloc_uncached_zero(kbd_size);
         if (kbd_buffer == NULL)
         {
-            printf("allocate memory failed in hid_get_buffer\r\n");
+            USB_PRINTF("allocate memory failed in hid_get_buffer\r\n");
             return (uint32_t)-1;
         }
     }
@@ -309,7 +307,7 @@ void kbd_hid_get_report_descriptor()
             kbd_reportDescriptor = (uint8_t*)OS_Mem_alloc_uncached_zero(kbd_reportLength);
             if (kbd_reportDescriptor == NULL)
             {
-                printf("allocate memory failed in hid_get_buffer\r\n");
+                USB_PRINTF("allocate memory failed in hid_get_buffer\r\n");
                 return ;
             }
 
@@ -322,13 +320,13 @@ void kbd_hid_get_report_descriptor()
          
             if (status != USB_OK)
             {
-                printf("\r\nError in usb_class_hid_get_descriptor: %x\r\n", status);
+                USB_PRINTF("\r\nError in usb_class_hid_get_descriptor: %x\r\n", status);
             }
         }
     }
     else
     {
-        printf("Can't find HID_DESCRIPTOR\r\n");
+        USB_PRINTF("Can't find HID_DESCRIPTOR\r\n");
     }
     return ;
 }
@@ -361,13 +359,13 @@ static void usb_host_hid_keyboard_event
         case USB_ATTACH_EVENT:
             kbd_interface_info[kbd_interface_number] = pHostIntf;
             kbd_interface_number++;
-            printf("----- Attach Event -----\r\n");
-            printf("State = %d", kbd_hid_device.DEV_STATE);
-            printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-            printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-            printf("  Class = %d", intf_ptr->bInterfaceClass);
-            printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-            printf("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+            USB_PRINTF("----- Attach Event -----\r\n");
+            USB_PRINTF("State = %d", kbd_hid_device.DEV_STATE);
+            USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+            USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+            USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+            USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+            USB_PRINTF("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
             break;
         case USB_CONFIG_EVENT:
             if(kbd_hid_device.DEV_STATE == USB_DEVICE_IDLE)
@@ -378,29 +376,29 @@ static void usb_host_hid_keyboard_event
             }
             else
             {
-                 printf("HID device already attached - DEV_STATE = %d\r\n", kbd_hid_device.DEV_STATE);
+                 USB_PRINTF("HID device already attached - DEV_STATE = %d\r\n", kbd_hid_device.DEV_STATE);
             }
             break;
     
         case USB_INTF_OPENED_EVENT:
-            printf("----- Interfaced Event -----\r\n");
+            USB_PRINTF("----- Interfaced Event -----\r\n");
             kbd_hid_device.DEV_STATE = USB_DEVICE_INTERFACE_OPENED;
             break;
     
         case USB_DETACH_EVENT:
             /* Use only the interface with desired protocol */
-            printf("\r\n----- Detach Event -----\r\n");
-            printf("State = %d", kbd_hid_device.DEV_STATE);
-            printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-            printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-            printf("  Class = %d", intf_ptr->bInterfaceClass);
-            printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-            printf("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+            USB_PRINTF("\r\n----- Detach Event -----\r\n");
+            USB_PRINTF("State = %d", kbd_hid_device.DEV_STATE);
+            USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+            USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+            USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+            USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+            USB_PRINTF("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
             kbd_interface_number = 0;
             kbd_hid_device.DEV_STATE = USB_DEVICE_DETACHED;
             break;
         default:
-            printf("HID Device state = %d??\r\n", kbd_hid_device.DEV_STATE);
+            USB_PRINTF("HID Device state = %d??\r\n", kbd_hid_device.DEV_STATE);
             kbd_hid_device.DEV_STATE = USB_DEVICE_IDLE;
             break;
     }
@@ -438,22 +436,22 @@ static void usb_host_hid_keyboard_ctrl_callback
 {
     if (status == USBERR_ENDPOINT_STALLED)
     {
-        printf("\r\nHID control Request failed DEV_STATE 0x%x status 0x%x!\r\n", kbd_hid_device.DEV_STATE, status);
+        USB_PRINTF("\r\nHID control Request failed DEV_STATE 0x%x status 0x%x!\r\n", kbd_hid_device.DEV_STATE, status);
     }
     else if (status)
     {
-        printf("\r\nHID control Request failed DEV_STATE 0x%x status 0x%x!\r\n", kbd_hid_device.DEV_STATE, status);
+        USB_PRINTF("\r\nHID control Request failed DEV_STATE 0x%x status 0x%x!\r\n", kbd_hid_device.DEV_STATE, status);
     }
 
     if(kbd_hid_device.DEV_STATE == USB_DEVICE_SETTING_PROTOCOL)
     {
         kbd_hid_device.DEV_STATE = USB_DEVICE_INUSE;
-        printf("setting protocol done\r\n");
+        USB_PRINTF("setting protocol done\r\n");
     }
     else if (kbd_hid_device.DEV_STATE == USB_DEVICE_GET_REPORT_DESCRIPTOR)
     {
         kbd_hid_device.DEV_STATE = USB_DEVICE_GET_REPORT_DESCRIPTOR_DONE;
-        printf("get report descriptor done\r\n");
+        USB_PRINTF("get report descriptor done\r\n");
     }
 
     /* notify application that status has changed */
@@ -496,12 +494,12 @@ static void usb_host_hid_keyboard_recv_callback
     else if (status == USBERR_TR_CANCEL)
     {
         /* notify application that data are available */
-        printf("tr cancel\r\n");
+        USB_PRINTF("tr cancel\r\n");
     	OS_Event_set(kbd_usb_event, USB_EVENT_DATA_CORRUPTED);
     }
     else
     {
-   //     printf("tr completed 0x%x\r\n", status);
+   //     USB_PRINTF("tr completed 0x%x\r\n", status);
         OS_Event_set(kbd_usb_event, USB_EVENT_DATA_CORRUPTED);
     }
 }
@@ -534,28 +532,28 @@ void process_kbd_buffer(uint8_t *buffer)
     shift = 0;
     /* Check Modifiers in byte 0 (see HID specification 1.11 page 56) */
     if(code & 0x01) {
-        printf("LEFT CTRL ");
+        USB_PRINTF("LEFT CTRL ");
     }
     if(code & 0x02) {
-        printf("LEFT SHIFT ");
+        USB_PRINTF("LEFT SHIFT ");
     }
     if(code & 0x04) {
-        printf("LEFT ALT ");
+        USB_PRINTF("LEFT ALT ");
     }
     if(code & 0x08) {
-        printf("LEFT GUI ");
+        USB_PRINTF("LEFT GUI ");
     }
     if(code & 0x10) {
-        printf("RIGHT CTRL ");
+        USB_PRINTF("RIGHT CTRL ");
     }
     if(code & 0x20) {
-        printf("RIGHT SHIFT ");
+        USB_PRINTF("RIGHT SHIFT ");
     }
     if(code & 0x40) {
-        printf("RIGHT ALT ");
+        USB_PRINTF("RIGHT ALT ");
     }
     if(code & 0x80) {
-        printf("RIGHT GUI ");
+        USB_PRINTF("RIGHT GUI ");
     }
 
     /* immediate state of left or right SHIFT */
@@ -570,6 +568,12 @@ void process_kbd_buffer(uint8_t *buffer)
      ** (HID spec 1.11 page 60)
      */
     for(i = 8 - 1; i >= 2; i--) {
+        if((buffer[2] != buffer[3]) && (buffer[3] != 0))
+            {
+               break;
+            }
+        else
+            {
         code = buffer[i];
 
         /* if valid keyboard code was received */
@@ -577,23 +581,24 @@ void process_kbd_buffer(uint8_t *buffer)
             if(code < MAX_SUPPORTED_USAGE_ID && HID_table[code][shift]) {
                 switch (code) {
                     case 0x29:
-                      printf("ESC ");
+                      USB_PRINTF("ESC ");
                       break;
                     case 0x2A:
-                      printf("BACKSPACE ");
+                      USB_PRINTF("BACKSPACE ");
                       break;
                     default:
-                      printf("%c",HID_table[code][shift]);
+                      USB_PRINTF("%c",HID_table[code][shift]);
                 }
             }
             else {
-                printf("\\x%02x", code);
+                USB_PRINTF("\\x%02x", code);
             }
 
             /* only print the newest key */
             break;
         }
     }
+}
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -621,16 +626,16 @@ void usb_host_hid_unsupported_device_event
     {
         pDeviceIntf = (usb_device_interface_struct_t*)intf_handle;
         intf_ptr    = pDeviceIntf->lpinterfaceDesc;
-        printf("----- Unsupported Interface of attached Device -----\r\n");
-        printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-        printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-        printf("  Class = %d", intf_ptr->bInterfaceClass);
-        printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-        printf("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+        USB_PRINTF("----- Unsupported Interface of attached Device -----\r\n");
+        USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+        USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+        USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+        USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+        USB_PRINTF("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
     }
     else if (USB_ATTACH_DEVICE_NOT_SUPPORT == event_code)
     {
-        printf("----- Unsupported Device attached -----\r\n");
+        USB_PRINTF("----- Unsupported Device attached -----\r\n");
     }
 }
 
@@ -649,7 +654,7 @@ void APP_init(void)
 	status = usb_host_init(CONTROLLER_ID, &host_handle);
     if (status != USB_OK) 
     {
-        printf("\nUSB Host Initialization failed! STATUS: 0x%x", status);
+        USB_PRINTF("\nUSB Host Initialization failed! STATUS: 0x%x", status);
         return;
     }
 	/*
@@ -659,32 +664,32 @@ void APP_init(void)
 	status = usb_host_register_driver_info(host_handle, (void *)DriverInfoTable);
     if (status != USB_OK) 
     {         
-        printf("\nUSB Initialization driver info failed! STATUS: 0x%x", status);
+        USB_PRINTF("\nUSB Initialization driver info failed! STATUS: 0x%x", status);
   	    return;
     }
 
     status = usb_host_register_unsupported_device_notify(host_handle, usb_host_hid_unsupported_device_event);
     if (status != USB_OK) 
     {         
-        printf("\nUSB Initialization driver info failed! STATUS: 0x%x", status);
+        USB_PRINTF("\nUSB Initialization driver info failed! STATUS: 0x%x", status);
   	    return;
     }
   
     kbd_usb_event = OS_Event_create(0);/* manually clear */
     if (kbd_usb_event == NULL)
     {
-        printf("\r\nOS_Event_create failed!\r\n");
+        USB_PRINTF("\r\nOS_Event_create failed!\r\n");
         return;
     }
     
     kbd_hid_com = (hid_command_t*) OS_Mem_alloc_zero(sizeof(hid_command_t));
     if (kbd_hid_com == NULL)
     {
-        printf("\r\nkbd_hid_com allocate failed!\r\n");
+        USB_PRINTF("\r\nkbd_hid_com allocate failed!\r\n");
         return;
     }
  
-    printf("\fUSB HID Keyboard\r\nWaiting for USB Keyboard to be attached...\r\n");  
+    USB_PRINTF("\fUSB HID Keyboard\r\nWaiting for USB Keyboard to be attached...\r\n");  
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -711,12 +716,12 @@ void APP_task()
             break;
 
         case USB_DEVICE_ATTACHED:
-            printf("\nKeyboard device attached\n");
+            USB_PRINTF("\nKeyboard device attached\n");
             kbd_hid_device.DEV_STATE = USB_DEVICE_SET_INTERFACE_STARTED;
             status = usb_host_open_dev_interface(host_handle, kbd_hid_device.DEV_HANDLE, kbd_hid_device.INTF_HANDLE, (class_handle*)&kbd_hid_device.CLASS_HANDLE);
             if (status != USB_OK)
             {
-                printf("\nError in _usb_hostdev_open_interface: %x\n", status);
+                USB_PRINTF("\nError in _usb_hostdev_open_interface: %x\n", status);
                 return;
             }
             break;
@@ -727,7 +732,7 @@ void APP_task()
 
         case USB_DEVICE_GET_REPORT_DESCRIPTOR_DONE:
             kbd_hid_get_buffer();
-            printf("Keyboard interfaced, setting protocol...\r\n");
+            USB_PRINTF("Keyboard interfaced, setting protocol...\r\n");
             /* now we will set the USB Hid standard boot protocol */
             kbd_hid_device.DEV_STATE = USB_DEVICE_SETTING_PROTOCOL;
         
@@ -739,7 +744,7 @@ void APP_task()
      
             if (status != USB_OK)
             {
-                printf("\r\nError in usb_class_hid_set_protocol: %x\r\n", status);
+                USB_PRINTF("\r\nError in usb_class_hid_set_protocol: %x\r\n", status);
             }
             break;
 
@@ -747,7 +752,7 @@ void APP_task()
             break;
 
         case USB_DEVICE_INUSE:
-            //printf("%d\n", data_received);
+            //USB_PRINTF("%d\n", data_received);
             i++;
             if (kbd_data_received)
             {
@@ -770,11 +775,11 @@ void APP_task()
 #endif
                 if (status != USB_OK)
                 {
-                    printf("\nError in usb_class_hid_recv_data: %x", status);
+                    USB_PRINTF("\nError in usb_class_hid_recv_data: %x", status);
                 }
                 else
                 {
-                    //printf("try to get recv data\n");
+                    //USB_PRINTF("try to get recv data\n");
                     kbd_data_received = 0;
                 }
 
@@ -785,7 +790,7 @@ void APP_task()
             {
                 if (OS_Event_check_bit(kbd_usb_event, USB_EVENT_DATA))
                 {
-                    //printf("get data\n");
+                    //USB_PRINTF("get data\n");
             	    OS_Event_clear(kbd_usb_event, USB_EVENT_DATA);
             	    kbd_data_received = 1;
             	    
@@ -796,35 +801,35 @@ void APP_task()
                     status = usb_class_hid_recv_data(kbd_hid_com, kbd_buffer, kbd_size);
                     if (status != USB_OK)
                     {
-                         printf("\nError in usb_class_hid_recv_data: %x", status);
+                         USB_PRINTF("\nError in usb_class_hid_recv_data: %x", status);
                     }
                     else
                     {
-                        //printf("try to get recv data\n");
+                        //USB_PRINTF("try to get recv data\n");
                         kbd_data_received = 0;
                     }
                 }
             
                 if (OS_Event_check_bit(kbd_usb_event, USB_EVENT_DATA_CORRUPTED))
                 {
-                    //printf("get corrupted\n");
+                    //USB_PRINTF("get corrupted\n");
                 	kbd_data_received = 1;
                     OS_Event_clear(kbd_usb_event, USB_EVENT_DATA_CORRUPTED);              
                     status = usb_class_hid_recv_data(kbd_hid_com, kbd_buffer, kbd_size);
                     if (status != USB_OK)
                     {
-                         printf("\nError in usb_class_hid_recv_data: %x", status);
+                         USB_PRINTF("\nError in usb_class_hid_recv_data: %x", status);
                     }
                     else
                     {
-                        //printf("try to get recv data\n");
+                        //USB_PRINTF("try to get recv data\n");
                         kbd_data_received = 0;
                     }
                 }
             
                 if (OS_Event_check_bit(kbd_usb_event, USB_EVENT_CTRL))
                 {
-                    //printf("get control\n");
+                    //USB_PRINTF("get control\n");
             	    //OS_Event_set(USB_Event, USB_EVENT_CTRL);
                 }
             }
@@ -838,11 +843,11 @@ void APP_task()
                 status = usb_host_close_dev_interface(host_handle, kbd_hid_device.DEV_HANDLE, kbd_hid_device.INTF_HANDLE, kbd_hid_device.CLASS_HANDLE);
                 if (status != USB_OK)
                 {
-                    printf("error in _usb_hostdev_close_interface %x\n", status);
+                    USB_PRINTF("error in _usb_hostdev_close_interface %x\n", status);
                 }
                 kbd_hid_device.INTF_HANDLE = NULL;
                 kbd_hid_device.CLASS_HANDLE = NULL;
-                printf("Going to idle state\r\n");
+                USB_PRINTF("Going to idle state\r\n");
                 kbd_hid_device.DEV_STATE = USB_DEVICE_IDLE;
 				if (kbd_reportDescriptor != NULL)
 				{
@@ -862,7 +867,7 @@ void APP_task()
                 {
                     if (OS_Event_check_bit(kbd_usb_event, USB_EVENT_DATA))
                     {
-                        //printf("get data\n");
+                        //USB_PRINTF("get data\n");
                 	    OS_Event_clear(kbd_usb_event, USB_EVENT_DATA);
                 	    kbd_data_received = 1;
                         if(kbd_hid_device.DEV_STATE == USB_DEVICE_INUSE)
@@ -874,14 +879,14 @@ void APP_task()
                 
                     if (OS_Event_check_bit(kbd_usb_event, USB_EVENT_DATA_CORRUPTED))
                     {
-                        //printf("get corrupted\n");
+                        //USB_PRINTF("get corrupted\n");
                     	 kbd_data_received = 1;
                          OS_Event_clear(kbd_usb_event, USB_EVENT_DATA_CORRUPTED);              
                     }
                 
                     if (OS_Event_check_bit(kbd_usb_event, USB_EVENT_CTRL))
                     {
-                        //printf("get control\n");
+                        //USB_PRINTF("get control\n");
                 	    //OS_Event_set(USB_Event, USB_EVENT_CTRL);
                     }
                 }

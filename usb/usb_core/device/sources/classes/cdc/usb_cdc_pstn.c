@@ -28,7 +28,7 @@
 *
 * Comments:
 *
-* @brief The file contains USB CDC_PSTN module implimentation.
+* @brief The file contains USB CDC_PSTN module implementation.
 *
 *****************************************************************************/
 
@@ -48,7 +48,7 @@
  * Constant and Macro's
  *****************************************************************************/
 
-    /* left shifted by 2 to have effect of mutiplication by 4 i.e. size of uint32_t */ 
+    /* left shifted by 2 to have effect of multiplication by 4 i.e. size of uint32_t */
 /*****************************************************************************
  * Global Functions Prototypes
  *****************************************************************************/
@@ -130,13 +130,13 @@ uint8_t g_response_available_data[NOTIF_PACKET_SIZE] =
  *
  * @name  USB_Pstn_Init
  *
- * @brief The funtion initializes the Pstn Module 
+ * @brief The function initializes the Pstn Module
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
  * @param class_callback:       event callback 
  *
  * @return status       
- *         USB_OK           : When Successfull 
+ *         USB_OK           : When Successfully
  *         Others           : Errors
  *****************************************************************************/
 usb_status USB_Pstn_Init
@@ -159,7 +159,7 @@ usb_status USB_Pstn_Init
     cdc_pstn_ptr->pstn_callback.arg = (void *)pstn_cb->arg;
     
     cdc_obj_ptr->pstn_obj_ptr = (void *)cdc_pstn_ptr;
-	cdc_obj_ptr->has_sent_state = FALSE;
+    cdc_obj_ptr->has_sent_state = FALSE;
     #if USBCFG_DEV_RNDIS_SUPPORT
         /* Initially RNDIS is in Uninitialized state */
         cdc_pstn_ptr->rndis_device_state = RNDIS_UNINITIALIZED;
@@ -173,7 +173,7 @@ usb_status USB_Pstn_Init
         if(cdc_pstn_ptr->response_data_ptr == NULL)
         {
             #if _DEBUG
-                printf("response_data_ptr malloc failed: USB_Pstn_Init\n");
+                USB_PRINTF("response_data_ptr malloc failed: USB_Pstn_Init\n");
             #endif  
             return USBERR_ALLOC;
         }
@@ -183,7 +183,7 @@ usb_status USB_Pstn_Init
         if(cdc_pstn_ptr->rndis_command_ptr == NULL)
         {
             #if _DEBUG
-                printf("rndis_command_ptr malloc failed: USB_Pstn_Init\n");
+                USB_PRINTF("rndis_command_ptr malloc failed: USB_Pstn_Init\n");
             #endif  
             return USBERR_ALLOC;
         }
@@ -197,12 +197,12 @@ usb_status USB_Pstn_Init
  *
  * @name  USB_Pstn_Deinit
  *
- * @brief The funtion initializes the Pstn Module 
+ * @brief The function initializes the Pstn Module
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
  *
  * @return status       
- *         USB_OK           : When Successfull 
+ *         USB_OK           : When Successfully
  *         Others           : Errors
  *****************************************************************************/
 usb_status USB_Pstn_Deinit
@@ -231,7 +231,7 @@ usb_status USB_Pstn_Deinit
  * @brief  This function is called in response to GetLineCoding request
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -268,7 +268,7 @@ usb_status PSTN_Get_Line_Coding
  * @brief  This function is called in response to SetLineCoding request
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -309,12 +309,12 @@ usb_status PSTN_Set_Line_Coding
  * @brief  This function is called in response to Set Control Line State 
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
  * @return status:       
- *                        USB_OK : When Successfull       
+ *                        USB_OK : When Successfully
  *                        Others : When Error
  *
  *****************************************************************************/ 
@@ -363,19 +363,19 @@ usb_status PSTN_Set_Ctrl_Line_State
         }                
         if(cdc_pstn_ptr->dte_status & DTE_PRESENCE_CHECK) 
         {  
-			cdc_obj_ptr->class_specific_callback.callback(USB_APP_CDC_DTE_ACTIVATED,
-					USB_REQ_VAL_INVALID,
-					NULL,
-					NULL,
-					cdc_obj_ptr->class_specific_callback.arg);
+            cdc_obj_ptr->class_specific_callback.callback(USB_APP_CDC_DTE_ACTIVATED,
+                    USB_REQ_VAL_INVALID,
+                    NULL,
+                    NULL,
+                    cdc_obj_ptr->class_specific_callback.arg);
         } 
         else
         {           
-			cdc_obj_ptr->class_specific_callback.callback(USB_APP_CDC_DTE_DEACTIVATED,
-					USB_REQ_VAL_INVALID,
-					NULL,
-					NULL,
-					cdc_obj_ptr->class_specific_callback.arg);
+            cdc_obj_ptr->class_specific_callback.callback(USB_APP_CDC_DTE_DEACTIVATED,
+                    USB_REQ_VAL_INVALID,
+                    NULL,
+                    NULL,
+                    cdc_obj_ptr->class_specific_callback.arg);
         }                
     } 
     return USB_OK;
@@ -388,12 +388,12 @@ usb_status PSTN_Set_Ctrl_Line_State
  * @brief  This function is called in response to Set Config request
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
  * @return status:       
- *                        USB_OK : When Successfull       
+ *                        USB_OK : When Successfully
  *                        Others : When Error
  *
  *****************************************************************************/ 
@@ -422,7 +422,7 @@ usb_status PSTN_Send_Break
  * @brief  This function is called in response to GetCommFeature request
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -448,20 +448,20 @@ usb_status PSTN_Get_Comm_Feature
     if(setup_packet->value == ABSTRACT_STATE_FEATURE) 
     {     
     
-		error = cdc_obj_ptr->class_specific_callback.callback(GET_ABSTRACT_STATE,
-				cdc_pstn_ptr->current_interface,
-				data,
-				size,
-				cdc_obj_ptr->class_specific_callback.arg);
+        error = cdc_obj_ptr->class_specific_callback.callback(GET_ABSTRACT_STATE,
+                cdc_pstn_ptr->current_interface,
+                data,
+                size,
+                cdc_obj_ptr->class_specific_callback.arg);
     } 
     else if(setup_packet->value == COUNTRY_SETTING_FEATURE) 
     {
         
-	   error = cdc_obj_ptr->class_specific_callback.callback(GET_COUNTRY_SETTING,
-			   cdc_pstn_ptr->current_interface,
-			   data,
-			   size,
-			   cdc_obj_ptr->class_specific_callback.arg);
+       error = cdc_obj_ptr->class_specific_callback.callback(GET_COUNTRY_SETTING,
+               cdc_pstn_ptr->current_interface,
+               data,
+               size,
+               cdc_obj_ptr->class_specific_callback.arg);
     } 
     else 
     {
@@ -477,7 +477,7 @@ usb_status PSTN_Get_Comm_Feature
  * @brief  This function is called in response to SetCommFeature request
  *
  * @param cdc_obj_ptr :   Pointer to CDC class object.
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -502,19 +502,19 @@ usb_status PSTN_Set_Comm_Feature
     cdc_pstn_ptr->current_interface =  (uint8_t)setup_packet->index ;
     if(setup_packet->value == ABSTRACT_STATE_FEATURE) 
     {  
-	   error = cdc_obj_ptr->class_specific_callback.callback(SET_ABSTRACT_STATE,
-			   cdc_pstn_ptr->current_interface,
-			   data,
-			   size,
-			   cdc_obj_ptr->class_specific_callback.arg);
+       error = cdc_obj_ptr->class_specific_callback.callback(SET_ABSTRACT_STATE,
+               cdc_pstn_ptr->current_interface,
+               data,
+               size,
+               cdc_obj_ptr->class_specific_callback.arg);
     } 
     else if(setup_packet->value == COUNTRY_SETTING_FEATURE) 
     {
-		   error = cdc_obj_ptr->class_specific_callback.callback(SET_COUNTRY_SETTING,
-				   cdc_pstn_ptr->current_interface,
-				   data,
-				   size,
-				   cdc_obj_ptr->class_specific_callback.arg);
+           error = cdc_obj_ptr->class_specific_callback.callback(SET_COUNTRY_SETTING,
+                   cdc_pstn_ptr->current_interface,
+                   data,
+                   size,
+                   cdc_obj_ptr->class_specific_callback.arg);
     } 
     else 
     {
@@ -548,9 +548,9 @@ void PSTN_Send_Serial_State(cdc_device_struct_t * cdc_obj_ptr)
     val = (uint32_t)(NOTIF_PACKET_SIZE + UART_BITMAP_SIZE);
     if(FALSE == cdc_obj_ptr->has_sent_state)
     {
-		(void)USB_Class_CDC_Send_Data(cdc_obj_ptr->cdc_handle, 
-			cdc_obj_ptr->cic_send_endpoint,cdc_pstn_ptr->serial_state_buf,val); 
-		cdc_obj_ptr->has_sent_state = TRUE;
+        (void)USB_Class_CDC_Send_Data(cdc_obj_ptr->cdc_handle, 
+            cdc_obj_ptr->cic_send_endpoint,cdc_pstn_ptr->serial_state_buf,val); 
+        cdc_obj_ptr->has_sent_state = TRUE;
     }
 }
 
@@ -588,7 +588,7 @@ void PSTN_Response_Available(cdc_device_struct_t * cdc_obj_ptr)
  * @brief  This function is called in response to PSTN_Rndis_Message_Set 
  *
  * @param handle            handle to Identify the controller
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -616,7 +616,7 @@ usb_status PSTN_Rndis_Message_Set
          cdc_obj_ptr->max_supported_interfaces))
     {       
         #if _DEBUG
-            printf("PSTN_Rndis_Message_Set:  %d interface not supported\n", cdc_pstn_ptr->current_interface); 
+            USB_PRINTF("PSTN_Rndis_Message_Set:  %d interface not supported\n", cdc_pstn_ptr->current_interface); 
         #endif  
         return USBERR_INVALID_REQ_TYPE;
     }   
@@ -624,7 +624,7 @@ usb_status PSTN_Rndis_Message_Set
     if(setup_packet->length > MAX_EXPECTED_COMMAND_SIZE) 
     {
         #if _DEBUG
-            printf("MAX_EXPECTED_COMMAND_SIZE insufficient, needed %d\n", setup_packet->length);
+            USB_PRINTF("MAX_EXPECTED_COMMAND_SIZE insufficient, needed %d\n", setup_packet->length);
         #endif  
         return USBERR_ERROR;
     }
@@ -639,7 +639,7 @@ usb_status PSTN_Rndis_Message_Set
     
     if(message_type == REMOTE_NDIS_HALT_MSG)
     {   
-        /* No response is send to host on receving Halt Command */
+        /* No response is send to host on receiving Halt Command */
         RNDIS_Halt_Command(cdc_obj_ptr);
     }
     else
@@ -663,7 +663,7 @@ usb_status PSTN_Rndis_Message_Set
  * @brief  This function is called in response to PSTN_Rndis_Message_Get 
  *
  * @param handle            handle to Identify the controller
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received
  * @param data:             data to be send back
  * @param size:             size to be returned 
  *
@@ -704,14 +704,14 @@ usb_status PSTN_Rndis_Message_Get
         case REMOTE_NDIS_QUERY_MSG:
             /* Preparing for response to REMOTE_NDIS_QUERY_MSG command 
                i.e. REMOTE_NDIS_QUERY_CMPLT data */
-            /* correct the endianess of OID */
+            /* correct the endianness of OID */
             *((uint32_t*)cdc_pstn_ptr->rndis_command_ptr + 3) = USB_LONG_LE_TO_HOST(*((uint32_t*)cdc_pstn_ptr->rndis_command_ptr + 3));
             RNDIS_Query_Command(cdc_obj_ptr,data,size);         
             break;
         case REMOTE_NDIS_SET_MSG : 
             /* Preparing for response to REMOTE_NDIS_SET_MSG command 
                i.e. REMOTE_NDIS_SET_CMPLT data */
-            /* Correct the endianess of OID and InformationBufferLength
+            /* Correct the endianness of OID and InformationBufferLength
                and InformationBufferOffset*/
             *((uint32_t*)cdc_pstn_ptr->rndis_command_ptr + 3) = USB_LONG_LE_TO_HOST(*((uint32_t*)cdc_pstn_ptr->rndis_command_ptr + 3));
             *((uint32_t*)cdc_pstn_ptr->rndis_command_ptr + 4) = USB_LONG_LE_TO_HOST(*((uint32_t*)cdc_pstn_ptr->rndis_command_ptr + 4));
@@ -735,7 +735,7 @@ usb_status PSTN_Rndis_Message_Get
             break;      
         default : 
             #if _DEBUG
-                printf("UNSUPPORTED RNDIS Command : 0x%x\n",*message_type_ptr);
+                USB_PRINTF("UNSUPPORTED RNDIS Command : 0x%x\n",*message_type_ptr);
             #endif  
             return USBERR_INVALID_REQ_TYPE;         
     }
@@ -743,14 +743,14 @@ usb_status PSTN_Rndis_Message_Get
     if(*size > MAX_EXPECTED_RESPONSE_SIZE) 
     {
         #if _DEBUG
-            printf("MAX_EXPECTED_RESPONSE_SIZE insufficient\n");
+            USB_PRINTF("MAX_EXPECTED_RESPONSE_SIZE insufficient\n");
         #endif  
     }
     
     if(setup_pkt_len < *size)
     {
         #if _DEBUG
-            printf("Error : Device has more data to send than Host needs.\n");
+            USB_PRINTF("Error : Device has more data to send than Host needs.\n");
         #endif  
         return USBERR_INVALID_REQ_TYPE;
     }
@@ -953,9 +953,9 @@ void RNDIS_Query_Command
     switch(*oid_ptr)
     {
         case OID_GEN_SUPPORTED_LIST : 
-            /* List of supported OIDs - Query Manadatory - General Operational Characteristic */
+            /* List of supported OIDs - Query Mandatory - General Operational Characteristic */
             for(i=0;i<NUM_OIDS_SUPPORTED;i++)
-            {   /* change the endianess of data before sending on USB Bus */
+            {   /* change the endianness of data before sending on USB Bus */
                 g_list_supp_oid[i] = USB_LONG_LE_TO_HOST(g_list_supp_oid[i]);
             }                       
             info_buf_len = sizeof(g_list_supp_oid);         
@@ -968,12 +968,12 @@ void RNDIS_Query_Command
             *((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6) = USB_LONG_LE_TO_HOST(cdc_pstn_ptr->rndis_hw_state);
             break;
         case OID_GEN_MEDIA_SUPPORTED :
-            /* Media types supported (encoded) - Query Manadatory - General Operational Characteristic*/
+            /* Media types supported (encoded) - Query Mandatory - General Operational Characteristic*/
             info_buf_len = sizeof(uint32_t);
             *((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6) = USB_LONG_LE_TO_HOST(NdisMedium802_3);
             break;
         case OID_GEN_MEDIA_IN_USE :
-            /* Media types in use (encoded) - Query Manadatory - General Operational Characteristic*/ 
+            /* Media types in use (encoded) - Query Mandatory - General Operational Characteristic*/
             info_buf_len = sizeof(uint32_t);
             *((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6) = USB_LONG_LE_TO_HOST(NdisMedium802_3);
             break;
@@ -987,11 +987,11 @@ void RNDIS_Query_Command
             info_buf_len = sizeof(uint32_t);
             if(cdc_pstn_ptr->pstn_callback.callback != NULL)
             {   
-				cdc_obj_ptr->class_specific_callback.callback(USB_APP_GET_LINK_SPEED,
-						USB_REQ_VAL_INVALID,
-						NULL,
-						((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6),
-						cdc_obj_ptr->class_specific_callback.arg);
+                cdc_obj_ptr->class_specific_callback.callback(USB_APP_GET_LINK_SPEED,
+                        USB_REQ_VAL_INVALID,
+                        NULL,
+                        ((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6),
+                        cdc_obj_ptr->class_specific_callback.arg);
             } 
 
             *((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6) = USB_LONG_LE_TO_HOST(*((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6));
@@ -1005,7 +1005,7 @@ void RNDIS_Query_Command
             break;
         case OID_GEN_RECEIVE_BLOCK_SIZE : 
             /* Amount of storage, in bytes, that a single packet occupies in 
-               the receive buffer space of the NIC - Query Manadatory - General Operational Characteristic*/
+               the receive buffer space of the NIC - Query Mandatory - General Operational Characteristic*/
             info_buf_len = sizeof(uint32_t);
             *((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6) = USB_LONG_LE_TO_HOST((uint32_t)cdc_obj_ptr->dic_recv_pkt_size);
             break;
@@ -1028,12 +1028,12 @@ void RNDIS_Query_Command
             OS_Mem_copy(g_vendor_info, (uint32_t*)cdc_pstn_ptr->response_data_ptr + 6, info_buf_len);            
             break;
         case OID_GEN_CURRENT_PACKET_FILTER : 
-            /* Current packet filter (encoded) - Query and Set Manadatory - General Operational Characteristic*/
+            /* Current packet filter (encoded) - Query and Set Mandatory - General Operational Characteristic*/
             info_buf_len = sizeof(uint32_t);
             *((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6) = USB_LONG_LE_TO_HOST(cdc_pstn_ptr->rndis_packet_filter);
             break;
         case OID_GEN_MAXIMUM_TOTAL_SIZE : 
-            /* Maximum total packet length in bytes - Query Manadatory - General Operational Characteristic*/
+            /* Maximum total packet length in bytes - Query Mandatory - General Operational Characteristic*/
             info_buf_len = sizeof(uint32_t);
             *((uint32_t*)cdc_pstn_ptr->response_data_ptr + 6) = USB_LONG_LE_TO_HOST(cdc_pstn_ptr->rndis_dev_max_tx_size);
             break;
@@ -1113,7 +1113,7 @@ void RNDIS_Query_Command
             break;
         default : 
             #if _DEBUG
-                printf("OID 0x%x NOT SUPPORTED(QUERY)\n",*oid_ptr);
+                USB_PRINTF("OID 0x%x NOT SUPPORTED(QUERY)\n",*oid_ptr);
             #endif  
             return_status = RNDIS_STATUS_NOT_SUPPORTED;
             break;
@@ -1177,7 +1177,7 @@ void RNDIS_Set_Command
     switch(*oid_ptr)
     {
         case OID_GEN_CURRENT_PACKET_FILTER : 
-            /* Current packet filter (encoded) - Query and Set Manadatory - General Operational Characteristic*/
+            /* Current packet filter (encoded) - Query and Set Mandatory - General Operational Characteristic*/
             if(*info_buf_len_ptr != 4 ) 
             {
                 return_status = RNDIS_STATUS_INVALID_DATA;
@@ -1190,11 +1190,11 @@ void RNDIS_Set_Command
                     cdc_pstn_ptr->rndis_command_ptr + 2) + *info_buf_offset_ptr)));
                 if(cdc_pstn_ptr->pstn_callback.callback != NULL)
                 {   
-					cdc_obj_ptr->class_specific_callback.callback(USB_APP_GET_LINK_STATUS,
-							USB_REQ_VAL_INVALID,
-							NULL,
-							(&media_connected),
-							cdc_obj_ptr->class_specific_callback.arg);
+                    cdc_obj_ptr->class_specific_callback.callback(USB_APP_GET_LINK_STATUS,
+                            USB_REQ_VAL_INVALID,
+                            NULL,
+                            (&media_connected),
+                            cdc_obj_ptr->class_specific_callback.arg);
                 } 
 
                 if((cdc_pstn_ptr->rndis_packet_filter)&&(media_connected == 1))
@@ -1228,7 +1228,7 @@ void RNDIS_Set_Command
             break;
         default : 
             #if _DEBUG
-                printf("OID 0x%x NOT SUPPORTED(SET)\n",*oid_ptr);
+                USB_PRINTF("OID 0x%x NOT SUPPORTED(SET)\n",*oid_ptr);
             #endif  
             return_status = RNDIS_STATUS_NOT_SUPPORTED;
             break;
@@ -1332,7 +1332,7 @@ void RNDIS_Halt_Command(cdc_device_struct_t * cdc_obj_ptr)
     cdc_pstn_ptr = (cdc_pstn_struct_t *)cdc_obj_ptr->pstn_obj_ptr;
 
     #if _DEBUG
-        printf("RNDIS_Halt_Command\n");
+        USB_PRINTF("RNDIS_Halt_Command\n");
     #endif
     cdc_pstn_ptr->rndis_device_state = RNDIS_UNINITIALIZED;
     cdc_pstn_ptr->rndis_media_connect_status = NdisMediaStateDisconnected;  

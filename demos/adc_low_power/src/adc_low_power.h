@@ -34,23 +34,24 @@
 #ifndef __LOWPOWER_ADC_H__
 #define __LOWPOWER_ADC_H__
 
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
 #include <stdint.h>
 
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 
 /*!
 * @brief Boundaries struct
 */
 typedef struct lowPowerAdcBoundaries
 {
-    uint32_t upperBoundary;
-    uint32_t lowerBoundary;
+    int32_t upperBoundary;
+    int32_t lowerBoundary;
 } lowPowerAdcBoundaries_t;
-
-
-/*!
- * @brief Initialize Clock Manager for PORT, ADC, and LPTIMER.
- */
-void init_hardware(void);
 
 /*!
  * @brief Low Power Timer Interrupt handler. Clear LPT Compare flag.
@@ -72,7 +73,7 @@ void InitLowPowerTmr(void);
  *
  * @return uint32_t Returns current temperature.
  */
-uint32_t GetCurrentTempValue(void);
+int32_t GetCurrentTempValue(void);
 
 /*!
  * @brief Calculate current temperature.
@@ -84,10 +85,16 @@ uint32_t GetCurrentTempValue(void);
  * @return lowPowerAdcBoundaries_t Returns upper and lower temperature boundaries.
  */
 lowPowerAdcBoundaries_t TempSensorCalibration(uint32_t updateBoundariesCounter,
-                                                     uint32_t *tempArray);
+                                                     int32_t *tempArray);
 
-#endif /* __LOWPOWER_ADC_H__ */
+/*!
+ * @brief User-defined function to install callback.
+ */
+void ADC_TEST_InstallCallback(uint32_t instance, uint32_t chnGroup, void (*callbackFunc)(void) );
 
-/*******************************************************************************
- * EOF
- *******************************************************************************/
+/*!
+ * @brief User-defined function to read conversion value in ADC ISR. 
+ */
+uint16_t ADC_TEST_GetConvValueRAWInt(uint32_t instance, uint32_t chnGroup);
+
+#endif // __LOWPOWER_ADC_H__

@@ -178,7 +178,7 @@ void Main_Task ( uint32_t param )
 			&host_handle);							/* Returned pointer */
     if (status != USB_OK) 
     {
-        printf("\nUSB Host Initialization failed. STATUS: %x", status);
+        USB_PRINTF("\nUSB Host Initialization failed. STATUS: %x", status);
         fflush(stdout);
     }
 
@@ -191,22 +191,22 @@ void Main_Task ( uint32_t param )
     DriverInfoTable
     );
     if (status != USB_OK) {
-        printf("\nDriver Registration failed. STATUS: %x", status);
+        USB_PRINTF("\nDriver Registration failed. STATUS: %x", status);
         fflush(stdout);
     }
     _int_enable();
 
-    printf("\n MQX USB Audio Speaker Host Demo\n");
+    USB_PRINTF("\n MQX USB Audio Speaker Host Demo\n");
     fflush(stdout);
     /* Creat lwevents*/
     if (MQX_OK !=_lwevent_create(&USB_Keyboard_Event, LWEVENT_AUTO_CLEAR)){
-        printf("\n_lwevent_create USB_Keyboard_Event failed.\n");
+        USB_PRINTF("\n_lwevent_create USB_Keyboard_Event failed.\n");
     }
     if (MQX_OK !=_lwevent_create(&USB_Audio_FU_Request, LWEVENT_AUTO_CLEAR)){
-        printf("\n_lwevent_create USB_Audio_FU_Request failed.\n");
+        USB_PRINTF("\n_lwevent_create USB_Audio_FU_Request failed.\n");
     }
     if (MQX_OK !=_lwevent_create(&SD_Card_Event, LWEVENT_AUTO_CLEAR)){
-        printf("\n_lwevent_create SD_Card_Event failed.\n");
+        USB_PRINTF("\n_lwevent_create SD_Card_Event failed.\n");
     }
     _task_create(0, AUDIO_TASK, (uint32_t) host_handle);
     _task_create(0, HID_KEYB_TASK, (uint32_t) host_handle);

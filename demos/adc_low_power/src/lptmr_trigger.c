@@ -28,50 +28,61 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// SDK Included Files
 #include "fsl_lptmr_driver.h"
 #include "fsl_gpio_hal.h"
 #include "fsl_port_hal.h"
 #include "fsl_sim_hal.h"
 
-#define LPTMR_COMPARE_VALUE     (500U)   /* Low Power Timer interrupt time in miliseconds */
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 
+#define LPTMR_COMPARE_VALUE     (500000U)   // Low Power Timer interrupt time in microseconds
+
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
 
 extern const uint32_t gSimBaseAddr[];
-
 static lptmr_state_t gLPTMRState;
 
-/*
- * enable the trigger source of LPTimer
- */
+///////////////////////////////////////////////////////////////////////////////
+//  Code
+///////////////////////////////////////////////////////////////////////////////
+
+/* enable the trigger source of LPTimer */
 void init_trigger_source(uint32_t adcInstance)
 {
     lptmr_user_config_t lptmrUserConfig =
     {
         .timerMode = kLptmrTimerModeTimeCounter,
         .freeRunningEnable = false,
-        .prescalerEnable = false, /* bypass perscaler */
-        .prescalerClockSource = kLptmrPrescalerClockSourceMcgIrcClk, /* use MCGIRCCLK, 4M or 32KHz */
+        .prescalerEnable = false, // bypass perscaler
+        .prescalerClockSource = kClockLptmrSrcLpoClk, // use LPO, 1KHz
         .isInterruptEnabled = false
     };
 
-    /* Init LPTimer driver */
+    // Init LPTimer driver
     LPTMR_DRV_Init(0, &lptmrUserConfig, &gLPTMRState);
 
-    /* Set the LPTimer period */
+    // Set the LPTimer period
     LPTMR_DRV_SetTimerPeriodUs(0, LPTMR_COMPARE_VALUE);
 
-    /* Start the LPTimer */
+    // Start the LPTimer
     LPTMR_DRV_Start(0);
 
-    /* Configure SIM for ADC hw trigger source selection */
+    // Configure SIM for ADC hw trigger source selection
     SIM_HAL_SetAdcAlternativeTriggerCmd(gSimBaseAddr[0], adcInstance, true);
     SIM_HAL_SetAdcPreTriggerMode(gSimBaseAddr[0], adcInstance, kSimAdcPretrgselA);
     SIM_HAL_SetAdcTriggerMode(gSimBaseAddr[0], adcInstance, kSimAdcTrgSelLptimer);
 }
 
-/*
- * disable the trigger source
- */
+/* disable the trigger source */
 void deinit_trigger_source(uint32_t adcInstance)
 {
     LPTMR_DRV_Stop(0);

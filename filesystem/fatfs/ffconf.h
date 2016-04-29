@@ -1,3 +1,33 @@
+/*
+ * Copyright (c) 2013 - 2014, Freescale Semiconductor, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this list
+ *   of conditions and the following disclaimer.
+ *
+ * o Redistributions in binary form must reproduce the above copyright notice, this
+ *   list of conditions and the following disclaimer in the documentation and/or
+ *   other materials provided with the distribution.
+ *
+ * o Neither the name of Freescale Semiconductor, Inc. nor the names of its
+ *   contributors may be used to endorse or promote products derived from this
+ *   software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 /*---------------------------------------------------------------------------/
 /  FatFs - FAT file system module configuration file  R0.09b (C)ChaN, 2013
 /----------------------------------------------------------------------------/
@@ -119,7 +149,7 @@
 /   1: Enable relative path. f_chdrive() and f_chdir() are available.
 /   2: f_getcwd() is available in addition to 1.
 /
-/  Note that output of the f_readdir fnction is affected by this option. */
+/  Note that output of the f_readdir function is affected by this option. */
 
 
 
@@ -141,7 +171,7 @@
 
 #define	_MULTI_PARTITION	0	/* 0:Single partition, 1:Enable multiple partition */
 /* When set to 0, each volume is bound to the same physical drive number and
-/ it can mount only first primaly partition. When it is set to 1, each volume
+/ it can mount only first primary partition. When it is set to 1, each volume
 / is tied to the partitions listed in VolToPart[]. */
 
 
@@ -186,7 +216,7 @@
 /* To enable file lock control feature, set _FS_LOCK to 1 or greater.
    The value defines how many files can be opened simultaneously. */
 
-#define ENABLE_MYCHANGE                         1       /* 0:Disable change based on orign FatFs 0.09b */
+#define _FS_ENABLE_THROUGHPUT_OPTIMIZATION      1       /* 0:Disable change based on orign FatFs 0.09b */
 /* 1: Enable change by using two sectors as buffer.
    2: Enable change by using WIN_SECTOR_NUM sectors as buffer. */
      
@@ -194,7 +224,7 @@
      
 #define MAX_TRIES_SEARCH_CONTINUOUS_CLUSTER     2       /* The max time of trying to apply for multiple continuous clusters, 2-4 is good*/
 
-#define WIN_SECTOR_NUM                          2     /* WIN_SECTOR_NUM must be 2 when ENABLE_MYCHANGE == 1 */
-/* WIN_SECTOR_NUM can be configured as any value (for example:2 - 8) when ENABLE_MYCHANGE == 2 */
+#define WIN_SECTOR_NUM                          2     /* WIN_SECTOR_NUM must be 2 when _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 1 */
+/* WIN_SECTOR_NUM can be configured as any value (for example:2 - 8) when _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 2 */
 
 #endif /* _FFCONFIG */

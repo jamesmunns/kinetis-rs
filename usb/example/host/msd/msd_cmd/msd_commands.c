@@ -155,7 +155,8 @@ device_struct_t                           g_mass_device    = { 0 };   /* mass st
 volatile bool                             g_bCallBack      = FALSE;
 volatile usb_status                       g_bStatus        = USB_OK;
 volatile uint32_t                         g_dBuffer_length = 0;
-static uint32_t                           g_mass_device_test_flag = 0;
+static volatile uint32_t                  g_mass_device_test_flag = 0;
+static volatile uint8_t                   g_mass_device_open_flag = 0;
 
 usb_host_handle                           g_host_handle;         /* global handle for calling host   */
 usb_device_interface_struct_t*            g_interface_info[USBCFG_HOST_MAX_INTERFACE_PER_CONFIGURATION];
@@ -173,7 +174,7 @@ const uint16_t                            g_buff_out_size = MAX_FRAME_SIZE;
 mass_storage_read_capacity_cmd_struct_t   g_read_capacity;
 
 #if TEST_SECTOR_READ_WRITE_SPEED
-volatile uint32_t                         g_time_count       = 0;
+volatile uint64_t                         g_time_count       = 0;
 uint32_t                                  g_cpu_core_clk_khz = 120000000 / ticks_per_second;
 #endif
 
@@ -212,7 +213,7 @@ uint32_t mass_get_buffer()
         g_buff_in = OS_Mem_alloc_uncached_zero(g_buff_in_size);
         if (g_buff_in == NULL)
         {
-            printf("allocate memory failed in mass_get_buffer\r\n");
+            USB_PRINTF("allocate memory failed in mass_get_buffer\r\n");
             return (uint32_t)-1;
         }
     }
@@ -223,7 +224,8 @@ uint32_t mass_get_buffer()
         if (g_buff_out == NULL)
         {
             OS_Mem_free(g_buff_in);
-            printf("allocate memory failed in mass_get_buffer\r\n");
+            g_buff_in = NULL;
+            USB_PRINTF("allocate memory failed in mass_get_buffer\r\n");
             return (uint32_t)-1;
         }
     }
@@ -249,13 +251,16 @@ void APP_init(void)
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
     extern const TCpuClockConfiguration PE_CpuClockConfigurations[];
     g_cpu_core_clk_khz = PE_CpuClockConfigurations[Cpu_GetClockConfiguration()].cpu_core_clk_hz / ticks_per_second;
+#elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
+    CLOCK_SYS_GetFreq(kCoreClock, &g_cpu_core_clk_khz);
+    g_cpu_core_clk_khz /= ticks_per_second;
 #endif
 #endif
 
     status = usb_host_init(CONTROLLER_ID, &g_host_handle);
     if(status != USB_OK) 
     {
-        printf("\r\nUSB Host Initialization failed! STATUS: 0x%x", status);
+        USB_PRINTF("\r\nUSB Host Initialization failed! STATUS: 0x%x", status);
         return;
     }
     /*
@@ -265,23 +270,23 @@ void APP_init(void)
     status = usb_host_register_driver_info(g_host_handle, (void *)DriverInfoTable);
     if(status != USB_OK) 
     {         
-        printf("\r\nUSB Initialization driver info failed! STATUS: 0x%x", status);
+        USB_PRINTF("\r\nUSB Initialization driver info failed! STATUS: 0x%x", status);
         return;
     }
     
-    g_pCmd.CBW_PTR = (cbw_struct_t*)OS_Mem_alloc_zero(sizeof(cbw_struct_t));  
+    g_pCmd.CBW_PTR = (cbw_struct_t*)OS_Mem_alloc_uncached_zero(sizeof(cbw_struct_t));  
     if (g_pCmd.CBW_PTR == NULL)
     {
-       printf ("\r\nUnable to allocate Command Block Wrapper!");     
+       USB_PRINTF ("\r\nUnable to allocate Command Block Wrapper!");     
     }
      
-    g_pCmd.CSW_PTR = (csw_struct_t*)OS_Mem_alloc_zero(sizeof(csw_struct_t));   
+    g_pCmd.CSW_PTR = (csw_struct_t*)OS_Mem_alloc_uncached_zero(sizeof(csw_struct_t));   
     if (g_pCmd.CSW_PTR == NULL)
     {
-       printf ("\r\nUnable to allocate Command Status Wrapper!");     
+       USB_PRINTF ("\r\nUnable to allocate Command Status Wrapper!");     
     }
 
-    printf("\r\nUSB MSD Command test\r\nWaiting for USB mass storage to be attached...\r\n");
+    USB_PRINTF("\r\nUSB MSD Command test\r\nWaiting for USB mass storage to be attached...\r\n");
       
 #if TEST_SECTOR_READ_WRITE_SPEED
     DEMCR |= DEMCR_TRCENA; //enable DWT module counter
@@ -316,19 +321,20 @@ void APP_task (void)
            break;
         
        case USB_DEVICE_ATTACHED:
-           printf( "Mass Storage Device Attached\r\n" );
-           g_mass_device.dev_state = USB_DEVICE_SET_INTERFACE_STARTED;
+           USB_PRINTF( "Mass Storage Device Attached\r\n" );
+           if (1 == g_mass_device_open_flag)
            {
+               g_mass_device_open_flag = 0;
                status = usb_host_open_dev_interface(g_host_handle, g_mass_device.dev_handle, g_mass_device.intf_handle, (class_handle*)&g_mass_device.CLASS_HANDLE);
                if (status != USB_OK)
                {
-                   printf("\r\nError in _usb_hostdev_open_interface: %x\r\n", status);
+                   USB_PRINTF("\r\nError in _usb_hostdev_open_interface: %x\r\n", status);
                    return;
                } /* Endif */
                
                if(usb_class_mass_getvidpid(g_mass_device.CLASS_HANDLE, &vid, &pid) == USB_OK)
                {
-               	   printf("vid = 0x%04X, pid = 0x%04X\r\n", vid, pid);
+               	   USB_PRINTF("vid = 0x%04X, pid = 0x%04X\r\n", vid, pid);
                }               
            }     
            break;
@@ -341,24 +347,33 @@ void APP_task (void)
            if(1 == g_mass_device_test_flag)
            {
                g_mass_device_test_flag = 0;
-               usb_host_mass_test_storage();
+               if (g_buff_in != NULL && g_buff_out != NULL)
+                   usb_host_mass_test_storage();
+               else
+                   USB_PRINTF("test don't run because buff malloc fail\r\n");
            }
            break;
         
        case USB_DEVICE_DETACHED:
-           printf ( "\r\nMass Storage Device Detached\r\n" );
+           USB_PRINTF ( "\r\nMass Storage Device Detached\r\n" );
            status = usb_host_close_dev_interface(g_host_handle, g_mass_device.dev_handle, g_mass_device.intf_handle, g_mass_device.CLASS_HANDLE);
            if (status != USB_OK)
            {
-               printf("error in _usb_hostdev_close_interface %x\r\n", status);
+               USB_PRINTF("error in _usb_hostdev_close_interface %x\r\n", status);
            }
            g_mass_device.intf_handle = NULL;
            g_mass_device.CLASS_HANDLE = NULL;
-           printf("Going to idle state\r\n");
-           OS_Mem_free(g_buff_in);
-           g_buff_in = NULL;
-           OS_Mem_free(g_buff_out);
-           g_buff_out = NULL;
+           USB_PRINTF("Going to idle state\r\n");
+           if (g_buff_in != NULL)
+           {
+               OS_Mem_free(g_buff_in);
+               g_buff_in = NULL;
+           }
+           if (g_buff_out != NULL)
+           {
+               OS_Mem_free(g_buff_out);
+               g_buff_out = NULL;
+           }
            g_mass_device.dev_state = USB_DEVICE_IDLE;
            break;
         
@@ -366,7 +381,7 @@ void APP_task (void)
            break;
         
        default:
-           printf ( "Unknown Mass Storage Device State = %d\r\n",\
+           USB_PRINTF ( "Unknown Mass Storage Device State = %d\r\n",\
                (int)g_mass_device.dev_state );
            break;
    } /* Endswitch */
@@ -424,13 +439,13 @@ void usb_host_mass_device_event
       case USB_ATTACH_EVENT:
          g_interface_info[g_interface_number] = pHostIntf;
          g_interface_number++;
-         printf("----- Attach Event -----\r\n");
-         printf("State = %d", g_mass_device.dev_state);
-         printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-         printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-         printf("  Class = %d", intf_ptr->bInterfaceClass);
-         printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-         printf("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+         USB_PRINTF("----- Attach Event -----\r\n");
+         USB_PRINTF("State = %d", g_mass_device.dev_state);
+         USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+         USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+         USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+         USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+         USB_PRINTF("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
          break;
          /* Drop through into attach, same processing */
       case USB_CONFIG_EVENT:
@@ -440,34 +455,35 @@ void usb_host_mass_device_event
             g_mass_device.dev_handle = dev_handle;
             g_mass_device.intf_handle = mass_get_interface();
             g_mass_device.dev_state = USB_DEVICE_ATTACHED;
+            g_mass_device_open_flag = 1;
          } 
          else 
          {
-            printf("Mass Storage Device is already attached - DEV_STATE = %d\r\n", g_mass_device.dev_state);
+            USB_PRINTF("Mass Storage Device is already attached - DEV_STATE = %d\r\n", g_mass_device.dev_state);
          } /* EndIf */
          break;
          
       case USB_INTF_OPENED_EVENT:
-         printf("----- Interface opened Event -----\r\n");
+         USB_PRINTF("----- Interface opened Event -----\r\n");
          g_mass_device.dev_state = USB_DEVICE_INTERFACE_OPENED;
          g_mass_device_test_flag = 1;
          break ;
          
       case USB_DETACH_EVENT:
          /* Use only the interface with desired protocol */
-         printf("----- Detach Event -----\r\n");
-         printf("State = %d", g_mass_device.dev_state);
-         printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-         printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-         printf("  Class = %d", intf_ptr->bInterfaceClass);
-         printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-         printf("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+         USB_PRINTF("----- Detach Event -----\r\n");
+         USB_PRINTF("State = %d", g_mass_device.dev_state);
+         USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+         USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+         USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+         USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+         USB_PRINTF("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
          g_interface_number = 0;
          g_mass_device.dev_state = USB_DEVICE_DETACHED;
          break;
          
       default:
-         printf("Mass Storage Device state = %d??\r\n", g_mass_device.dev_state);
+         USB_PRINTF("Mass Storage Device state = %d??\r\n", g_mass_device.dev_state);
          g_mass_device.dev_state = USB_DEVICE_IDLE;
          break;
    } /* EndSwitch */
@@ -551,7 +567,7 @@ static void usb_host_mass_test_storage
    volatile uint32_t                                 i = 0;
    volatile uint32_t                                 j = 0;
    uint64_t                                          temp = 0;
-   uint32_t                                          test_case[] = {0, /* 8, 16, 32, 64, 128, 256, 512, 1024, 2048, */ 8192*2, 8192*4/*,8192*75, 8192*100 */};
+   uint32_t                                          test_case[] = {0, 2048 * 100, 2048 * 100}; /* sector count */
    uint32_t                                          sector_count = 0;
    uint32_t                                          transfor_length = 0;
 
@@ -571,9 +587,9 @@ static void usb_host_mass_test_storage
    g_pCmd.CLASS_PTR = (void *)g_mass_device.CLASS_HANDLE;
    g_pCmd.CALLBACK  = callback_bulk_pipe;
 
-   printf("\r\n ================ START OF A NEW SESSION ================\r\n");
+   USB_PRINTF("\r\n ================ START OF A NEW SESSION ================\r\n");
    /* Test the GET MAX LUN command */
-   printf("\r\nTesting: GET MAX LUN Command");
+   USB_PRINTF("\r\nTesting: GET MAX LUN Command");
       
    g_bCallBack = FALSE;
       
@@ -583,7 +599,7 @@ static void usb_host_mass_test_storage
       
    if ((status != USB_OK))
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -600,16 +616,16 @@ static void usb_host_mass_test_storage
       }     
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
 
    /* Test the TEST UNIT READY command */
-   printf("Testing: TEST UNIT READY Command");
+   USB_PRINTF("Testing: TEST UNIT READY Command");
       
 
    g_bCallBack = FALSE;
@@ -618,7 +634,7 @@ static void usb_host_mass_test_storage
       
    if ((status != USB_OK))
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -634,16 +650,16 @@ static void usb_host_mass_test_storage
       }         
       if (!g_bStatus)
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
 
    /* Test the REQUEST SENSE command */
-   printf("Testing: REQUEST SENSE Command");
+   USB_PRINTF("Testing: REQUEST SENSE Command");
        
    g_bCallBack = FALSE;
 
@@ -651,7 +667,7 @@ static void usb_host_mass_test_storage
 
    if ((status != USB_OK))
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -667,16 +683,16 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus)
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
 
    /* Test the INQUIRY command */
-   printf("Testing: INQUIRY Command");    
+   USB_PRINTF("Testing: INQUIRY Command");    
 
    g_bCallBack = FALSE;
 
@@ -684,7 +700,7 @@ static void usb_host_mass_test_storage
 
    if ((status != USB_OK))
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -700,16 +716,16 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
       
    /* Test the REQUEST SENSE command */
-   printf("Testing: REQUEST SENSE Command");
+   USB_PRINTF("Testing: REQUEST SENSE Command");
       
    g_bCallBack = FALSE;
 
@@ -717,7 +733,7 @@ static void usb_host_mass_test_storage
 
    if ((status != USB_OK))
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -733,16 +749,16 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
    
    /* Test the READ CAPACITY command */
-   printf("Testing: READ CAPACITY Command");
+   USB_PRINTF("Testing: READ CAPACITY Command");
       
    g_bCallBack = FALSE;
 
@@ -750,7 +766,7 @@ static void usb_host_mass_test_storage
 
    if ((status != USB_OK))
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -765,11 +781,11 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus)
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
    mass_storage_read_capacity_cmd_struct_t * read_capacity_temp;
@@ -778,7 +794,7 @@ static void usb_host_mass_test_storage
    block_len = SWAP4BYTE_CONST(*((uint32_t *)(read_capacity_temp->BLENGTH)));
 
    /* Test the REQUEST SENSE command */
-   printf("Testing: REQUEST SENSE Command");
+   USB_PRINTF("Testing: REQUEST SENSE Command");
       
    g_bCallBack = FALSE;
 
@@ -786,7 +802,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -802,32 +818,32 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
 #if TEST_SECTOR_READ_WRITE_SPEED
    for(j = 1; j < test_case[0]; j++)
    {
        sector_count = test_case[j];
-       printf("Testing: Start Test READ Throughput... Test data size: %d KB(%dB) : \r\n",sector_count / 2, 512 * sector_count);
+       USB_PRINTF("Testing: Start Test READ Throughput... Test data size: %d KB(%dB) : \r\n",sector_count / 2, 512 * sector_count);
     #if TEST_SECTOR_READ1
-       printf("Testing: Start Test READ Throughput...(Test data size: %d KB(%dB). Read one sector at a time.)\r\n", sector_count / 2, 512 * sector_count);
-
+       USB_PRINTF("Testing: Start Test READ Throughput...(Test data size: %d KB(%dB). Read one sector at a time.)\r\n", sector_count / 2, 512 * sector_count);
        g_time_count = 0;
-       DWT_CYCCNT = (uint32_t)0u;
-       DWT_CR    |= DWT_CR_CYCCNTENA;
+       
        for(i = 0;i < sector_count;i++)
        {
+             DWT_CYCCNT = (uint32_t)0u;
+             DWT_CR    |= DWT_CR_CYCCNTENA;
              g_bCallBack = FALSE;
              status = usb_mass_ufi_read_10(&g_pCmd, (i), g_test_buffer, 512, 1);
 
              if (status != USB_OK)
              {
-                printf ("\r\n...ERROR");
+                USB_PRINTF ("\r\n...ERROR");
                 return;
              }
              else
@@ -843,16 +859,17 @@ static void usb_host_mass_test_storage
                 }
                 if (!g_bStatus) 
                 {
-                   /* printf("...OK\r\n"); */
+                   /* USB_PRINTF("...OK\r\n"); */
                 }
                 else 
                 {
-                   printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+                   USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
                 }
              }
+             g_time_count += DWT_CYCCNT;
+             DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
        }
-       g_time_count = DWT_CYCCNT;
-       DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
+       
     #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
        g_time_count = g_time_count / (g_cpu_core_clk_khz);
     #else
@@ -860,11 +877,11 @@ static void usb_host_mass_test_storage
     #endif
        temp = (uint64_t)((uint64_t)512*(uint64_t)ticks_per_second*(uint64_t)sector_count);
        temp = temp / (uint64_t)g_time_count;
-       printf("Test results: Time = %dms, Speed = %dB/s\r\n", g_time_count, temp);  
+       USB_PRINTF("Test results: Time = %dms, Speed = %dB/s\r\n", (uint32_t)g_time_count, temp);  
     #endif
        
        /* Test the REQUEST SENSE command */
-       printf("Testing: REQUEST SENSE Command");
+       USB_PRINTF("Testing: REQUEST SENSE Command");
           
        g_bCallBack = FALSE;
 
@@ -872,7 +889,7 @@ static void usb_host_mass_test_storage
 
        if (status != USB_OK)
        {
-          printf ("\r\n...ERROR");
+          USB_PRINTF ("\r\n...ERROR");
           return;
        }
        else
@@ -888,29 +905,29 @@ static void usb_host_mass_test_storage
           }
           if (!g_bStatus) 
           {
-             printf("...OK\r\n");
+             USB_PRINTF("...OK\r\n");
           }
           else 
           {
-             printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+             USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
           }
        }
 
     #if TEST_SECTOR_READ2
        
-       printf("Testing: Start Test READ Throughput...(Test data size: %d KB(%dB). Read two sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
-
+       USB_PRINTF("Testing: Start Test READ Throughput...(Test data size: %d KB(%dB). Read two sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
        g_time_count = 0;
-       DWT_CYCCNT = (uint32_t)0u;
-       DWT_CR    |= DWT_CR_CYCCNTENA;
+       
        for(i = 0;i < sector_count;i += 2)
        {
+             DWT_CYCCNT = (uint32_t)0u;
+             DWT_CR    |= DWT_CR_CYCCNTENA;
              g_bCallBack = FALSE;
              status = usb_mass_ufi_read_10(&g_pCmd, (i), g_test_buffer, 1024, 2);
 
              if (status != USB_OK)
              {
-                printf ("\r\n...ERROR");
+                USB_PRINTF ("\r\n...ERROR");
                 return;
              }
              else
@@ -926,16 +943,17 @@ static void usb_host_mass_test_storage
                 }
                 if (!g_bStatus) 
                 {
-                   /* printf("...OK\r\n"); */
+                   /* USB_PRINTF("...OK\r\n"); */
                 }
                 else 
                 {
-                   /* printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus); */
+                   /* USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus); */
                 }
              }
+             g_time_count += DWT_CYCCNT;
+             DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
        }
-       g_time_count = DWT_CYCCNT;
-       DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
+       
     #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && !(USE_RTOS)))
        g_time_count = g_time_count / (g_cpu_core_clk_khz);
     #else
@@ -943,13 +961,13 @@ static void usb_host_mass_test_storage
     #endif
        temp = (uint64_t)((uint64_t)512*(uint64_t)ticks_per_second*(uint64_t)sector_count);
        temp = temp / (uint64_t)g_time_count;
-       printf("Test results: Time = %dms, Speed = %dB/s\r\n", g_time_count, temp); 
+       USB_PRINTF("Test results: Time = %dms, Speed = %dB/s\r\n", (uint32_t)g_time_count, temp); 
 
     #endif
 
        
        /* Test the REQUEST SENSE command */
-       printf("Testing: REQUEST SENSE Command");
+       USB_PRINTF("Testing: REQUEST SENSE Command");
           
        g_bCallBack = FALSE;
 
@@ -957,7 +975,7 @@ static void usb_host_mass_test_storage
 
        if (status != USB_OK)
        {
-          printf ("\r\n...ERROR");
+          USB_PRINTF ("\r\n...ERROR");
           return;
        }
        else
@@ -973,28 +991,29 @@ static void usb_host_mass_test_storage
           }
           if (!g_bStatus) 
           {
-             printf("...OK\r\n");
+             USB_PRINTF("...OK\r\n");
           }
           else 
           {
-             printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+             USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
           }
        }
        
     #if TEST_SECTOR_READ4
        
-       printf("Testing: Start Test READ Throughput...(Test data size: %d KB(%dB). Read four sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
+       USB_PRINTF("Testing: Start Test READ Throughput...(Test data size: %d KB(%dB). Read four sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
        g_time_count = 0;
-       DWT_CYCCNT = (uint32_t)0u;
-       DWT_CR    |= DWT_CR_CYCCNTENA;
+       
        for(i = 0;i < sector_count;i += 4)
        {
+             DWT_CYCCNT = (uint32_t)0u;
+             DWT_CR    |= DWT_CR_CYCCNTENA;
              g_bCallBack = FALSE;
              status = usb_mass_ufi_read_10(&g_pCmd, (i), g_test_buffer, 2048, 4);
 
              if (status != USB_OK)
              {
-                printf ("\r\n...ERROR");
+                USB_PRINTF ("\r\n...ERROR");
                 return;
              }
              else
@@ -1010,16 +1029,17 @@ static void usb_host_mass_test_storage
                 }
                 if (!g_bStatus)
                 {
-                   /* printf("...OK\r\n"); */
+                   /* USB_PRINTF("...OK\r\n"); */
                 }
                 else 
                 {
-                   /* printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus); */
+                   /* USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus); */
                 }
              }
+             g_time_count += DWT_CYCCNT;
+             DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
        }       
-       g_time_count = DWT_CYCCNT;
-       DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
+       
     #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && !(USE_RTOS)))
        g_time_count = g_time_count / (g_cpu_core_clk_khz);
     #else
@@ -1027,12 +1047,12 @@ static void usb_host_mass_test_storage
     #endif
        temp = (uint64_t)((uint64_t)512*(uint64_t)ticks_per_second*(uint64_t)sector_count);
        temp = temp / (uint64_t)g_time_count;
-       printf("Test results: Time = %dms, Speed = %dB/s\r\n", g_time_count, temp); 
+       USB_PRINTF("Test results: Time = %dms, Speed = %dB/s\r\n", (uint32_t)g_time_count, temp); 
 
     #endif
        
        /* Test the REQUEST SENSE command */
-       printf("Testing: REQUEST SENSE Command");
+       USB_PRINTF("Testing: REQUEST SENSE Command");
           
        g_bCallBack = FALSE;
 
@@ -1040,7 +1060,7 @@ static void usb_host_mass_test_storage
 
        if (status != USB_OK)
        {
-          printf ("\r\n...ERROR");
+          USB_PRINTF ("\r\n...ERROR");
           return;
        }
        else
@@ -1056,22 +1076,23 @@ static void usb_host_mass_test_storage
           }
           if (!g_bStatus) 
           {
-             printf("...OK\r\n");
+             USB_PRINTF("...OK\r\n");
           }
           else 
           {
-             printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+             USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
           }
        }
 
     #if TEST_SECTOR_READ_MULTI
        
-       printf("Testing: Start Test READ Throughput...(Test data size: %d KB(%dB). Read n sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
+       USB_PRINTF("Testing: Start Test READ Throughput...(Test data size: %d KB(%dB). Read n sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
        g_time_count = 0;
-       DWT_CYCCNT = (uint32_t)0u;
-       DWT_CR    |= DWT_CR_CYCCNTENA;
+
        for(i = 0;i < sector_count;)
        {
+             DWT_CYCCNT = (uint32_t)0u;
+             DWT_CR    |= DWT_CR_CYCCNTENA;
              transfor_length = (sector_count-i) > EACH_TRANSFOR_SECTORS ? EACH_TRANSFOR_SECTORS : (sector_count-i);
              i += transfor_length;
              g_bCallBack = FALSE;
@@ -1079,7 +1100,7 @@ static void usb_host_mass_test_storage
 
              if (status != USB_OK)
              {
-                printf ("\r\n...ERROR");
+                USB_PRINTF ("\r\n...ERROR");
                 return;
              }
              else
@@ -1095,16 +1116,17 @@ static void usb_host_mass_test_storage
                 }
                 if (!g_bStatus)
                 {
-                   /* printf("...OK\r\n"); */
+                   /* USB_PRINTF("...OK\r\n"); */
                 }
                 else 
                 {
-                   /* printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus); */
+                   /* USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus); */
                 }
              }
+             g_time_count += DWT_CYCCNT;
+             DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
        }       
-       g_time_count = DWT_CYCCNT;
-       DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
+
     #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && !(USE_RTOS)))
        g_time_count = g_time_count / (g_cpu_core_clk_khz);
     #else
@@ -1113,12 +1135,12 @@ static void usb_host_mass_test_storage
        temp = (uint64_t)((uint64_t)512*(uint64_t)ticks_per_second*(uint64_t)sector_count);
        temp = temp / (uint64_t)g_time_count;
        temp = temp / 1000;
-       printf("Test results: Time = %dms, Speed = %dKB/s\r\n", g_time_count, temp); 
+       USB_PRINTF("Test results: Time = %dms, Speed = %dKB/s\r\n", (uint32_t)g_time_count, temp); 
 
     #endif
    }
       /* Test the REQUEST SENSE command */
-   printf("Testing: REQUEST SENSE Command");
+   USB_PRINTF("Testing: REQUEST SENSE Command");
       
    g_bCallBack = FALSE;
 
@@ -1126,7 +1148,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1142,17 +1164,17 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
 #endif
 
    /* Test the READ(10) command */
-   printf("Testing: READ(10) Command");
+   USB_PRINTF("Testing: READ(10) Command");
       
    g_bCallBack = FALSE;
 
@@ -1160,7 +1182,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1176,16 +1198,16 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
       
    /* Test the MODE SENSE command */
-   printf("Testing: MODE SENSE Command");
+   USB_PRINTF("Testing: MODE SENSE Command");
       
    g_bCallBack = FALSE;
 
@@ -1193,7 +1215,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1209,16 +1231,16 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
       
    /* Test the PREVENT ALLOW command */
-   printf("Testing: PREVENT-ALLOW MEDIUM REMOVAL Command");
+   USB_PRINTF("Testing: PREVENT-ALLOW MEDIUM REMOVAL Command");
       
    g_bCallBack = FALSE;
 
@@ -1226,7 +1248,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1242,16 +1264,16 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus)
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
       
    /* Test the REQUEST SENSE command */
-   printf("Testing: REQUEST SENSE Command");
+   USB_PRINTF("Testing: REQUEST SENSE Command");
      
    g_bCallBack = FALSE;
 
@@ -1259,7 +1281,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1275,16 +1297,16 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
       
    /* Test the VERIFY command */
-   printf("Testing: VERIFY Command");
+   USB_PRINTF("Testing: VERIFY Command");
       
    g_bCallBack = FALSE;
 
@@ -1292,7 +1314,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1308,24 +1330,20 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
 
 #if TEST_SECTOR_READ_WRITE_SPEED
 
-#if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && !(USE_RTOS)))
-   OSA_TimeDelay(1000);
-#else
-   _time_delay(1000);
-#endif
+   OS_Time_delay(1000);
 
    /* Test the REQUEST SENSE command */
-   printf("Testing: REQUEST SENSE Command");
+   USB_PRINTF("Testing: REQUEST SENSE Command");
      
    g_bCallBack = FALSE;
 
@@ -1333,7 +1351,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1350,32 +1368,33 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
    
    for(j = 1; j < test_case[0]; j++)
    {
        sector_count = test_case[j];
-       printf("Testing: Start Test WRITE Throughput... Test data size: %d KB(%dB).\r\n", sector_count / 2, 512 * sector_count);
+       USB_PRINTF("Testing: Start Test WRITE Throughput... Test data size: %d KB(%dB).\r\n", sector_count / 2, 512 * sector_count);
 
     #if TEST_SECTOR_WRITE1
-       printf("Testing: Start Test WRITE Throughput...(Test data size: %d KB(%dB). Write one sector at a time.)\r\n", sector_count / 2, 512 * sector_count);
+       USB_PRINTF("Testing: Start Test WRITE Throughput...(Test data size: %d KB(%dB). Write one sector at a time.)\r\n", sector_count / 2, 512 * sector_count);
        g_time_count = 0;
-       DWT_CYCCNT = (uint32_t)0u;
-       DWT_CR    |= DWT_CR_CYCCNTENA;
+       
        for(i = 0;i < sector_count;i++)
        {
+             DWT_CYCCNT = (uint32_t)0u;
+             DWT_CR    |= DWT_CR_CYCCNTENA;
              g_bCallBack = FALSE;
              status = usb_mass_ufi_write_10(&g_pCmd, (i), g_test_buffer, 512, 1);
 
              if (status != USB_OK)
              {
-                printf ("\r\n...ERROR");
+                USB_PRINTF ("\r\n...ERROR");
                 return;
              }
              else
@@ -1391,16 +1410,17 @@ static void usb_host_mass_test_storage
                 }
                 if (!g_bStatus) 
                 {
-                   /* printf("...OK\r\n"); */
+                   /* USB_PRINTF("...OK\r\n"); */
                 }
                 else 
                 {
-                   printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+                   USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
                 }
              }
+             g_time_count += DWT_CYCCNT;
+             DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
        }
-       g_time_count = DWT_CYCCNT;
-       DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
+
     #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && !(USE_RTOS)))
        g_time_count = g_time_count / (g_cpu_core_clk_khz);
     #else
@@ -1408,12 +1428,12 @@ static void usb_host_mass_test_storage
     #endif
        temp = (uint64_t)((uint64_t)512*(uint64_t)ticks_per_second*(uint64_t)sector_count);
        temp = temp / (uint64_t)g_time_count;
-       printf("Test results: Time = %dms, Speed = %dB/s\r\n", g_time_count, temp); 
+       USB_PRINTF("Test results: Time = %dms, Speed = %dB/s\r\n", (uint32_t)g_time_count, temp); 
 
     #endif
        
        /* Test the REQUEST SENSE command */
-       printf("Testing: REQUEST SENSE Command");
+       USB_PRINTF("Testing: REQUEST SENSE Command");
           
        g_bCallBack = FALSE;
 
@@ -1421,7 +1441,7 @@ static void usb_host_mass_test_storage
 
        if (status != USB_OK)
        {
-          printf ("\r\n\r\n...ERROR");
+          USB_PRINTF ("\r\n\r\n...ERROR");
           return;
        }
        else
@@ -1438,28 +1458,29 @@ static void usb_host_mass_test_storage
           }
           if (!g_bStatus) 
           {
-             printf("...OK\r\n");
+             USB_PRINTF("...OK\r\n");
           }
           else 
           {
-             printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+             USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
           }
        }
        
     #if TEST_SECTOR_WRITE2
        
-       printf("Testing: Start Test WRITE Throughput...(Test data size: %d KB(%dB). Write two sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
+       USB_PRINTF("Testing: Start Test WRITE Throughput...(Test data size: %d KB(%dB). Write two sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
        g_time_count = 0;
-       DWT_CYCCNT = (uint32_t)0u;
-       DWT_CR    |= DWT_CR_CYCCNTENA;
+       
        for(i = 0;i < sector_count;i += 2)
        {
+             DWT_CYCCNT = (uint32_t)0u;
+             DWT_CR    |= DWT_CR_CYCCNTENA;
              g_bCallBack = FALSE;
              status = usb_mass_ufi_write_10(&g_pCmd, (i), g_test_buffer, 1024, 2);
 
              if (status != USB_OK)
              {
-                printf ("\r\n...ERROR");
+                USB_PRINTF ("\r\n...ERROR");
                 return;
              }
              else
@@ -1476,17 +1497,17 @@ static void usb_host_mass_test_storage
                 }
                 if (!g_bStatus) 
                 {
-                   /* printf("...OK\r\n"); */
+                   /* USB_PRINTF("...OK\r\n"); */
                 }
                 else 
                 {
-                   printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+                   USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
                 }
              }
+             g_time_count += DWT_CYCCNT;
+             DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
        }
 
-       g_time_count = DWT_CYCCNT;
-       DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
     #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && !(USE_RTOS)))
        g_time_count = g_time_count / (g_cpu_core_clk_khz);
     #else
@@ -1494,12 +1515,12 @@ static void usb_host_mass_test_storage
     #endif
        temp = (uint64_t)((uint64_t)512*(uint64_t)ticks_per_second*(uint64_t)sector_count);
        temp = temp / (uint64_t)g_time_count;
-       printf("Test results: Time = %dms, Speed = %dB/s\r\n", g_time_count, temp); 
+       USB_PRINTF("Test results: Time = %dms, Speed = %dB/s\r\n", (uint32_t)g_time_count, temp); 
 
     #endif
        
        /* Test the REQUEST SENSE command */
-       printf("Testing: REQUEST SENSE Command");
+       USB_PRINTF("Testing: REQUEST SENSE Command");
           
        g_bCallBack = FALSE;
 
@@ -1507,7 +1528,7 @@ static void usb_host_mass_test_storage
 
        if (status != USB_OK)
        {
-          printf ("\r\n...ERROR");
+          USB_PRINTF ("\r\n...ERROR");
           return;
        }
        else
@@ -1524,29 +1545,29 @@ static void usb_host_mass_test_storage
           }
           if (!g_bStatus) 
           {
-             printf("...OK\r\n");
+             USB_PRINTF("...OK\r\n");
           }
           else
           {
-             printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+             USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
           }
        }
        
     #if TEST_SECTOR_WRITE4
        
-       printf("Testing: Start Test WRITE Throughput...(Test data size: %d KB(%dB). Write four sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
+       USB_PRINTF("Testing: Start Test WRITE Throughput...(Test data size: %d KB(%dB). Write four sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
        g_time_count = 0;
 
-       DWT_CYCCNT = (uint32_t)0u;
-       DWT_CR    |= DWT_CR_CYCCNTENA;
        for(i = 0;i < sector_count;i += 4)
        {
+             DWT_CYCCNT = (uint32_t)0u;
+             DWT_CR    |= DWT_CR_CYCCNTENA;
              g_bCallBack = FALSE;
              status = usb_mass_ufi_write_10(&g_pCmd, (i), g_test_buffer, 2048, 4);
 
              if (status != USB_OK)
              {
-                printf ("\r\n...ERROR");
+                USB_PRINTF ("\r\n...ERROR");
                 return;
              }
              else
@@ -1563,17 +1584,17 @@ static void usb_host_mass_test_storage
                 }
                 if (!g_bStatus) 
                 {
-                   /* printf("...OK\r\n"); */
+                   /* USB_PRINTF("...OK\r\n"); */
                 }
                 else 
                 {
-                   printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+                   USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
                 }
              }
+             g_time_count += DWT_CYCCNT;
+             DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
        }
 
-       g_time_count = DWT_CYCCNT;
-       DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
     #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && !(USE_RTOS)))
        g_time_count = g_time_count / (g_cpu_core_clk_khz);
     #else
@@ -1581,12 +1602,12 @@ static void usb_host_mass_test_storage
     #endif
        temp = (uint64_t)((uint64_t)512*(uint64_t)ticks_per_second*(uint64_t)sector_count);
        temp = temp / (uint64_t)g_time_count;
-       printf("Test results: Time = %dms, Speed = %dB/s\r\n", g_time_count, temp); 
+       USB_PRINTF("Test results: Time = %dms, Speed = %dB/s\r\n", (uint32_t)g_time_count, temp); 
 
     #endif 
 
        /* Test the REQUEST SENSE command */
-       printf("Testing: REQUEST SENSE Command");
+       USB_PRINTF("Testing: REQUEST SENSE Command");
           
        g_bCallBack = FALSE;
 
@@ -1594,7 +1615,7 @@ static void usb_host_mass_test_storage
 
        if (status != USB_OK)
        {
-          printf ("\r\n...ERROR");
+          USB_PRINTF ("\r\n...ERROR");
           return;
        }
        else
@@ -1611,23 +1632,23 @@ static void usb_host_mass_test_storage
           }
           if (!g_bStatus) 
           {
-             printf("...OK\r\n");
+             USB_PRINTF("...OK\r\n");
           }
           else 
           {
-             printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+             USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
           }
        }
 
     #if TEST_SECTOR_WRITE_MULTI
        
-       printf("Testing: Start Test WRITE Throughput...(Test data size: %d KB(%dB). Write n sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
+       USB_PRINTF("Testing: Start Test WRITE Throughput...(Test data size: %d KB(%dB). Write n sectors at a time.)\r\n", sector_count / 2, 512 * sector_count);
        g_time_count = 0;
 
-       DWT_CYCCNT = (uint32_t)0u;
-       DWT_CR    |= DWT_CR_CYCCNTENA;
        for(i = 0;i < sector_count;)
        {
+             DWT_CYCCNT = (uint32_t)0u;
+             DWT_CR    |= DWT_CR_CYCCNTENA;
              transfor_length = (sector_count-i) > EACH_TRANSFOR_SECTORS ? EACH_TRANSFOR_SECTORS : (sector_count-i);
              i += transfor_length;
              g_bCallBack = FALSE;
@@ -1635,7 +1656,7 @@ static void usb_host_mass_test_storage
 
              if (status != USB_OK)
              {
-                printf ("\r\n...ERROR");
+                USB_PRINTF ("\r\n...ERROR");
                 return;
              }
              else
@@ -1652,17 +1673,17 @@ static void usb_host_mass_test_storage
                 }
                 if (!g_bStatus) 
                 {
-                   /* printf("...OK\r\n"); */
+                   /* USB_PRINTF("...OK\r\n"); */
                 }
                 else 
                 {
-                   printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+                   USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
                 }
              }
+             g_time_count += DWT_CYCCNT;
+             DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
        }
 
-       g_time_count = DWT_CYCCNT;
-       DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
     #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
        g_time_count = g_time_count / (g_cpu_core_clk_khz);
     #else
@@ -1671,13 +1692,13 @@ static void usb_host_mass_test_storage
        temp = (uint64_t)((uint64_t)512*(uint64_t)ticks_per_second*(uint64_t)sector_count);
        temp = temp / (uint64_t)g_time_count;
        temp = temp / 1000;
-       printf("Test results: Time = %dms, Speed = %dKB/s\r\n", g_time_count, temp); 
+       USB_PRINTF("Test results: Time = %dms, Speed = %dKB/s\r\n", (uint32_t)g_time_count, temp); 
 
     #endif 
    }
    
    /* Test the REQUEST SENSE command */
-   printf("Testing: REQUEST SENSE Command");
+   USB_PRINTF("Testing: REQUEST SENSE Command");
       
    g_bCallBack = FALSE;
 
@@ -1685,7 +1706,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n\r\n...ERROR");
+      USB_PRINTF ("\r\n\r\n...ERROR");
       return;
    }
    else
@@ -1701,17 +1722,17 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n\r\n", g_bStatus);
       }
    }
 #endif
 
    /* Test the WRITE(10) command */
-   printf("Testing: WRITE(10) Command");
+   USB_PRINTF("Testing: WRITE(10) Command");
       
    g_bCallBack = FALSE;
 
@@ -1719,7 +1740,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1735,16 +1756,16 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
 
    /* Test the REQUEST SENSE command */
-   printf("Testing: REQUEST SENSE Command");
+   USB_PRINTF("Testing: REQUEST SENSE Command");
    
    g_bCallBack = FALSE;
 
@@ -1752,7 +1773,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1768,16 +1789,16 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
 
    /* Test the START-STOP UNIT command */
-   printf("Testing: START-STOP UNIT Command");
+   USB_PRINTF("Testing: START-STOP UNIT Command");
 
    g_bCallBack = FALSE;
 
@@ -1785,7 +1806,7 @@ static void usb_host_mass_test_storage
 
    if (status != USB_OK)
    {
-      printf ("\r\n...ERROR");
+      USB_PRINTF ("\r\n...ERROR");
       return;
    }
    else
@@ -1801,15 +1822,15 @@ static void usb_host_mass_test_storage
       }
       if (!g_bStatus) 
       {
-         printf("...OK\r\n");
+         USB_PRINTF("...OK\r\n");
       }
       else 
       {
-         printf("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
+         USB_PRINTF("...Unsupported by device (g_bStatus=0x%x)\r\n", g_bStatus);
       }
    }
 
-   printf("\r\nTest done!");
+   USB_PRINTF("\r\nTest done!");
 } /* Endbody */
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #if defined(FSL_RTOS_MQX)

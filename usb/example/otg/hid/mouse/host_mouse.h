@@ -78,7 +78,6 @@ extern "C" {
 
 void usb_host_hid_recv_callback(usb_pipe_handle, void*, uint8_t *, uint32_t, usb_status);
 void usb_host_hid_ctrl_callback(usb_pipe_handle, void*, uint8_t *, uint32_t, usb_status);
-void static usb_host_hid_mouse_event(usb_device_instance_handle, usb_interface_descriptor_handle, usb_status);
 
 #ifdef __cplusplus
 }

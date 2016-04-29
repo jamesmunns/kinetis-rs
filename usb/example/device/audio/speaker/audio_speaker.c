@@ -39,7 +39,7 @@
 #include "usb_descriptor.h"
 #include "usb_request.h"
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX) 
-#include "io_gpio.h"
+//#include "io_gpio.h"
 #include "sgtl5000.h"
 #ifdef BSPCFG_ENABLE_SAI
 #include "sai_audio.h"
@@ -64,16 +64,17 @@
 
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
-//#include "board.h"
+#include "board.h"
 #include "fsl_debug_console.h"
 #include "fsl_port_hal.h"
-#include "fsl_gpio_common.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "fsl_soundcard.h"
 #include "fsl_sgtl5000_driver.h"
 #include "fsl_edma_request.h"
 #include "fsl_clock_manager.h"
+#include "fsl_sai_driver.h"
+
 static bool first_copy = true;
 
 #endif
@@ -150,9 +151,9 @@ ksai_info_struct_t    ksai_init =
 /*****************************************************************************
  * Local Functions Prototypes
  *****************************************************************************/
-void USB_App_Callback(uint8_t event_type, void* val,void* arg);
+void USB_App_Device_Callback(uint8_t event_type, void* val,void* arg);
 void USB_Notif_Callback(uint8_t event_type,void* val,void* arg);
-uint8_t USB_App_Param_Callback(uint8_t request, uint16_t value, uint8_t ** data, 
+uint8_t USB_App_Class_Callback(uint8_t request, uint16_t value, uint8_t ** data, 
     uint32_t* size,void* arg); 
 
 /*****************************************************************************
@@ -165,13 +166,15 @@ uint8_t USB_App_Param_Callback(uint8_t request, uint16_t value, uint8_t ** data,
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 
+ sai_data_format_t sai_format = {0};
+ sgtl_handler_t sgtl_codec_handler_t = {0};
  static sound_card_t tx_card;
- static sound_card_t rx_card;
- static sai_data_format_t *format;
+ /*static sound_card_t rx_card; */
+ static sai_data_format_t *format= &sai_format;
  static sai_user_config_t tx_config;
- static sai_user_config_t rx_config;
+ /* static sai_user_config_t rx_config; */
  static sai_state_t tx_state;
- static sai_state_t rx_state;
+ /* static sai_state_t rx_state; */
  uint8_t audio_data_buff[DATA_BUFF_SIZE*4];
 #if USEDMA
 static edma_state_t edmaState;
@@ -182,13 +185,13 @@ static edma_user_config_t edmaUserConfig;
  /* Open the clock and configure the pin mux for sai, i2c. */
  void hardware_init_codec(uint8_t instance)
  {
-	 uint8_t i;
-	 /* Open GPIO clock */
-	 for (i = 0; i < HW_PORT_INSTANCE_COUNT; i++)
-	 {
-		 CLOCK_SYS_EnablePortClock(i);
-	 }
-	 CLOCK_SYS_EnableSaiClock(0);
+     uint8_t i;
+     /* Open GPIO clock */
+     for (i = 0; i < HW_PORT_INSTANCE_COUNT; i++)
+     {
+         CLOCK_SYS_EnablePortClock(i);
+     }
+     CLOCK_SYS_EnableSaiClock(0);
          configure_i2s_pins(instance);
          configure_i2c_pins(0);
  }
@@ -196,48 +199,35 @@ static edma_user_config_t edmaUserConfig;
  /* Initialize the structure information for sai. */
  void init(void)
  {
-	 hardware_init_codec(0);
-	 /* Configure the play audio format */
-	 format = (sai_data_format_t *)OSA_MemAllocZero(sizeof(sai_data_format_t));
-	 format->bits = 16;
-	 format->sample_rate = 16000;
-	 format->mclk = 384 * format->sample_rate;
-	 format->mono_streo = kSaiStreo;
+    hardware_init_codec(0);
+    /* Configure the play audio format */
+	 //format = (sai_data_format_t *)OSA_MemAllocZero(sizeof(sai_data_format_t));
+    format->bits = 16;
+    format->sample_rate = 16000;
+    format->mclk = 384 * format->sample_rate;
+    format->mono_streo = kSaiStreo;
  
-	 /* SAI configuration */
-	 tx_config.protocol = kSaiBusI2SLeft;
-	 tx_config.channel = 0;
-	 tx_config.slave_master = kSaiMaster;
-	 tx_config.sync_mode = kSaiModeAsync;
-	 tx_config.bclk_source = kSaiBclkSourceMclkDiv;
-	 tx_config.mclk_source = kSaiMclkSourceSysclk;
-	 tx_config.mclk_divide_enable = true;
-	 tx_config.watermark = 4;
-	 
-	 rx_config.protocol = kSaiBusI2SLeft;
-	 rx_config.channel = 0;
-	 rx_config.slave_master = kSaiMaster;
-	 rx_config.sync_mode = kSaiModeSync;
-	 rx_config.bclk_source = kSaiBclkSourceMclkDiv;
-	 rx_config.mclk_source = kSaiMclkSourceSysclk;
-	 rx_config.mclk_divide_enable = true;
-	 rx_config.watermark = 4;
- 
-	 tx_card.controller.instance = 0;
-	 tx_card.controller.fifo_channel = 0;
-	 tx_card.controller.ops = &g_sai_ops;
-	 rx_card.controller.instance = 0;
-	 rx_card.controller.fifo_channel = 0;
-	 rx_card.controller.ops = &g_sai_ops;
+    /* SAI configuration */
+    tx_config.protocol = kSaiBusI2SLeft;
+    tx_config.channel = 0;
+    tx_config.slave_master = kSaiMaster;
+    tx_config.sync_mode = kSaiModeAsync;
+    tx_config.bclk_source = kSaiBclkSourceMclkDiv;
+    tx_config.mclk_source = kSaiMclkSourceSysclk;
+    tx_config.mclk_divide_enable = true;
+    tx_config.watermark = 4;
+
+    tx_card.controller.instance = 0;
+    tx_card.controller.fifo_channel = 0;
+    tx_card.controller.ops = &g_sai_ops;
+
 #if USEDMA
-	 tx_card.controller.dma_source = kDmaRequestMux0I2S0Tx;
-	 rx_card.controller.dma_source = kDmaRequestMux0I2S0Rx;
+    tx_card.controller.dma_source = kDmaRequestMux0I2S0Tx;
 #endif
-	 sgtl_handler_t *codec_handler = (sgtl_handler_t *)OSA_MemAllocZero(sizeof(sgtl_handler_t));
-	 tx_card.codec.handler = codec_handler;
-	 rx_card.codec.handler = codec_handler;
-	 tx_card.codec.ops = &g_sgtl_ops;
-	 rx_card.codec.ops = &g_sgtl_ops;
+    //sgtl_handler_t *codec_handler = (sgtl_handler_t *)OSA_MemAllocZero(sizeof(sgtl_handler_t));
+    sgtl_handler_t *codec_handler = &sgtl_codec_handler_t;
+    tx_card.codec.handler = codec_handler;
+    tx_card.codec.ops = &g_sgtl_ops;
  }
 
  #endif
@@ -255,49 +245,112 @@ static edma_user_config_t edmaUserConfig;
  *****************************************************************************/
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #if defined(FSL_RTOS_MQX)
-extern void I2C0_IRQHandler(void);
-extern void I2S0_Tx_IRQHandler(void);
+extern void I2C_DRV_IRQHandler(uint32_t instance);
+ void I2C0_MQX_IRQHandler(void)
+ {
+     I2C_DRV_IRQHandler(0);
+ }
+ 
+ void I2S0_TX_MQX_IRQHandler(void)
+ {
+     SAI_DRV_TxIRQHandler(0U);
+ }
+ 
+ void DMA0_MQX_IRQHandler(void)
+ {
+     EDMA_DRV_IRQHandler(0);
+ }
+#else
+extern void I2C_DRV_IRQHandler(uint32_t instance);
+void DMA0_IRQHandler(void)
+{
+    EDMA_DRV_IRQHandler(0);
+}
+
+void I2C0_IRQHandler(void)
+{
+    I2C_DRV_IRQHandler(0);
+}
+
+extern sai_state_t * volatile sai_state_ids[HW_I2S_INSTANCE_COUNT][2];
+
+/*************************************************************************
+ * Code
+ ************************************************************************/
+/* I2S IRQ handler with the same name in startup code */
+
+#if (FSL_FEATURE_SAI_INT_SOURCE_NUM == 1)
+
+void I2S0_IRQHandler(void)
+{
+    if (sai_state_ids[0][1] != NULL)
+    {
+        SAI_DRV_RxIRQHandler(0U);
+    }
+    if (sai_state_ids[0][0] != NULL)
+    {
+        SAI_DRV_TxIRQHandler(0U);
+    }
+}
+
+#else
+void I2S0_Tx_IRQHandler(void)
+{
+    SAI_DRV_TxIRQHandler(0U);
+}
+
+void I2S0_Rx_IRQHandler(void)
+{
+    SAI_DRV_RxIRQHandler(0U);
+}
+
+#if defined (K70F12_SERIES)
+void I2S1_Tx_IRQHandler(void)
+{
+    SAI_DRV_TxIRQHandler(1U);
+}
+
+void I2S1_Rx_IRQHandler(void)
+{
+    SAI_DRV_RxIRQHandler(1U);
+}
+#endif /*defined K70F12_SERIES */
+#endif /* FSL_FEATURE_SAI_INT_SPURCE_NUM */
 #endif
 #endif
 void APP_init(void)
 {
     audio_config_struct_t       audio_config;
 
-    printf("audio_speaker_TestApp_Init\n");
-    audio_config.audio_application_callback.callback = USB_App_Callback;
+    USB_PRINTF("audio_speaker_TestApp_Init\n");
+    audio_config.audio_application_callback.callback = USB_App_Device_Callback;
     audio_config.audio_application_callback.arg = &g_app_handle;
-    audio_config.class_specific_callback.callback = USB_App_Param_Callback;
+    audio_config.class_specific_callback.callback = USB_App_Class_Callback;
     audio_config.class_specific_callback.arg = &g_app_handle;
     audio_config.desc_callback_ptr = &desc_callback;
-    printf("Audio speaker TestApp\r\n");
+    USB_PRINTF("Audio speaker TestApp\r\n");
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #if defined(FSL_RTOS_FREE_RTOS)
     NVIC_SetPriority(I2C0_IRQn, 2);
     NVIC_SetPriority(I2S0_Tx_IRQn, 3);
+#if USEDMA
+    NVIC_SetPriority(DMA0_IRQn,4);
+#endif
 #endif
 #if defined(FSL_RTOS_MQX)
-    OS_install_isr(I2C0_IRQn, I2C0_IRQHandler, NULL);
-    OS_install_isr(I2S0_Tx_IRQn, I2S0_Tx_IRQHandler, NULL);
-#endif
-
-#if 1
-		 //uint8_t *data = (uint8_t *)OSA_MemoryAllocateZero(AUDIO_BUFFER_BLOCK_SIZE);
-		 //uint32_t count = 0;
-		 //uint8_t *pData = data;
-		 snd_state_t tx_status, rx_status;
-		 init();
+    OS_install_isr(I2C0_IRQn, I2C0_MQX_IRQHandler, NULL);
+    OS_install_isr(I2S0_Tx_IRQn, I2S0_TX_MQX_IRQHandler, NULL);
 #if USEDMA
-		 edmaUserConfig.chnArbitration = kEDMAChnArbitrationRoundrobin;
-		 edmaUserConfig.notHaltOnError = false;
-		 EDMA_DRV_Init(&edmaState, &edmaUserConfig);
+    OS_install_isr(DMA0_IRQn, DMA0_MQX_IRQHandler, NULL);
 #endif
-         SND_TxInit(&tx_card, &tx_config, NULL, &tx_state);
-         //SND_RxInit(&rx_card, &rx_config, NULL, &rx_state);
-         SND_TxConfigDataFormat(&tx_card,format);
-		 //SND_RxConfigDataFormat(&rx_card,format);
-	 
-		 //SND_RxStart(&rx_card);
 #endif
+    init();
+#if USEDMA
+    EDMA_DRV_Init(&edmaState, &edmaUserConfig);
+#endif
+    SND_TxInit(&tx_card, &tx_config, NULL, &tx_state);
+    SND_TxConfigDataFormat(&tx_card,format);
+
 #endif
     /* Initialize the USB interface */
     USB_Class_Audio_Init(CONTROLLER_ID, &audio_config, &g_app_handle);
@@ -308,24 +361,24 @@ void APP_init(void)
     app_event = OS_Event_create(0);//LWEVENT_AUTO_CLEAR);
     if (app_event == NULL)
     {
-        printf("\n_lwevent_create app_event failed.\n");
+        USB_PRINTF("\n_lwevent_create app_event failed.\n");
         _task_block();
     }
     while (1)
     {
         if (OS_EVENT_OK != OS_Event_wait(app_event, USB_APP_ENUM_COMPLETE_EVENT_MASK, FALSE, 0)) {
-            printf("\nOS_Event_wait app_event failed.\n");
+            USB_PRINTF("\nOS_Event_wait app_event failed.\n");
             _task_block();
         }
         if (OS_EVENT_OK!= OS_Event_clear(app_event, USB_APP_ENUM_COMPLETE_EVENT_MASK)) 
         {
-            printf("\nOS_Event_clear app_event failed.\n");
+            USB_PRINTF("\nOS_Event_clear app_event failed.\n");
             _task_block();
         }
        /* Prepare buffer for first isochronous input */
         while (!codecisready)
             OS_Time_delay(1);
-        printf("Audio speaker is working ... \r\n");
+        USB_PRINTF("Audio speaker is working ... \r\n");
         /* Prepare buffer for first isochronous input */
         USB_Class_Audio_Recv_Data(g_app_handle,AUDIO_ISOCHRONOUS_ENDPOINT,
                       audio_data_buff0, DATA_BUFF_SIZE);
@@ -335,7 +388,7 @@ void APP_init(void)
 
 /******************************************************************************
  * 
- *    @name        USB_App_Callback
+ *    @name        USB_App_Device_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -346,7 +399,7 @@ void APP_init(void)
  *    @return      None
  *
  *****************************************************************************/
-void USB_App_Callback(uint8_t event_type, void* val, void* arg) 
+void USB_App_Device_Callback(uint8_t event_type, void* val, void* arg) 
 {
     if(event_type == USB_DEV_EVENT_BUS_RESET) 
     {
@@ -357,20 +410,27 @@ void USB_App_Callback(uint8_t event_type, void* val, void* arg)
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)     
         if (OS_EVENT_OK !=OS_Event_set(app_event, USB_APP_ENUM_COMPLETE_EVENT_MASK))
         {
-            printf("OS_Event_set app_event failed.\n");
+            USB_PRINTF("OS_Event_set app_event failed.\n");
         }
 #endif
         
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
+#if USEDMA
+              edmaUserConfig.chnArbitration = kEDMAChnArbitrationRoundrobin;
+              edmaUserConfig.notHaltOnError = false;
+#endif
+
+          
+
      USB_Class_Audio_Recv_Data(g_app_handle,AUDIO_ISOCHRONOUS_ENDPOINT,
                                         audio_data_buff, DATA_BUFF_SIZE);
 #endif
         
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
-        uint32_t	flags = I2S_IO_WRITE;
-        uint32_t	fs_freq = 16000;
-        uint16_t	clk_mult = 256;
-        uint8_t 	channels = 2;
+        uint32_t    flags = I2S_IO_WRITE;
+        uint32_t    fs_freq = 16000;
+        uint16_t    clk_mult = 256;
+        uint8_t     channels = 2;
 
         InitCodec();
         sai_init(&ksai_init, flags, fs_freq, clk_mult, channels);
@@ -380,7 +440,7 @@ void USB_App_Callback(uint8_t event_type, void* val, void* arg)
         USB_Class_Audio_Recv_Data(g_app_handle,AUDIO_ISOCHRONOUS_ENDPOINT,
                                         audio_data_buff, DATA_BUFF_SIZE);
         sai_tx_enable(ksai_info_ptr->tx_channel);
-		printf("Audio speaker is working ... \r\n");
+        USB_PRINTF("Audio speaker is working ... \r\n");
 #endif
     }
     else if(event_type == USB_DEV_EVENT_ERROR)
@@ -392,7 +452,7 @@ void USB_App_Callback(uint8_t event_type, void* val, void* arg)
 
 /******************************************************************************
  * 
- *    @name        USB_App_Param_Callback
+ *    @name        USB_App_Class_Callback
  *    
  *    @brief       This function handles the callback for Get/Set report req  
  *                  
@@ -406,7 +466,7 @@ void USB_App_Callback(uint8_t event_type, void* val, void* arg)
  *                  else return error
  *
  *****************************************************************************/
-uint8_t USB_App_Param_Callback
+uint8_t USB_App_Class_Callback
 (
     uint8_t request, 
     uint16_t value, 
@@ -421,7 +481,7 @@ uint8_t USB_App_Param_Callback
     static uint32_t write_data = 0;
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
     static uint32_t soundcard_counter = 0;
-    snd_state_t tx_status, rx_status;
+    snd_state_t tx_status;
 #endif
 
     if((request == USB_DEV_EVENT_DATA_RECEIVED) && (value == USB_REQ_VAL_INVALID) && (arg != NULL))
@@ -479,7 +539,7 @@ uint8_t USB_App_Param_Callback
             read_data = 0;
         }
 
-		if (write_data >= DATA_BUFF_SIZE*4) 
+        if (write_data >= DATA_BUFF_SIZE*4) 
         {
             write_data = 0;
         }
@@ -489,7 +549,6 @@ uint8_t USB_App_Param_Callback
             first_copy = false;
             SND_GetStatus(&tx_card, &tx_status);
             memcpy(tx_status.input_address, audio_data_buff, tx_status.size);
-			//write_data += tx_status.size;
             SND_TxStart(&tx_card);    
             SND_TxUpdateStatus(&tx_card, AUDIO_BUFFER_BLOCK_SIZE);     
 
@@ -497,26 +556,24 @@ uint8_t USB_App_Param_Callback
         else
         {
 
-		    soundcard_counter++;
+            soundcard_counter++;
             if(soundcard_counter >= AUDIO_BUFFER_BLOCK_SIZE/AUDIO_ENDPOINT_PACKET_SIZE)
             {
              
              SND_WaitEvent(&tx_card);
              SND_GetStatus(&tx_card, &tx_status);
              memcpy(tx_status.input_address, audio_data_buff, tx_status.size);
-			//write_data += tx_status.size;
-             //SND_TxStart(&tx_card);  
              SND_TxUpdateStatus(&tx_card,AUDIO_BUFFER_BLOCK_SIZE);
              soundcard_counter = 0;
-            	}
+                }
 
         }
         
         /* request next data to the current buffer */
         USB_Class_Audio_Recv_Data(g_app_handle, AUDIO_ISOCHRONOUS_ENDPOINT,
             audio_data_buff + AUDIO_ENDPOINT_PACKET_SIZE * soundcard_counter, AUDIO_ENDPOINT_PACKET_SIZE);
-					
-	    
+                    
+        
          return error;
 #endif
     }
@@ -562,18 +619,20 @@ void Play_Task
    uint32_t param
 )
 {
-    MQX_FILE_PTR              i2s_ptr = NULL;
-    AUDIO_DATA_FORMAT         audio_format;
-    _mqx_int                  errcode;
-    _mqx_int                  freq;
-    I2S_STATISTICS_STRUCT stats ;
+   MQX_FILE_PTR              i2s_ptr = NULL;
+   AUDIO_DATA_FORMAT         audio_format;
+   _mqx_int                  errcode;
+   _mqx_int                  freq;
+#if BSPCFG_ENABLE_SAI
+   I2S_STATISTICS_STRUCT     stats;
+#endif
 
     errcode = InitCodec();
     i2s_ptr = fopen(AUDIO_DEVICE, "w");
     if ((errcode != 0) || (i2s_ptr == NULL))
     {
-        printf("Initializing audio codec...[FAIL]\n");
-        printf("  Error 0x%X\n", errcode);
+        USB_PRINTF("Initializing audio codec...[FAIL]\n");
+        USB_PRINTF("  Error 0x%X\n", errcode);
         fclose(i2s_ptr);
         _task_block();
     }
@@ -587,7 +646,14 @@ void Play_Task
     audio_format.SIZE = AUDIO_FORMAT_SIZE;
     /* Audio format channel number */
     audio_format.CHANNELS = AUDIO_FORMAT_CHANNELS;
-
+#if BSPCFG_ENABLE_SAI
+   audio_format.SAMPLE_RATE = AUDIO_FORMAT_SAMPLE_RATE;
+   freq = AUDIO_FORMAT_SAMPLE_RATE * AUDIO_I2S_FS_FREQ_DIV;
+   ioctl(i2s_ptr, IO_IOCTL_I2S_SET_MCLK_FREQ, &freq);
+   ioctl(i2s_ptr, IO_IOCTL_AUDIO_SET_TX_DATA_FORMAT, &audio_format);
+   /* Setting audio codec for SGTL5000 device */
+   SetupCodec(i2s_ptr, &audio_format);
+#else
     /* Setting audio format */
     ioctl(i2s_ptr, IO_IOCTL_AUDIO_SET_IO_DATA_FORMAT, &audio_format);
 
@@ -600,53 +666,70 @@ void Play_Task
     ioctl(i2s_ptr, IO_IOCTL_I2S_SET_FS_FREQ, &freq);
     ioctl(i2s_ptr, IO_IOCTL_I2S_TX_DUMMY_OFF, NULL);
 
-    /* Setting audio codec for SGTL5000 device */
-    SetupCodec(i2s_ptr);
-    OS_Time_delay(1);
-    ioctl(i2s_ptr, IO_IOCTL_I2S_GET_STATISTICS, &stats);
-    codecisready = 1;
-    datasize = stats.SIZE;
+   /* Setting audio codec for SGTL5000 device */
+   SetupCodec(i2s_ptr);
+   OS_Time_delay(1);
 
-    if (NULL == (audio_data_buff0 = OS_Mem_alloc_uncached_align(datasize, 32)))
-    {
-         printf("\nMemory allocation for audio_data_buff0 failed.\n");
-         _task_block();
-    }
-    if (NULL == (audio_data_buff1 = OS_Mem_alloc_uncached_align(datasize, 32)))
-    {
-        printf("\nMemory allocation for audio_data_buff1 failed.\n");
+   datasize = DATA_BUFF_SIZE;
+#endif
+
+#if BSPCFG_ENABLE_SAI
+   ioctl(i2s_ptr, IO_IOCTL_I2S_GET_TX_STATISTICS, &stats);
+   datasize = stats.SIZE;
+#endif
+   codecisready = 1;
+
+   if (NULL == (audio_data_buff0 = OS_Mem_alloc_uncached_align(datasize, 32)))
+   {
+        USB_PRINTF("\nMemory allocation for audio_data_buff0 failed.\n");
         _task_block();
-    }
-    audio_current_buff = audio_data_buff0;
-    OS_Time_delay(1);
-    ioctl(i2s_ptr, IO_IOCTL_I2S_START_TX, NULL);
+   }
+   if (NULL == (audio_data_buff1 = OS_Mem_alloc_uncached_align(datasize, 32)))
+   {
+       USB_PRINTF("\nMemory allocation for audio_data_buff1 failed.\n");
+       _task_block();
+   }
+   audio_current_buff = audio_data_buff0;
+   OS_Time_delay(1);
+#if BSPCFG_ENABLE_SAI
+   ioctl(i2s_ptr, IO_IOCTL_I2S_START_TX, NULL);
+#endif
 
-    while (TRUE) 
-    {
-        if (OS_EVENT_OK != OS_Event_wait(app_event, USB_APP_BUFFER0_FULL_EVENT_MASK | USB_APP_BUFFER1_FULL_EVENT_MASK, FALSE, 0))
-        {
-            printf("\n_lwevent_wait_ticks app_event failed.\n");
-            fclose(i2s_ptr);
-            _task_block();
-        }
-
-        ioctl(i2s_ptr, IO_IOCTL_I2S_WAIT_TX_EVENT, NULL);
-        if (OS_Event_check_bit(app_event, USB_APP_BUFFER0_FULL_EVENT_MASK))
-        {
-            ioctl(i2s_ptr, IO_IOCTL_I2S_GET_STATISTICS, &stats);
-            OS_Mem_copy(audio_data_buff0,stats.IN_BUFFER,datasize);
-            ioctl(i2s_ptr, IO_IOCTL_I2S_UPDATE_TX_STATUS, &datasize);
-        }
-        else if (OS_Event_check_bit(app_event, USB_APP_BUFFER1_FULL_EVENT_MASK))
-        {
-            ioctl(i2s_ptr, IO_IOCTL_I2S_GET_STATISTICS, &stats);
-            OS_Mem_copy(audio_data_buff1,stats.IN_BUFFER,datasize);
-            ioctl(i2s_ptr, IO_IOCTL_I2S_UPDATE_TX_STATUS, &datasize);
-        }
+   while (TRUE)
+   {
+       if (OS_EVENT_OK != OS_Event_wait(app_event, USB_APP_BUFFER0_FULL_EVENT_MASK | USB_APP_BUFFER1_FULL_EVENT_MASK, FALSE, 0))
+       {
+           USB_PRINTF("\n_lwevent_wait_ticks app_event failed.\n");
+           fclose(i2s_ptr);
+           _task_block();
+       }
+#if BSPCFG_ENABLE_SAI
+       ioctl(i2s_ptr, IO_IOCTL_I2S_WAIT_TX_EVENT, NULL);
+#endif
+       if (OS_Event_check_bit(app_event, USB_APP_BUFFER0_FULL_EVENT_MASK))
+       {
+#if BSPCFG_ENABLE_SAI
+           ioctl(i2s_ptr, IO_IOCTL_I2S_GET_TX_STATISTICS, &stats);
+           OS_Mem_copy(audio_data_buff0, stats.IN_BUFFER, datasize);
+           ioctl(i2s_ptr, IO_IOCTL_I2S_UPDATE_TX_STATUS, &datasize);
+#else
+           write(i2s_ptr, audio_data_buff0, datasize);
+#endif
+       }
+       else if (OS_Event_check_bit(app_event, USB_APP_BUFFER1_FULL_EVENT_MASK))
+       {
+#if BSPCFG_ENABLE_SAI
+           ioctl(i2s_ptr, IO_IOCTL_I2S_GET_TX_STATISTICS, &stats);
+           OS_Mem_copy(audio_data_buff1,stats.IN_BUFFER,datasize);
+           ioctl(i2s_ptr, IO_IOCTL_I2S_UPDATE_TX_STATUS, &datasize);
+#else
+           write(i2s_ptr, audio_data_buff1, datasize);
+#endif
+       }
 
         if (OS_EVENT_OK != OS_Event_clear(app_event, USB_APP_BUFFER0_FULL_EVENT_MASK | USB_APP_BUFFER1_FULL_EVENT_MASK))
         {
-            printf("\n_lwevent_clear app_event failed.\n");
+            USB_PRINTF("\n_lwevent_clear app_event failed.\n");
             _task_block();
         }
     }/* End while */
@@ -681,7 +764,13 @@ static void Task_Start(void *arg)
 #if defined(FSL_RTOS_MQX)
 void Main_Task(uint32_t param)
 #else
+
+#if defined(__CC_ARM) || defined(__GNUC__)
+int main(void)
+#else
 void main(void)
+#endif
+
 #endif
 {
     OSA_Init();
@@ -691,6 +780,9 @@ void main(void)
     OS_Task_create(Task_Start, NULL, 9L, 3000L, "task_start", NULL);
     
     OSA_Start();
+#if (!defined(FSL_RTOS_MQX))&(defined(__CC_ARM) || defined(__GNUC__))
+    return 1;
+#endif
 }
 #endif
 

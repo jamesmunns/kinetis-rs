@@ -105,6 +105,7 @@ uint32_t                        g_host_app_task_id = 0;
 *****************************************************************************/
 
 static void usb_host_hid_mouse_ctrl_callback(void* unused, void* user_parm, uint8_t *buffer, uint32_t buflen, usb_status status);
+static void usb_host_hid_mouse_event(usb_device_instance_handle, usb_interface_descriptor_handle, usb_status);
 
 
 /************************************************************************************
@@ -211,7 +212,7 @@ uint32_t mouse_hid_get_buffer()
         g_mouse_buffer = (uint8_t *)OS_Mem_alloc_uncached_zero(g_mouse_size);
         if (g_mouse_buffer == NULL)
         {
-            printf("\n\r allocate memory failed in hid_get_buffer");
+            USB_PRINTF("\n\r allocate memory failed in hid_get_buffer");
             return (uint32_t)-1;
         }
     }
@@ -269,7 +270,7 @@ void mouse_hid_get_report_descriptor()
             g_mouse_reportDescriptor = (uint8_t *)OS_Mem_alloc_uncached_zero(g_mouse_reportLength);
             if (g_mouse_reportDescriptor == NULL)
             {
-                printf("\n\r allocate memory failed in hid_get_buffer");
+                USB_PRINTF("\n\r allocate memory failed in hid_get_buffer");
                 return ;
             }
 
@@ -282,13 +283,13 @@ void mouse_hid_get_report_descriptor()
             
             if (status != USB_OK)
             {
-                printf("\n\r Error in usb_class_hid_get_descriptor: %x", status);
+                USB_PRINTF("\n\r Error in usb_class_hid_get_descriptor: %x", status);
             }
         }
     }
     else
     {
-        printf("\n\r Can't find HID_DESCRIPTOR");
+        USB_PRINTF("\n\r Can't find HID_DESCRIPTOR");
     }
     return ;
 }
@@ -320,13 +321,13 @@ static void usb_host_hid_mouse_event
     case USB_ATTACH_EVENT:
         g_mouse_interface_info[g_mouse_interface_number] = pHostIntf;
         g_mouse_interface_number++;
-        printf("\n\r ----- Attach Event -----");
-        printf("\n\r State = %d", g_mouse_hid_device.dev_state);
-        printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-        printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-        printf("  Class = %d", intf_ptr->bInterfaceClass);
-        printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-        printf("  Protocol = %d", intf_ptr->bInterfaceProtocol);
+        USB_PRINTF("\n\r ----- Attach Event -----");
+        USB_PRINTF("\n\r State = %d", g_mouse_hid_device.dev_state);
+        USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+        USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+        USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+        USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+        USB_PRINTF("  Protocol = %d", intf_ptr->bInterfaceProtocol);
         break;
     case USB_CONFIG_EVENT:
         if (g_mouse_hid_device.dev_state == USB_DEVICE_IDLE)
@@ -337,28 +338,28 @@ static void usb_host_hid_mouse_event
         }
         else
         {
-            printf("\n\r HID device already attached - dev_state = %d", g_mouse_hid_device.dev_state);
+            USB_PRINTF("\n\r HID device already attached - dev_state = %d", g_mouse_hid_device.dev_state);
         }
         break;
     
     case USB_INTF_OPENED_EVENT:
-        printf("\n\r ----- Interfaced Event -----");
+        USB_PRINTF("\n\r ----- Interfaced Event -----");
         g_mouse_hid_device.dev_state = USB_DEVICE_INTERFACE_OPENED;
         break;
     case USB_DETACH_EVENT:
         /* Use only the interface with desired protocol */
-        printf("\n\r ----- Detach Event -----");
-        printf("\n\r State = %d", g_mouse_hid_device.dev_state);
-        printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-        printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-        printf("  Class = %d", intf_ptr->bInterfaceClass);
-        printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-        printf("  Protocol = %d", intf_ptr->bInterfaceProtocol);
+        USB_PRINTF("\n\r ----- Detach Event -----");
+        USB_PRINTF("\n\r State = %d", g_mouse_hid_device.dev_state);
+        USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+        USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+        USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+        USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+        USB_PRINTF("  Protocol = %d", intf_ptr->bInterfaceProtocol);
         g_mouse_interface_number = 0;
         g_mouse_hid_device.dev_state = USB_DEVICE_DETACHED;
         break;
     default:
-        printf("\n\r HID Device state = %d??", g_mouse_hid_device.dev_state);
+        USB_PRINTF("\n\r HID Device state = %d??", g_mouse_hid_device.dev_state);
         g_mouse_hid_device.dev_state = USB_DEVICE_IDLE;
         break;
     }
@@ -391,27 +392,27 @@ static void usb_host_hid_mouse_ctrl_callback
 {
     if (status == USBERR_ENDPOINT_STALLED)
     {
-        printf("\n\r HID control Request failed dev_state 0x%x status 0x%x!\n\r", g_mouse_hid_device.dev_state, status);
+        USB_PRINTF("\n\r HID control Request failed dev_state 0x%x status 0x%x!\n\r", g_mouse_hid_device.dev_state, status);
     }
     else if (status)
     {
-        printf("\n\r HID control Request failed dev_state 0x%x status 0x%x!\n\r", g_mouse_hid_device.dev_state, status);
+        USB_PRINTF("\n\r HID control Request failed dev_state 0x%x status 0x%x!\n\r", g_mouse_hid_device.dev_state, status);
     }
 
     if(g_mouse_hid_device.dev_state == USB_DEVICE_SETTING_PROTOCOL)
     {
         g_mouse_hid_device.dev_state = USB_DEVICE_SET_IDLE;
-        printf("\n\r setting protocol done");
+        USB_PRINTF("\n\r setting protocol done");
     }
     else if (g_mouse_hid_device.dev_state == USB_DEVICE_GET_REPORT_DESCRIPTOR)
     {
         g_mouse_hid_device.dev_state = USB_DEVICE_GET_REPORT_DESCRIPTOR_DONE;
-        printf("\n\r get report descriptor done");
+        USB_PRINTF("\n\r get report descriptor done");
     }
     else if (g_mouse_hid_device.dev_state ==  USB_DEVICE_SETTING_IDLE)
     {
         g_mouse_hid_device.dev_state = USB_DEVICE_INUSE;
-        printf("\n\r setting idle done\n");
+        USB_PRINTF("\n\r setting idle done\n");
     }
     /* notify application that status has changed */
     OS_Event_set(g_mouse_usb_event, USB_EVENT_CTRL);
@@ -447,7 +448,7 @@ void usb_host_hid_mouse_recv_callback
     else if (status == USBERR_TR_CANCEL)
     {
         /* notify application that data are available */
-        printf("\n\r tr cancel");
+        USB_PRINTF("\n\r tr cancel");
         OS_Event_set(g_mouse_usb_event, USB_EVENT_DATA_CORRUPTED);
     }
     else
@@ -468,77 +469,77 @@ void process_mouse_buffer
     uint8_t * buffer
 )
 {
-    printf("\n\r");   
+    USB_PRINTF("\n\r");   
     if (buffer[0] & 0x01) 
     {
-        printf("Left Click ");
+        USB_PRINTF("Left Click ");
     }
     else
     {
-        printf("           ");
+        USB_PRINTF("           ");
     }
     if (buffer[0] & 0x04) 
     {
-        printf("Middle Click ");
+        USB_PRINTF("Middle Click ");
     }
     else 
     {
-        printf("             ");
+        USB_PRINTF("             ");
     }
     if (buffer[0] & 0x02) 
     {
-        printf("Right Click ");
+        USB_PRINTF("Right Click ");
     }
     else 
     {
-        printf("            ");
+        USB_PRINTF("            ");
     }
 
     if (buffer[1])
     {
         if(buffer[1] > 127) 
         {
-            printf("Left  ");
+            USB_PRINTF("Left  ");
         }
         else 
         {
-            printf("Right ");
+            USB_PRINTF("Right ");
         }
     }
     else 
     { 
-        printf("      ");
+        USB_PRINTF("      ");
     }
 
     if (buffer[2])
     {
         if (buffer[2] > 127) 
         {
-            printf("UP   ");
+            USB_PRINTF("UP   ");
         }
         else 
         {
-            printf("Down ");
+            USB_PRINTF("Down ");
         }
     }
     else { 
-        printf("     ");
+        USB_PRINTF("     ");
     }
 
     if (buffer[3])
     {
         if (buffer[3] > 127) 
         {
-            printf("Wheel Down");
+            USB_PRINTF("Wheel Down");
         }
         else 
         {
-            printf("Wheel UP  ");
+            USB_PRINTF("Wheel UP  ");
         }
     }
     else 
     { 
-        printf("          ");
+        USB_PRINTF("          ");
     } 
 }
 
@@ -567,16 +568,16 @@ void usb_host_hid_unsupported_device_event
     {
         pDeviceIntf = (usb_device_interface_struct_t*)intf_handle;
         intf_ptr    = pDeviceIntf->lpinterfaceDesc;
-        printf("\n\r ----- Unsupported Interface of attached Device -----");
-        printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-        printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-        printf("  Class = %d", intf_ptr->bInterfaceClass);
-        printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-        printf("  Protocol = %d", intf_ptr->bInterfaceProtocol);
+        USB_PRINTF("\n\r ----- Unsupported Interface of attached Device -----");
+        USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+        USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+        USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+        USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+        USB_PRINTF("  Protocol = %d", intf_ptr->bInterfaceProtocol);
     }
     else if (USB_ATTACH_DEVICE_NOT_SUPPORT == event_code)
     {
-        printf("\n\r ----- Unsupported Device attached -----");
+        USB_PRINTF("\n\r ----- Unsupported Device attached -----");
     }
 }
 
@@ -623,7 +624,7 @@ usb_status HOST_APP_init(void)
     status = usb_host_init(0, &g_host_handle);
     if (status != USB_OK) 
     {
-        printf("\n\r USB Host Initialization failed! STATUS: 0x%x", status);
+        USB_PRINTF("\n\r USB Host Initialization failed! STATUS: 0x%x", status);
         return USBERR_UNKNOWN_ERROR;
     }
     /*
@@ -633,27 +634,27 @@ usb_status HOST_APP_init(void)
     status = usb_host_register_driver_info(g_host_handle, (void *)DriverInfoTable);
     if (status != USB_OK) 
     {         
-        printf("\n\r USB Initialization driver info failed! STATUS: 0x%x", status);
+        USB_PRINTF("\n\r USB Initialization driver info failed! STATUS: 0x%x", status);
         return USBERR_UNKNOWN_ERROR;
     }
 
     status = usb_host_register_unsupported_device_notify(g_host_handle, usb_host_hid_unsupported_device_event);
     if (status != USB_OK) 
     {         
-        printf("\n\r USB Initialization driver info failed! STATUS: 0x%x", status);
+        USB_PRINTF("\n\r USB Initialization driver info failed! STATUS: 0x%x", status);
         return USBERR_UNKNOWN_ERROR;
     }
 
     g_mouse_usb_event = OS_Event_create(0);/* manually clear */
     if (g_mouse_usb_event == NULL)
     {
-        printf("\n\r OS_Event_create failed!\n");
+        USB_PRINTF("\n\r OS_Event_create failed!\n");
         return USBERR_UNKNOWN_ERROR;
     }
     g_mouse_hid_com = (hid_command_t*) OS_Mem_alloc_zero(sizeof(hid_command_t));
     if (g_mouse_hid_com == NULL)
     {
-        printf("\n\r mouse_hid_com allocate failed!\n");
+        USB_PRINTF("\n\r mouse_hid_com allocate failed!\n");
         return USBERR_UNKNOWN_ERROR;
     }
     /* create the host app */
@@ -662,7 +663,7 @@ usb_status HOST_APP_init(void)
     {
         return USBERR_UNKNOWN_ERROR;
     }
-    printf("\n\r USB HID Mouse\n\r Waiting for USB Mouse to be attached...\n"); 
+    USB_PRINTF("\n\r USB HID Mouse\n\r Waiting for USB Mouse to be attached...\n"); 
     return status;
 }
 
@@ -686,7 +687,7 @@ void HOST_APP_uninit(void)
         status = usb_host_close_dev_interface(g_host_handle, g_mouse_hid_device.dev_handle, g_mouse_hid_device.intf_handle, g_mouse_hid_device.class_handle);
         if (status != USB_OK)
         {
-           printf("\n\r error in _usb_hostdev_close_interface %x", status);
+           USB_PRINTF("\n\r error in _usb_hostdev_close_interface %x", status);
         }
     }
     g_mouse_hid_device.dev_state = USB_DEVICE_IDLE;
@@ -732,12 +733,12 @@ void HOST_APP_task()
     case USB_DEVICE_IDLE:
         break;
     case USB_DEVICE_ATTACHED:
-        printf("\n\r Mouse device attached");
+        USB_PRINTF("\n\r Mouse device attached");
         g_mouse_hid_device.dev_state = USB_DEVICE_SET_INTERFACE_STARTED;
         status = usb_host_open_dev_interface(g_host_handle, g_mouse_hid_device.dev_handle, g_mouse_hid_device.intf_handle, (class_handle*)&g_mouse_hid_device.class_handle);
         if (status != USB_OK)
         {
-            printf("\n\r Error in _usb_hostdev_open_interface: %x", status);
+            USB_PRINTF("\n\r Error in _usb_hostdev_open_interface: %x", status);
             return;
         }
         break;
@@ -746,7 +747,7 @@ void HOST_APP_task()
         break;
     case USB_DEVICE_GET_REPORT_DESCRIPTOR_DONE:
         mouse_hid_get_buffer();
-        printf("\n\r Mouse interfaced, setting protocol...");
+        USB_PRINTF("\n\r Mouse interfaced, setting protocol...");
         /* now we will set the USB Hid standard boot protocol */
         g_mouse_hid_device.dev_state = USB_DEVICE_SETTING_PROTOCOL;
         g_mouse_hid_com->class_ptr = g_mouse_hid_device.class_handle;
@@ -756,7 +757,7 @@ void HOST_APP_task()
         status = usb_class_hid_set_protocol(g_mouse_hid_com, USB_PROTOCOL_HID_KEYBOARD);
         if (status != USB_OK)
         {
-            printf("\n\r Error in usb_class_hid_set_protocol: %x", status);
+            USB_PRINTF("\n\r Error in usb_class_hid_set_protocol: %x", status);
         }
         g_mouse_data_received = 1;
         break;
@@ -769,7 +770,7 @@ void HOST_APP_task()
     
         if (status != USB_OK)
         {
-            printf("\nError in usb_class_hid_set_idle: %x\n", status);
+            USB_PRINTF("\nError in usb_class_hid_set_idle: %x\n", status);
         }
     case USB_DEVICE_SET_INTERFACE_STARTED:
         break;
@@ -786,7 +787,7 @@ void HOST_APP_task()
             status = usb_class_hid_recv_data(g_mouse_hid_com, g_mouse_buffer, g_mouse_size);
             if (status != USB_OK)
             {
-                printf("\n\r Error in usb_class_hid_recv_data: %x", status);
+                USB_PRINTF("\n\r Error in usb_class_hid_recv_data: %x", status);
             }
             else
             {
@@ -808,11 +809,11 @@ void HOST_APP_task()
                 status = usb_class_hid_recv_data(g_mouse_hid_com, g_mouse_buffer, g_mouse_size);
                 if (status != USB_OK)
                 {
-                    printf("\r\nError in usb_class_hid_recv_data: %x", status);
+                    USB_PRINTF("\r\nError in usb_class_hid_recv_data: %x", status);
                 }
                 else
                 {
-                    //printf("try to get recv data\r\n");
+                    //USB_PRINTF("try to get recv data\r\n");
                     g_mouse_data_received = 0;
                 }
             }
@@ -824,11 +825,11 @@ void HOST_APP_task()
                 status = usb_class_hid_recv_data(g_mouse_hid_com, g_mouse_buffer, g_mouse_size);
                 if (status != USB_OK)
                 {
-                    printf("\r\nError in usb_class_hid_recv_data: %x", status);
+                    USB_PRINTF("\r\nError in usb_class_hid_recv_data: %x", status);
                 }
                 else
                 {
-                    //printf("try to get recv data\r\n");
+                    //USB_PRINTF("try to get recv data\r\n");
                     g_mouse_data_received = 0;
                 }
             }
@@ -848,11 +849,11 @@ void HOST_APP_task()
             status = usb_host_close_dev_interface(g_host_handle, g_mouse_hid_device.dev_handle, g_mouse_hid_device.intf_handle, g_mouse_hid_device.class_handle);
             if (status != USB_OK)
             {
-                printf("\n\r error in _usb_hostdev_close_interface %x", status);
+                USB_PRINTF("\n\r error in _usb_hostdev_close_interface %x", status);
             }
             g_mouse_hid_device.intf_handle = NULL;
             g_mouse_hid_device.class_handle = NULL;
-            printf("\n\r Going to idle state");
+            USB_PRINTF("\n\r Going to idle state");
             g_mouse_hid_device.dev_state = USB_DEVICE_IDLE;
         }
         else

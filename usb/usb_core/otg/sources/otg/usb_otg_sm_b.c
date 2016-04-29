@@ -334,7 +334,7 @@ void _usb_otg_sm_b
         }
         else
         {
-            if ((otg_status->a_conn == FALSE) || usb_otg_struct_ptr->bus_release)
+            if ((otg_status->a_conn == (uint8_t)FALSE) || usb_otg_struct_ptr->bus_release)
             {
                 usb_otg_struct_ptr->bus_release = FALSE;
                 otg_status->a_conn = FALSE;

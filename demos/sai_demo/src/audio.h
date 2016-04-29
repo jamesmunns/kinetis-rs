@@ -31,29 +31,28 @@
 
 #ifndef __AUDIO_H__
 #define __AUDIO_H__
-/*******************************************************************************
- * Standard C Included Files
- ******************************************************************************/
+
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdint.h>
-/*******************************************************************************
- * SDK Included Files
- ******************************************************************************/
+// SDK Included Files
 #include "fsl_soundcard.h"
 #include "fsl_sai_driver.h"
-#include "fsl_sai_features.h"
-/*******************************************************************************
- * Application Included Files
- ******************************************************************************/
-#include "equalizer.h" 
-/*******************************************************************************
- * Definitions
- ******************************************************************************/   
-/* @brief Standard Winodws PCM wave file header length */
+// Application Included Files
+#include "equalizer.h"
+
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
+
+/*!
+ * @brief Standard Winodws PCM wave file header length
+ */
 #define WAVE_FILE_HEADER_SIZE   0x2CU
-/*******************************************************************************
- * Constants
- ******************************************************************************/
-/* Gain Levels */
+// Gain Levels
 #define HP_GAIN_POS_12_0    0x00
 #define HP_GAIN_POS_11_5    0x01
 #define HP_GAIN_POS_11_0    0x02
@@ -183,11 +182,9 @@
 #define HP_GAIN_NEG_51_0    0x7E
 #define HP_GAIN_NEG_51_5    0x7F
 
-
-/*******************************************************************************
- * Data Structures
- ******************************************************************************/
-/* @brief Standard Windows PCM wave file header struct. */
+/*! 
+ * @brief Standard Windows PCM wave file header structure.
+ */
 typedef struct wave_header
 {
     uint8_t  riff[4];
@@ -205,84 +202,77 @@ typedef struct wave_header
     uint32_t length;
 } wave_header_t;
 
-/* @brief Wave file struct */
+/*! 
+ * @brief Wave file structure
+ */
 typedef struct wave_file
 {
     wave_header_t header;
     uint32_t *data;
 }wave_file_t;
 
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Prototypes
+///////////////////////////////////////////////////////////////////////////////
 
-/* 
+/*!
  * @brief Initialize I2S, I2C, & TWR-AUDIO-SGTL board.
- *
  */
 void audio_stream_init(void);
 
-
-/* 
- * @brief Initialize I2S, I2C, & TWR-AUDIO-SGTL board.
+/*!
+ * @brief Initialize audio WAV.
  *
+ * @param [in] newWav Pointer to a WAV file.
  */
 void audio_wav_init(wave_file_t *newWav);
 
-/*
+/*!
  * @brief Sets volume from user input.
  * 
- * @param card pointer to sound_card_t.
- *
- * @param volumeCtrl user input data from terminal menu
- *
- * @return status_t Return kStatus_Success if function completed successfully, return kStatusFail if function failed.
- *
+ * @param [in] handler    Pointer to SGTL handler.
+ * @param [in] module     SGTL module.
+ * @param [in] volumeCtrl Input data from terminal menu.
+ * @retval kStatus_Success if function completed successfully.
+ * @retval kStatusFail if function failed.
  */
 uint32_t config_volume(sgtl_handler_t *handler, sgtl_module_t module, uint32_t volumeCtrl);
 
-/*
- * @brief Plays a stream of audio
- *
- * @param dspType Used to select one DSP function to perform on the data
+/*!
+ * @brief Plays a stream of audio.
  * 
- * @return Returns soundcard status
- *
+ * @param [in] dspType    Used to select one DSP function to perform on the data
+ * @param [in] volumeCtrl Input data from terminal menu.
+ * @return soundcard status.
  */
 snd_status_t stream_audio(dsp_types_t dspType, uint8_t volumeCtrl);
 
-/*
+/*!
  * @brief Collects data from wav file header.
  * 
- * @param waveFile Data structure of pcm data array.
- *
- * @return status_t Return kStatus_Success if function completed successfully, return kStatusFail if function failed.
- *
+ * @param [in] waveFile Data structure of pcm data array.
+ * @retval kStatus_Success if function completed successfully.
+ * @retval kStatusFail if function failed.
  */
 snd_status_t get_wav_data(wave_file_t *waveFile);
 
-/* 
+/*!
  * @brief Play PCM audio data from wav format array.
- *
- * @param pcmBuffer Pointer to data array containing wav formatted audio data.
  * 
- * @return status_t Return kStatus_Success if function completed successfully, return kStatusFail if function failed. 
- *
+ * @param [in] pcmBuffer  Pointer to data array containing wav formatted audio data.
+ * @param [in] volumeCtrl Input data from terminal menu.
+ * @retval kStatus_Success if function completed successfully.
+ * @retval kStatusFail if function failed.
  */
 snd_status_t play_wav(uint32_t *pcmBuffer, uint8_t volumeCtrl);
 
-/* 
+/*!
  * @brief Send audio data to sound card.
- *
- * @param pcmBuffer Pointer to data array containing wav formatted audio data.
- *  
- * @param dataFormat Point to audio_data_format_t for sound card.
- *
+ * 
+ * @param [in] dataBuffer Pointer to data array containing wav formatted audio data.
+ * @param [in] length     Length of the dataBuffer
+ * @param [in] dataFormat Point to audio_data_format_t for sound card.
  */
 void send_wav(uint8_t *dataBuffer, uint32_t length, sai_data_format_t *dataFormat);
 
-#endif /* __AUDIO_H__ */
-
-/*******************************************************************************
- * EOF                                           
- *******************************************************************************/
+#endif // __AUDIO_H__

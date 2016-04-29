@@ -132,20 +132,25 @@ typedef struct usb_dev_interface_functions_struct
    usb_status (_CODE_PTR_ dev_get_xd)(usb_device_handle, xd_struct_t**);
 
    usb_status (_CODE_PTR_ dev_reset)(usb_device_handle);
+   
+#if USBCFG_DEV_EHCI_TEST_MODE  
+   usb_status (_CODE_PTR_ dev_set_test_mode)(usb_device_handle, uint16_t);
+#endif
+
 } usb_dev_interface_functions_struct_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 #ifdef USBCFG_OTG
-extern uint32_t _usb_otg_device_on_class_init
+extern uint32_t usb_otg_device_on_class_init
 (
     usb_otg_handle     otg_handle, 
     usb_device_handle  dev_handle, 
     uint8_t             bm_attributes 
 );
 
-extern uint32_t _usb_otg_device_hnp_enable
+extern uint32_t usb_otg_device_hnp_enable
 (
     usb_otg_handle handle, 
     uint8_t enable

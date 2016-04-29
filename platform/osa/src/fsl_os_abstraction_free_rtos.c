@@ -403,6 +403,27 @@ osa_status_t OSA_EventClear(event_t *pEvent, event_flags_t flagsToClear)
 
 /*FUNCTION**********************************************************************
  *
+ * Function Name : OSA_EventGetFlags
+ * Description   : Get event flags status.
+ * Return current event flags.
+ *
+ *END**************************************************************************/
+event_flags_t OSA_EventGetFlags(event_t *pEvent)
+{
+    assert(pEvent);
+
+    if (__get_IPSR())
+    {
+        return xEventGroupGetBitsFromISR(pEvent->eventHandler);
+    }
+    else
+    {
+        return xEventGroupGetBits(pEvent->eventHandler);
+    }
+}
+
+/*FUNCTION**********************************************************************
+ *
  * Function Name : OSA_EventDestroy
  * Description   : This function is used to destroy a event object. Return
  * kStatus_OSA_Success if the event object is destroyed successfully, otherwise

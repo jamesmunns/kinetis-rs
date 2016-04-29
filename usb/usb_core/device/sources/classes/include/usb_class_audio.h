@@ -169,23 +169,40 @@ PACKED_STRUCT_END;
 typedef struct _usb_cntrl_range usb_cntrl_range;
 #endif
 
- /* structure to hold a request in the endpoint queue */
+ /*!
+  * @brief structure to hold the information of audio app data struct.
+  *
+  * Define the structure of the audio app data. 
+  *
+  */
 typedef struct _audio_app_data_struct
 {
-    uint8_t*      data_ptr;    /* pointer to buffer       */     
-    uint32_t      data_size;   /* buffer size of endpoint */
+    uint8_t*      data_ptr;    /*!< pointer to buffer       */     
+    uint32_t      data_size;   /*!< buffer size of endpoint */
 }audio_app_data_t;
 
+/*!
+ * @brief structure to hold the information of endpoint feature unit type.
+ *
+ * Define the structure of the endpoint feature unit type. 
+ *
+ */
 typedef struct _audio_ut_struct
 {
-  uint8_t         unit_id;     /* endpoint number         */
-  uint8_t         type;        /* type of endpoint        */
+  uint8_t         unit_id;     /*!< endpoint number         */
+  uint8_t         type;        /*!< type of endpoint        */
 }audio_ut_struct_t;
 
+/*!
+ * @brief structure to hold the information of endpoint unit struct.
+ *
+ * Define the structure of the endpoint unit struct. 
+ *
+ */
 typedef  struct _audio_units_struct 
 {
-   uint8_t            count;       /* Number of terminal or Ferture Unit End point */  
-   audio_ut_struct_t* put;         /* Array of terminal or Feature Unit */
+   uint8_t            count;       /*!< Number of terminal or Ferture Unit End point */  
+   audio_ut_struct_t* put;         /*!< Array of terminal or Feature Unit */
 }audio_units_struct_t; 
 
 /*****************************************************************************
@@ -195,38 +212,36 @@ typedef  struct _audio_units_struct
  /******************************************************************************
  * Types
  *****************************************************************************/
+ /* struct represents the AUDIO class handle */
  typedef uint32_t audio_handle_t;
 
- /* Structure used to configure Audio class by APP*/
+ /*!
+  * @brief structure used to configure Audio class by APP.
+  *
+  * Define the structure of the audio class configuration. 
+  *
+  */
  typedef struct audio_config_struct
  {
-    usb_application_callback_struct_t       audio_application_callback;
-    usb_vendor_req_callback_struct_t        vendor_req_callback;
-    usb_class_specific_callback_struct_t    class_specific_callback;
-    usb_desc_request_notify_struct_t*       desc_callback_ptr; 
+    usb_application_callback_struct_t       audio_application_callback;        /*!< application callback function to handle the Device status related event*/      
+    usb_vendor_req_callback_struct_t        vendor_req_callback;               /*!< application callback function to handle the vendor request related event, reserved for future use*/ 
+    usb_class_specific_callback_struct_t    class_specific_callback;           /*!< application callback function to handle all the class related event*/
+    usb_desc_request_notify_struct_t*       desc_callback_ptr;                 /*!< descriptor related callback function data structure*/
  }audio_config_struct_t;
 /******************************************************************************
  * Global Functions
  *****************************************************************************/
-/**************************************************************************//*!
- *
- * @name  USB_Class_Audio_Init
- *
+/*!
  * @brief The funtion initializes the Device and Controller layer 
  *
- * @param *handle: handle pointer to Identify the controller
- * @param hid_class_callback:   event callback      
- * @param vendor_req_callback:  vendor specific class request callback      
- * @param param_callback:       application params callback      
+ * This function initializes the Audio Class layer and layers it is dependent on 
  *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- ******************************************************************************
+ * @param controller_id	[in] - controller ID, such as USB_CONTROLLER_KHCI_0
+ * @param audio_config_ptr	[in] - AUDIO configuration structure, refer to audio_config_struct_t
+ * @param audioHandle	[out] - pointer point to the initialized AUDIO class, refer to audio_handle_t
  *
- *This function initializes the Audio Class layer and layers it is dependent on 
- *
- *****************************************************************************/
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_Audio_Init
 (
     uint8_t                 controller_id,
@@ -234,38 +249,32 @@ extern usb_status USB_Class_Audio_Init
     audio_handle_t*         audioHandle
 );
 
-/**************************************************************************//*!
+/*!
+ * @brief The funtion deinitializes the Device and Controller layer 
  *
- * @name  USB_Class_Audio_Deinit
- *
- * @brief 
+ * This function initializes the Audio Class layer and layers it is dependent on 
  *
  * @param handle          :   handle returned by USB_Class_HID_Init   
  *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- *****************************************************************************/
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_Audio_Deinit
 (
     audio_handle_t  handle
 );
 
-/**************************************************************************//*!
- *
- * @name  USB_Class_Audio_Send_Data
- *
+/*!
  * @brief This function is used to send data to the host
+ *
+ * The function calls this API function to send data specified by buff_ptr and size. 
  *
  * @param handle          :   handle returned by USB_Class_Audio_Send_Data
  * @param ep_num          :   endpoint num 
  * @param app_buff        :   buffer to send
  * @param size            :   length of the transfer   
  *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- *****************************************************************************/
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_Audio_Send_Data
 (
     audio_handle_t       handle,        /* [IN]*/
@@ -274,21 +283,18 @@ extern usb_status USB_Class_Audio_Send_Data
     uint32_t             size           /* [IN] length of the transfer */
 );
 
-/**************************************************************************//*!
- *
- * @name  USB_Class_Audio_Recv_Data
- *
+/*!
  * @brief This function receives Data from Host.
+ *
+ * The function calls this API function to receive data from host.
  *
  * @param handle          :   handle returned by USB_Class_Audio_Recv_Data
  * @param ep_num          :   endpoint num 
  * @param app_buff        :   buffer to send
  * @param size            :   length of the transfer   
  *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- *****************************************************************************/
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_Audio_Recv_Data
 (
     audio_handle_t       audio_handle,
@@ -296,6 +302,30 @@ extern usb_status USB_Class_Audio_Recv_Data
     uint8_t*             buff_ptr,      /* [IN] buffer to recv */      
     uint32_t             size           /* [IN] length of the transfer */
 );
+
+#if USBCFG_DEV_ADVANCED_CANCEL_ENABLE
+/**************************************************************************//*!
+ *
+ * @name  USB_Class_Audio_Cancel
+ *
+ * @brief 
+ *
+ * @param handle          :   handle returned by USB_Class_HID_Init
+ * @param ep_num          :   endpoint num 
+ * @param direction        :   direction of the endpoint 
+ *
+ * @return status       
+ *         USB_OK           : When Successfull 
+ *         Others           : Errors
+ *****************************************************************************/
+
+extern usb_status USB_Class_Audio_Cancel
+(
+    audio_handle_t handle,/*[IN]*/
+    uint8_t ep_num,/*[IN]*/
+    uint8_t direction
+);
+#endif
 
 #endif
 

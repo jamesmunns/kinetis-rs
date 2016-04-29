@@ -133,6 +133,7 @@ usb_status _usb_host_update_max_packet_size_call_interface (usb_host_handle, str
 usb_status _usb_host_update_device_address_call_interface (usb_host_handle, struct pipe_struct *);
 usb_status _usb_host_call_service (usb_host_handle, uint8_t, uint32_t);
 //usb_status _usb_host_check_service (usb_host_handle, uint8_t, uint32_t);
+usb_status USB_log_error(char* file, uint32_t line, usb_status error);
 
 
 #ifdef __cplusplus

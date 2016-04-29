@@ -37,24 +37,58 @@
 extern "C" {
 #endif
 #if ((defined __CWCC__)||(defined __GNUC__))
+#ifndef PACKED_STRUCT_BEGIN
 #define PACKED_STRUCT_BEGIN
+#endif
+
+#ifndef PACKED_STRUCT_END
 #define PACKED_STRUCT_END     __attribute__((__packed__))
+#endif
 
+#ifndef PACKED_UNION_BEGIN
 #define PACKED_UNION_BEGIN
+#endif
+
+#ifndef PACKED_UNION_END
 #define PACKED_UNION_END      __attribute__((__packed__))
-#elif (defined __IAR_SYSTEMS_ICC__)
-#define PACKED_STRUCT_BEGIN   __packed
-#define PACKED_STRUCT_END
-  
-#define PACKED_UNION_BEGIN
-#define PACKED_UNION_END      __packed
+#endif
 
+#elif (defined __IAR_SYSTEMS_ICC__)
+    
+#ifndef PACKED_STRUCT_BEGIN
+#define PACKED_STRUCT_BEGIN   __packed
+#endif
+
+#ifndef PACKED_STRUCT_END
+#define PACKED_STRUCT_END
+#endif
+
+#ifndef PACKED_UNION_BEGIN
+#define PACKED_UNION_BEGIN
+#endif
+
+#ifndef PACKED_UNION_END
+#define PACKED_UNION_END      __packed
+#endif
+    
 #elif (defined __CC_ARM)
+
+#ifndef PACKED_STRUCT_BEGIN
 #define PACKED_STRUCT_BEGIN   _Pragma("pack(1)")
+#endif
+
+#ifndef PACKED_STRUCT_END
 #define PACKED_STRUCT_END    _Pragma("pack()")
-  
+#endif
+
+#ifndef PACKED_UNION_BEGIN
 #define PACKED_UNION_BEGIN    _Pragma("pack()")
+#endif
+
+#ifndef PACKED_UNION_END
 #define PACKED_UNION_END    _Pragma("pack()")
+#endif
+
 #endif  
   
 

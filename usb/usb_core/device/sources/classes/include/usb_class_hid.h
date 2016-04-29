@@ -71,38 +71,35 @@
  *****************************************************************************/
  typedef uint32_t hid_handle_t; 
  
- /* Structure used to configure HID class by APP*/
+/*!
+ * @brief HID configuration structure.
+ *
+ * Structure used to configure HID class by APP
+ *
+ */
  typedef struct hid_config_struct
  {
-    usb_application_callback_struct_t       hid_application_callback;
-    usb_vendor_req_callback_struct_t        vendor_req_callback;
-    usb_class_specific_callback_struct_t    class_specific_callback;
-    usb_desc_request_notify_struct_t*       desc_callback_ptr; 
+    usb_application_callback_struct_t       hid_application_callback; /*!< application callback function to handle the Device status related event*/
+    usb_vendor_req_callback_struct_t        vendor_req_callback;      /*!< application callback function to handle the vendor request related event, reserved for future use*/
+    usb_class_specific_callback_struct_t    class_specific_callback;  /*!< application callback function to handle all the class related event*/
+    usb_desc_request_notify_struct_t*       desc_callback_ptr;        /*!< descriptor related callback function data structure*/
  }hid_config_struct_t;
 
  
 /******************************************************************************
  * Global Functions
  *****************************************************************************/
-/**************************************************************************//*!
- *
- * @name  USB_Class_HID_Init
- *
- * @brief The funtion initializes the Device and Controller layer 
- *
- * @param *handle: handle pointer to Identify the controller
- * @param hid_class_callback:   event callback      
- * @param vendor_req_callback:  vendor specific class request callback      
- * @param param_callback:       application params callback      
- *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- ******************************************************************************
- *
- *This function initializes the HID Class layer and layers it is dependent on 
- *
- *****************************************************************************/
+/*!
+* @brief The funtion initializes the Device and Controller layer.
+*
+* The application calls this API function to initialize the HID class, the underlying layers, and
+* the controller hardware.
+*
+* @param controller_id controller ID, such as USB_CONTROLLER_KHCI_0
+* @param hid_config_ptr HID configuration structure
+* @param hidHandle pointer point to the initialized HID class
+* @return USB_OK-Success/Others-Fail
+*/
 extern  usb_status USB_Class_HID_Init
 (
     uint8_t               controller_id,
@@ -110,26 +107,32 @@ extern  usb_status USB_Class_HID_Init
     hid_handle_t *          hidHandle
 );
 
+/*!
+ * @brief The funtion De-initializes the Device and Controller layer.
+ *
+ * The application calls this API function to un-initialize the HID class, the underlying layers, and
+ * the controller hardware.
+ * @param hidHandle HID class handler  
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_HID_Deinit
 (
  hid_handle_t   hidHandle
 );
 
-/**************************************************************************//*!
+/*!
+ * @brief Sends the HID data.
  *
- * @name  USB_Class_HID_Send_Data
+ * The application calls this API function to send HID data specified by app_buff and size. Once
+ * the data is sent, the application layer receives a callback event USB_DEV_EVENT_SEND_COMPLETE.
+ * The application reserves the buffer until it receives a callback event indicating that the data is sent.
  *
- * @brief 
- *
- * @param handle          :   handle returned by USB_Class_HID_Init
- * @param ep_num          :   endpoint num 
- * @param app_buff        :   buffer to send
- * @param size            :   length of the transfer   
- *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- *****************************************************************************/
+ * @param handle HID class handler
+ * @param ep_num endpoint number
+ * @param buff_ptr buffer holding application data 
+ * @param size length of the transfer
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_HID_Send_Data
 (
     hid_handle_t         handle,        /* [IN]*/
@@ -137,6 +140,52 @@ extern usb_status USB_Class_HID_Send_Data
     uint8_t*           buff_ptr,      /* [IN] buffer to send */      
     uint32_t           size           /* [IN] length of the transfer */
 );
+
+/*!
+ * @brief Receives the HID data.
+ *
+ * The application calls this API function to send HID data specified by app_buff and size. Once
+ * the data is sent, the application layer receives a callback event USB_DEV_EVENT_DATA_RECEIVED.
+ * The application reserves the buffer until it receives a callback event indicating that the data is received.
+ * 
+ * @param handle HID class handler
+ * @param ep_num endpoint number
+ * @param buff_ptr buffer to save the data from the host
+ * @param size buffer length to receive  
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status USB_Class_HID_Recv_Data
+(
+    hid_handle_t handle,/*[IN]*/
+    uint8_t ep_num,/*[IN]*/
+    uint8_t * app_buff,/*[IN]*/
+    uint32_t size /*[IN]*/
+);
+
+#if USBCFG_DEV_ADVANCED_CANCEL_ENABLE
+/**************************************************************************//*!
+ *
+ * @name  USB_Class_HID_Cancel
+ *
+ * @brief 
+ *
+ * @param handle          :   handle returned by USB_Class_HID_Init
+ * @param ep_num          :   endpoint num 
+ * @param direction        :   direction of the endpoint 
+ *
+ * @return status       
+ *         USB_OK           : When Successfull 
+ *         Others           : Errors
+ *****************************************************************************/
+
+extern usb_status USB_Class_HID_Cancel
+(
+    hid_handle_t handle,/*[IN]*/
+    uint8_t ep_num,/*[IN]*/
+    uint8_t direction
+);
+#endif
+
 extern void USB_Class_Periodic_Task(void);
 #define USB_HID_Periodic_Task USB_Class_Periodic_Task
 

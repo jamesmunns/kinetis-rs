@@ -55,23 +55,23 @@ static void usb_class_cdc_ctrl_acm_callback(usb_pipe_handle, void *, void *, uin
 *END*--------------------------------------------------------------------*/
 uint32_t usb_class_cdc_os_event_wait(os_event_handle handle, uint32_t bitmask, uint32_t flag, uint32_t timeout)
 {
-	uint32_t ret;
+    uint32_t ret;
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)            /* USB stack running on MQX */
-	ret = OS_Event_wait(handle, bitmask, flag, timeout);
+    ret = OS_Event_wait(handle, bitmask, flag, timeout);
 #else
-	while(OS_EVENT_OK != (ret = OS_Event_wait(handle, bitmask, flag, timeout)))
-	{
-		/* Actually we want to run _usb_khci_task() */
+    while(OS_EVENT_OK != (ret = OS_Event_wait(handle, bitmask, flag, timeout)))
+    {
+        /* Actually we want to run _usb_khci_task() */
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && (!(USE_RTOS))
-		OSA_PollAllOtherTasks();
+        OSA_PollAllOtherTasks();
 #endif
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
         Poll();
 #endif
-	}
+    }
 #endif
-	return ret;
+    return ret;
 }
 
 /*FUNCTION*----------------------------------------------------------------
@@ -112,11 +112,11 @@ static void usb_class_cdc_cntrl_callback
     /* Get class interface handle, reset IN_SETUP and call callback */
     if_ptr = (usb_data_class_intf_struct_t *)param;
  
-	if (usb_host_release_tr(if_ptr->host_handle, tr_ptr) != USB_OK)
-	{
-		printf("usb_class_cdc_cntrl_callback: _usb_host_release_tr failed\n");
-	}
-	
+    if (usb_host_release_tr(if_ptr->host_handle, tr_ptr) != USB_OK)
+    {
+        USB_PRINTF("usb_class_cdc_cntrl_callback: _usb_host_release_tr failed\n");
+    }
+    
     if (if_ptr->ctrl_callback) {
         if_ptr->ctrl_callback(tr_ptr, if_ptr->ctrl_callback_param, buffer, len, status);
     } /* Endif */
@@ -173,7 +173,7 @@ static usb_status usb_class_cdc_cntrl_common
     pipe_handle = (usb_pipe_handle)usb_host_dev_mng_get_control_pipe(if_ptr->dev_handle);
     if (usb_host_get_tr(if_ptr->host_handle, usb_class_cdc_cntrl_callback, if_ptr, &tr_ptr) != USB_OK)
     {
-        printf("usb_class_cdc_cntrl_common: error to get tr cdc\n");
+        USB_PRINTF("usb_class_cdc_cntrl_common: error to get tr cdc\n");
         return USBERR_ERROR;
     }
     
@@ -203,17 +203,17 @@ static usb_status usb_class_cdc_cntrl_common
         case USB_SUBCLASS_COM_DIRECT:
             break;
         case USB_SUBCLASS_COM_ABSTRACT:
-			if (USB_OK == (status =
-			usb_host_send_setup(if_ptr->host_handle, pipe_handle, tr_ptr)))	
-			{
-				status = USB_OK;
-			}
-			else
-			{
-				printf("\nError in usb_class_hid_cntrl_common: %x", status);
-				usb_host_release_tr(if_ptr->host_handle, tr_ptr);
-				status = USBERR_ERROR;
-			}
+            if (USB_OK == (status =
+            usb_host_send_setup(if_ptr->host_handle, pipe_handle, tr_ptr)))    
+            {
+                status = USB_OK;
+            }
+            else
+            {
+                USB_PRINTF("\nError in usb_class_hid_cntrl_common: %x", (unsigned int)status);
+                usb_host_release_tr(if_ptr->host_handle, tr_ptr);
+                status = USBERR_ERROR;
+            }
             break;
         case USB_SUBCLASS_COM_TELEPHONE:
             break;
@@ -280,16 +280,16 @@ usb_status usb_class_cdc_get_acm_line_coding
         if (usb_class_cdc_intf_validate(if_data_ptr->BOUND_CONTROL_INTERFACE)) {
             if_acm_ptr = (usb_acm_class_intf_struct_t *) if_data_ptr->BOUND_CONTROL_INTERFACE->class_intf_handle;
          
-			USB_CDC_ACM_lock();
+            USB_CDC_ACM_lock();
             if (if_acm_ptr->acm_desc->bmCapabilities & USB_ACM_CAP_LINE_CODING) {
                 event = if_acm_ptr->acm_event;
 
                 if (event != NULL) {
                     usb_class_cdc_os_event_wait(event, USB_ACM_CTRL_PIPE_FREE | USB_ACM_DETACH, FALSE, 0);
-					if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
-						OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
-					if (OS_Event_check_bit(event, USB_ACM_DETACH))
-						OS_Event_clear(event, USB_ACM_DETACH);
+                    if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
+                        OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
+                    if (OS_Event_check_bit(event, USB_ACM_DETACH))
+                        OS_Event_clear(event, USB_ACM_DETACH);
                 }
 
                 if (usb_class_cdc_intf_validate(acm_instance)) {
@@ -303,8 +303,8 @@ usb_status usb_class_cdc_get_acm_line_coding
             }
             else{
                status = USBERR_INVALID_BMREQ_TYPE;
-			}
-			USB_CDC_ACM_unlock();	
+            }
+            USB_CDC_ACM_unlock();   
         } /* Endif */
     } /* Endif */
 
@@ -312,10 +312,10 @@ usb_status usb_class_cdc_get_acm_line_coding
     if (!status && event != NULL) {
         /* wait for command completion */
         usb_class_cdc_os_event_wait(event, USB_ACM_CTRL_PIPE_FREE | USB_ACM_DETACH, FALSE, 0);
-		if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
-			OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
-		if (OS_Event_check_bit(event, USB_ACM_DETACH))
-			OS_Event_clear(event, USB_ACM_DETACH);
+        if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
+            OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
+        if (OS_Event_check_bit(event, USB_ACM_DETACH))
+            OS_Event_clear(event, USB_ACM_DETACH);
         /* and unlock control pipe as it is automatic event */
         OS_Event_set(event, USB_ACM_CTRL_PIPE_FREE);
     }
@@ -372,16 +372,16 @@ usb_status usb_class_cdc_set_acm_line_coding
   
         if (usb_class_cdc_intf_validate(acm_instance)) {
             if_acm_ptr = (usb_acm_class_intf_struct_t *) if_data_ptr->BOUND_CONTROL_INTERFACE->class_intf_handle;
-		    USB_CDC_ACM_lock();
+            USB_CDC_ACM_lock();
             if (if_acm_ptr->acm_desc->bmCapabilities & USB_ACM_CAP_LINE_CODING) {
                 event = if_acm_ptr->acm_event;
    
                 if (event != NULL) {
                     usb_class_cdc_os_event_wait(event, USB_ACM_CTRL_PIPE_FREE | USB_ACM_DETACH, FALSE, 0);
-					if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
-						OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
-					if (OS_Event_check_bit(event, USB_ACM_DETACH))
-						OS_Event_clear(event, USB_ACM_DETACH);
+                    if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
+                        OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
+                    if (OS_Event_check_bit(event, USB_ACM_DETACH))
+                        OS_Event_clear(event, USB_ACM_DETACH);
                 }
    
                 if (usb_class_cdc_intf_validate(acm_instance)) {
@@ -395,8 +395,8 @@ usb_status usb_class_cdc_set_acm_line_coding
             }
             else{
                status = USBERR_INVALID_BMREQ_TYPE;
-			}
-			USB_CDC_ACM_unlock();
+            }
+            USB_CDC_ACM_unlock();
         } /* Endif */
     } /* Endif */
     
@@ -404,10 +404,10 @@ usb_status usb_class_cdc_set_acm_line_coding
     if (!status && event != NULL) {
         /* wait for command completion */
         usb_class_cdc_os_event_wait(event, USB_ACM_CTRL_PIPE_FREE | USB_ACM_DETACH, FALSE, 0);
-		if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
-			OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
-		if (OS_Event_check_bit(event, USB_ACM_DETACH))
-			OS_Event_clear(event, USB_ACM_DETACH);
+        if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
+            OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
+        if (OS_Event_check_bit(event, USB_ACM_DETACH))
+            OS_Event_clear(event, USB_ACM_DETACH);
         /* and unlock control pipe as it is automatic event */
         OS_Event_set(event, USB_ACM_CTRL_PIPE_FREE);
     }
@@ -466,16 +466,16 @@ usb_status usb_class_cdc_set_acm_ctrl_state
   
         if (usb_class_cdc_intf_validate(acm_instance)) {
             if_acm_ptr = (usb_acm_class_intf_struct_t *) if_data_ptr->BOUND_CONTROL_INTERFACE->class_intf_handle;
-		    USB_CDC_ACM_lock();
+            USB_CDC_ACM_lock();
             if (if_acm_ptr->acm_desc->bmCapabilities & USB_ACM_CAP_LINE_CODING) {
                 event = if_acm_ptr->acm_event;
    
                 if (event != NULL) {
                     usb_class_cdc_os_event_wait(event, USB_ACM_CTRL_PIPE_FREE | USB_ACM_DETACH, FALSE, 0);
-					if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
-						OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
-					if (OS_Event_check_bit(event, USB_ACM_DETACH))
-						OS_Event_clear(event, USB_ACM_DETACH);
+                    if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
+                        OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
+                    if (OS_Event_check_bit(event, USB_ACM_DETACH))
+                        OS_Event_clear(event, USB_ACM_DETACH);
                 }
    
                 if (usb_class_cdc_intf_validate(acm_instance)) {
@@ -492,8 +492,8 @@ usb_status usb_class_cdc_set_acm_ctrl_state
             }
             else{
                status = USBERR_INVALID_BMREQ_TYPE;
-			}
-			USB_CDC_ACM_unlock();
+            }
+            USB_CDC_ACM_unlock();
         } /* Endif */
     } /* Endif */
     
@@ -501,10 +501,10 @@ usb_status usb_class_cdc_set_acm_ctrl_state
     if (!status && event != NULL) {
         /* wait for command completion */
         usb_class_cdc_os_event_wait(event, USB_ACM_CTRL_PIPE_FREE | USB_ACM_DETACH, FALSE, 0);
-		if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
-			OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
-		if (OS_Event_check_bit(event, USB_ACM_DETACH))
-			OS_Event_clear(event, USB_ACM_DETACH);
+        if (OS_Event_check_bit(event, USB_ACM_CTRL_PIPE_FREE))
+            OS_Event_clear(event, USB_ACM_CTRL_PIPE_FREE);
+        if (OS_Event_check_bit(event, USB_ACM_DETACH))
+            OS_Event_clear(event, USB_ACM_DETACH);
         /* and unlock control pipe as it is automatic event */
         OS_Event_set(event, USB_ACM_CTRL_PIPE_FREE);
     }
@@ -548,46 +548,46 @@ static void usb_class_cdc_int_acm_callback
       uint32_t           status
    )
 { /* Body */
-    //cdc_class_call_struct_t *	acm_parser;
+    //cdc_class_call_struct_t * acm_parser;
     tr_struct_t*                  tr_int_ptr;
     usb_acm_class_intf_struct_t *  if_acm_ptr = (usb_acm_class_intf_struct_t *)param;
     
     #ifdef _HOST_DEBUG_
         DEBUG_LOG_TRACE("usb_class_cdc_int_acm_callback");
     #endif
-	if (usb_host_release_tr(if_acm_ptr->host_handle, tr_ptr) != USB_OK)
-	{
-		printf("usb_class_cdc_int_acm_callback: _usb_host_release_tr failed\n");
-	}
+    if (usb_host_release_tr(if_acm_ptr->host_handle, tr_ptr) != USB_OK)
+    {
+        USB_PRINTF("usb_class_cdc_int_acm_callback: _usb_host_release_tr failed\n");
+    }
     if(USB_OK == status)
     {
-    	/* To Do... */
+        /* To Do... */
     }
     else
     {
-    	/* In case of error, e.g. KHCI_ATOM_TR_TO, need to re-issue tr for interrupt pipe */
-		USB_CDC_ACM_lock();
+        /* In case of error, e.g. KHCI_ATOM_TR_TO, need to re-issue tr for interrupt pipe */
+        USB_CDC_ACM_lock();
         if (if_acm_ptr->interrupt_pipe != NULL) {
         
-			if (usb_host_get_tr(if_acm_ptr->host_handle, usb_class_cdc_int_acm_callback, if_acm_ptr, &tr_int_ptr) != USB_OK)
-			{
-				printf("usb_class_cdc_int_acm_callback: error to get tr\n");
-				USB_CDC_ACM_unlock();
-				return;
-			}
-			tr_int_ptr->rx_buffer = (uint8_t *) &if_acm_ptr->interrupt_buffer;
-			tr_int_ptr->rx_length = sizeof(if_acm_ptr->interrupt_buffer);								   
-			status = usb_host_recv_data(if_acm_ptr->host_handle, if_acm_ptr->interrupt_pipe, tr_int_ptr);
-			if (status != USB_OK)
-			{
-				printf("\nError in usb_class_cdc_int_acm_callback: %x", status);
-				usb_host_release_tr(if_acm_ptr->host_handle, tr_int_ptr);
-			}
+            if (usb_host_get_tr(if_acm_ptr->host_handle, usb_class_cdc_int_acm_callback, if_acm_ptr, &tr_int_ptr) != USB_OK)
+            {
+                USB_PRINTF("usb_class_cdc_int_acm_callback: error to get tr\n");
+                USB_CDC_ACM_unlock();
+                return;
+            }
+            tr_int_ptr->rx_buffer = (uint8_t *) &if_acm_ptr->interrupt_buffer;
+            tr_int_ptr->rx_length = sizeof(if_acm_ptr->interrupt_buffer);                                   
+            status = usb_host_recv_data(if_acm_ptr->host_handle, if_acm_ptr->interrupt_pipe, tr_int_ptr);
+            if (status != USB_OK)
+            {
+                USB_PRINTF("\nError in usb_class_cdc_int_acm_callback: %x", (unsigned int)status);
+                usb_host_release_tr(if_acm_ptr->host_handle, tr_int_ptr);
+            }
         }
         else{
             status = USBERR_OPEN_PIPE_FAILED;
-		}
-		USB_CDC_ACM_unlock();
+        }
+        USB_CDC_ACM_unlock();
     }
     /* we do not use USB_ACM_INT_PIPE_FREE in this version at all */
 //    _lwevent_set(if_ptr->acm_event, USB_ACM_INT_PIPE_FREE); 
@@ -704,11 +704,11 @@ void usb_class_cdc_in_data_callback
     if (if_ptr->data_event != NULL)
         OS_Event_set(if_ptr->data_event, USB_DATA_READ_COMPLETE); /* signal that we have completed transfer on input pipe */
 
-	if(if_ptr->data_rx_cb)
-	{
-		if_ptr->data_rx_cb(NULL);
-		//if_ptr->data_rx_cb = NULL;
-	}
+    if(if_ptr->data_rx_cb)
+    {
+        if_ptr->data_rx_cb(NULL);
+        //if_ptr->data_rx_cb = NULL;
+    }
     #ifdef _HOST_DEBUG_
         DEBUG_LOG_TRACE("usb_class_cdc_in_data_callback, SUCCESSFUL");
     #endif
@@ -774,11 +774,11 @@ void usb_class_cdc_out_data_callback
     if (if_ptr->data_event != NULL)
         OS_Event_set(if_ptr->data_event, USB_DATA_SEND_COMPLETE); /* signal that we have completed transfer on output pipe */
 
-	if(if_ptr->data_tx_cb)
-	{
-		if_ptr->data_tx_cb(NULL);
-		//if_ptr->data_tx_cb = NULL;
-	}
+    if(if_ptr->data_tx_cb)
+    {
+        if_ptr->data_tx_cb(NULL);
+        //if_ptr->data_tx_cb = NULL;
+    }
     #ifdef _HOST_DEBUG_
         DEBUG_LOG_TRACE("usb_class_cdc_in_data_callback, SUCCESSFUL");
     #endif
@@ -814,7 +814,7 @@ usb_status usb_class_cdc_init_ipipe
         
             if (usb_host_get_tr(if_acm_ptr->host_handle, usb_class_cdc_int_acm_callback, if_acm_ptr, &tr_ptr) != USB_OK)
             {
-                printf("usb_class_cdc_init_ipipe: error to get tr\n");
+                USB_PRINTF("usb_class_cdc_init_ipipe: error to get tr\n");
                 return USBERR_ERROR;
             }
             
@@ -823,7 +823,7 @@ usb_status usb_class_cdc_init_ipipe
             status = usb_host_recv_data(if_acm_ptr->host_handle, if_acm_ptr->interrupt_pipe, tr_ptr);
             if (status != USB_OK)
             {
-                printf("\nError in usb_class_cdc_init_ipipe: %x", status);
+                USB_PRINTF("\nError in usb_class_cdc_init_ipipe: %x", (unsigned int)status);
                 usb_host_release_tr(if_acm_ptr->host_handle, tr_ptr);
                 return USBERR_ERROR;
             }

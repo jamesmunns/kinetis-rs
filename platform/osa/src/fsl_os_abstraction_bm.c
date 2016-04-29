@@ -33,8 +33,6 @@
 #include "fsl_interrupt_manager.h"
 #include "fsl_clock_manager.h"
 #include "fsl_lptmr_hal.h"
-#include "fsl_lptmr_features.h"
-/* Include lptmr features to check wether lptimer module is available. */
 
 /* Only one lptmr and always use it. */
 #define BM_LPTMR_INSTANCE 0
@@ -56,7 +54,7 @@ static uint32_t time_diff(uint32_t time_start, uint32_t time_end)
     else
     {
         /* lptmr count is 16 bits. */
-        return 0xFFFFU - time_start + time_end + 1;
+        return FSL_OSA_TIME_RANGE - time_start + time_end + 1;
     }
 }
 
@@ -391,6 +389,20 @@ osa_status_t OSA_EventWait(event_t       *pEvent,
     }
 
     return retVal;
+}
+
+/*FUNCTION**********************************************************************
+ *
+ * Function Name : OSA_EventGetFlags
+ * Description   : Get event flags status.
+ * Return current event flags.
+ *
+ *END**************************************************************************/
+event_flags_t OSA_EventGetFlags(event_t *pEvent)
+{
+    assert(pEvent);
+
+    return pEvent->flags;
 }
 
 /*FUNCTION**********************************************************************
@@ -915,13 +927,15 @@ osa_status_t OSA_Init(void)
 
     CLOCK_SYS_EnableLptimerClock(BM_LPTMR_INSTANCE);
 
+    LPTMR_HAL_Disable(BM_LPTMR_BASE);
+
     LPTMR_HAL_SetTimerModeMode(BM_LPTMR_BASE, kLptmrTimerModeTimeCounter);
 
     LPTMR_HAL_SetFreeRunningCmd(BM_LPTMR_BASE, true);
 
     LPTMR_HAL_SetPrescalerCmd(BM_LPTMR_BASE, false);
 
-    LPTMR_HAL_SetPrescalerClockSourceMode(BM_LPTMR_BASE, kLptmrPrescalerClockSourceLpo);
+    LPTMR_HAL_SetPrescalerClockSourceMode(BM_LPTMR_BASE, kClockLptmrSrcLpoClk);
 
     LPTMR_HAL_SetIntCmd(BM_LPTMR_BASE,false);
 

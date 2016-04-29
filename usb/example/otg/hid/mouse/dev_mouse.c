@@ -70,9 +70,6 @@ uint32_t g_dev_app_task_id = 0;
 extern usb_endpoints_t                      g_usb_desc_ep;
 extern usb_desc_request_notify_struct_t     g_desc_callback;
 mouse_global_variable_struct_t              g_mouse;
-#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
-_task_id                                    g_dev_app_task_id = MQX_NULL_TASK_ID;
-#endif
 extern os_event_handle                      g_otg_app_event_handle;
 /*****************************************************************************
 * Local Types - None
@@ -348,7 +345,7 @@ usb_status DEV_APP_init(void)
     OS_Mem_zero(&config_struct, sizeof(hid_config_struct_t));
 
     /* Initialize the USB interface */
-    printf("\n\r begin to test mouse");
+    USB_PRINTF("\n\r begin to test mouse");
     config_struct.hid_application_callback.callback = USB_App_Callback;
     config_struct.hid_application_callback.arg = &g_mouse.app_handle;
     config_struct.class_specific_callback.callback = USB_App_Param_Callback;

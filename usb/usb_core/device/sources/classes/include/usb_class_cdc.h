@@ -116,21 +116,39 @@ extern void USB_Class_Periodic_Task(void);
 typedef uint32_t  cdc_handle_t;
 typedef uint32_t  _ip_address;
 typedef uint8_t   enet_address_t[6];
+
+/*!
+ * @brief structure used to configure CDC class by APP.
+ *
+ * Define the structure of the CDC class configuration. 
+ *
+ */
 typedef struct _cdc_config_struct
 {
-   usb_application_callback_struct_t        cdc_application_callback;
-   usb_vendor_req_callback_struct_t         vendor_req_callback;
-   usb_class_specific_callback_struct_t     class_specific_callback;
-   usb_desc_request_notify_struct_t*        desc_callback_ptr;
+   usb_application_callback_struct_t        cdc_application_callback;        /*!< application callback function to handle the Device status related event*/  
+   usb_vendor_req_callback_struct_t         vendor_req_callback;             /*!< application callback function to handle the vendor request related event, reserved for future use*/
+   usb_class_specific_callback_struct_t     class_specific_callback;         /*!< application callback function to handle all the class related event*/
+   usb_desc_request_notify_struct_t*        desc_callback_ptr;               /*!< descriptor related callback function data structure*/
 }cdc_config_struct_t;
 
-/* Data structure for app */
+/*!
+ * @brief structure to hold the information of CDC app data struct.
+ *
+ * Define the structure of the CDC app data. 
+ *
+ */
 typedef struct _cdc_app_data_struct
 {
     uint8_t*                                  data_ptr;     /* pointer to buffer       */     
     uint32_t                                  data_size;    /* buffer size of endpoint */
 }cdc_app_data_struct_t;
 
+/*!
+ * @brief structure to hold the information of CDC rndis information data struct.
+ *
+ * Define the structure of the CDC rndis information data. 
+ *
+ */
 typedef struct _usb_rndis_info_struct
 {
     enet_address_t mac_address;
@@ -140,64 +158,73 @@ typedef struct _usb_rndis_info_struct
 /******************************************************************************
  * Global Functions
  *****************************************************************************/
-/**************************************************************************//*!
- *
- * @name  USB_Class_CDC_Init
- *
+ /*!
  * @brief The funtion initializes the Device and Controller layer 
  *
+ * This function initializes the CDC Class layer and layers it is dependednt on 
+ *
+ * @param controller_id	[in] - controller ID, such as USB_CONTROLLER_KHCI_0
  * @param *cdc_config_ptr[IN]:  This structure contians configuration parameter
- *                              send by APP to configure CDC class.
+ * @param cdc_handle_ptr	[out] - pointer point to the initialized CDC class, refer to cdc_handle_t
  *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- ******************************************************************************
  *
- *This function initializes the CDC Class layer and layers it is dependednt on 
- *
- *****************************************************************************/
+ * @return USB_OK-Success/Others-Fail
+ */
 extern uint32_t USB_Class_CDC_Init
 (
     uint8_t controller_id,
     cdc_config_struct_t * cdc_config_ptr,
     cdc_handle_t *    cdc_handle_ptr
 );
-/**************************************************************************//*!
- *
- * @name  USB_Class_CDC_Deinit
- *
+
+/*!
  * @brief The funtion deinitializes the Device and Controller layer 
  *
- * @param cdc_handle:  
+ * @param cdc_handle		[in] - The CDC class handler 
  *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- ******************************************************************************
+ * This function deinitializes the CDC Class layer and layers it is dependednt on 
  *
- *This function initializes the CDC Class layer and layers it is dependednt on 
- *
- *****************************************************************************/
+ * @return USB_OK-Success/Others-Fail
+ */
 extern uint32_t USB_Class_CDC_Deinit
 (
   cdc_handle_t cdc_handle
 );
-/**************************************************************************//*!
- *
- * @name  USB_Class_CDC_Send_Data
- *
+
+#if USBCFG_DEV_ADVANCED_CANCEL_ENABLE
+ /**************************************************************************//*!
+  *
+  * @name  USB_Class_CDC_Cancel
+  *
+  * @brief 
+  *
+  * @param handle		   :   handle returned by USB_Class_CDC_Init
+  * @param ep_num		   :   endpoint num 
+  * @param direction		:	direction of the endpoint 
+  *
+  * @return status		 
+  * 		USB_OK			 : When Successfully
+  * 		Others			 : Errors
+  *****************************************************************************/
+ 
+ usb_status USB_Class_CDC_Cancel
+ (
+	 cdc_handle_t cdc_handle,/*[IN]*/
+	 uint8_t ep_num,/*[IN]*/
+	 uint8_t direction
+ );
+#endif
+
+ /*!
  * @brief  This function sends data to Host.
  *
- * @param handle          :   handle returned by USB_Class_CDC_Init
+ * @param cdc_handle          :   handle returned by USB_Class_CDC_Init
  * @param ep_num          :   endpoint num 
- * @param app_buff        :   buffer to send
+ * @param buff_ptr        :   buffer to send
  * @param size            :   length of the transfer   
  *
- * @return status       
- *         USB_OK         : When Successfull 
- *         Others         : Errors
- *****************************************************************************/
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_CDC_Send_Data
 (
     cdc_handle_t          cdc_handle,
@@ -205,21 +232,17 @@ extern usb_status USB_Class_CDC_Send_Data
     uint8_t*            buff_ptr,      /* [IN] buffer to send */      
     uint32_t            size           /* [IN] length of the transfer */
 );
-/**************************************************************************//*!
- *
- * @name  USB_Class_CDC_Recv_Data
- *
+
+ /*!
  * @brief This functions receives Data from Host.
  *
- * @param handle          :   handle returned by USB_Class_CDC_Init
+ * @param cdc_handle          :   handle returned by USB_Class_CDC_Init
  * @param ep_num          :   endpoint num 
- * @param app_buff        :   buffer to send
+ * @param buff_ptr        :   buffer to send
  * @param size            :   length of the transfer   
  *
- * @return status       
- *         USB_OK         : When Successfull 
- *         Others         : Errors
- *****************************************************************************/
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_CDC_Recv_Data
 (
     cdc_handle_t          cdc_handle,

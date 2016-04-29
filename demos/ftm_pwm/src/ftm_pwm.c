@@ -27,19 +27,27 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+ 
+///////////////////////////////////////////////////////////////////////////////
+//  Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
+// SDK Included Files
 #include "board.h"
-#include "fsl_device_registers.h"
 #include "fsl_ftm_driver.h"
-#include "fsl_ftm_hal.h"
-#include "fsl_ftm_features.h"
-#include "fsl_uart_driver.h"
-#include "fsl_debug_console.h"
-#include "fsl_clock_manager.h"
+#include "fsl_os_abstraction.h"
 
+////////////////////////////////////////////////////////////////////////////////
+// Code
+////////////////////////////////////////////////////////////////////////////////
+
+/*!
+ * @brief Main function 
+ */
 int main(void)
 {
     ftm_pwm_param_t ftmParam = {
@@ -49,30 +57,33 @@ int main(void)
         .uDutyCyclePercent      = 0,
         .uFirstEdgeDelayPercent = 0,
     };
+    ftm_user_config_t ftmInfo;
 
+    // Configure board specific pin muxing
     hardware_init();
 
     OSA_Init();
-
+    // Initialize UART terminal
     dbg_uart_init();
 
-    /* Print a note to show the start of demo */
+    // Print a note to show the start of demo
     printf("\r\nWelcome to FTM PWM demo!\n\n\r");
 
     configure_ftm_pins(BOARD_FTM_INSTANCE);
 
-    ftm_user_config_t ftmInfo;
     memset(&ftmInfo, 0, sizeof(ftmInfo));
 
+    ftmInfo.syncMethod = kFtmUseSoftwareTrig;
     FTM_DRV_Init(BOARD_FTM_INSTANCE, &ftmInfo);
 
     while(1)
     {
         FTM_DRV_PwmStart(BOARD_FTM_INSTANCE, &ftmParam, BOARD_FTM_CHANNEL);
+        // Issue a software trigger to update registers
+        FTM_HAL_SetSoftwareTriggerCmd(g_ftmBaseAddr[BOARD_FTM_INSTANCE], true);
 
-        OSA_TimeDelay(50);  //delay 50ms
-
-        FTM_DRV_PwmStop(BOARD_FTM_INSTANCE, &ftmParam, BOARD_FTM_CHANNEL);
+        // delay 50ms
+        OSA_TimeDelay(50);
 
         if (ftmParam.uDutyCyclePercent++ >= 100)
         {

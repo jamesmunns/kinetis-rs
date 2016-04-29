@@ -56,10 +56,6 @@ typedef struct
    /* Pipes */
    usb_pipe_handle                          control_pipe;
    usb_pipe_handle                          interrupt_pipe;
-   /* Is command used? (only 1 command can be issued at one time) */
-   bool                                   in_setup;
-   /* Only 1 interrupt pipe can be opened at one time */
-   bool                                   in_interrupt;
 
    /* Higher level callback and parameter */
    tr_callback                               ctrl_callback;
@@ -69,6 +65,10 @@ typedef struct
    tr_callback                               interrupt_callback;
    void*                                   interrupt_param;
 
+   /* Is command used? (only 1 command can be issued at one time) */
+   bool                                   in_setup;
+   /* Only 1 interrupt pipe can be opened at one time */
+   bool                                   in_interrupt;
    //uint32_t                                   control_buf_size;
    //uint32_t                                   interrupt_buf_size;
    /* control pipe buffer pointer, allocated in memlist */

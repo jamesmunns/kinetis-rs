@@ -96,7 +96,7 @@ usb_status usb_class_phdc_init
     phdc_class = (usb_phdc_class_struct_t*)OS_Mem_alloc_zero(sizeof(usb_phdc_class_struct_t));
     if (phdc_class == NULL)
     {
-        printf("usb_class_phdc_init fail on memory allocation\n");
+        USB_PRINTF("usb_class_phdc_init fail on memory allocation\n");
         return USBERR_ERROR;
     }
 
@@ -124,7 +124,7 @@ usb_status usb_class_phdc_init
             status = usb_host_open_pipe(phdc_class->host_handle, &phdc_class->int_in_pipe, &pipe_init);
             if (status != USB_OK)
             {
-                printf("usb_class_phdc_init fail to open in pipe\n");
+                USB_PRINTF("usb_class_phdc_init fail to open in pipe\n");
                 *class_handle_ptr = (class_handle)phdc_class;
                 return USBERR_ERROR;
             }
@@ -143,7 +143,7 @@ usb_status usb_class_phdc_init
             status = usb_host_open_pipe(phdc_class->host_handle, &phdc_class->bulk_in_pipe, &pipe_init);
             if (status != USB_OK)
             {
-                printf("usb_class_phdc_init fail to open in pipe\n");
+                USB_PRINTF("usb_class_phdc_init fail to open in pipe\n");
                 *class_handle_ptr = (class_handle)phdc_class;
                 return USBERR_ERROR;
             }
@@ -162,7 +162,7 @@ usb_status usb_class_phdc_init
             status = usb_host_open_pipe(phdc_class->host_handle, &phdc_class->bulk_out_pipe, &pipe_init);
             if (status != USB_OK)
             {
-                printf("usb_class_phdc_init fail to open in pipe\n");
+                USB_PRINTF("usb_class_phdc_init fail to open in pipe\n");
                 *class_handle_ptr = (class_handle)phdc_class;
                 return USBERR_ERROR;
             }
@@ -492,7 +492,7 @@ usb_status usb_class_phdc_send_data
 
     if (usb_host_get_tr(phdc_class->host_handle, usb_class_phdc_send_data_callback, call_param_ptr, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr\n");
+        USB_PRINTF("error to get tr\n");
         return USBERR_ERROR;
     }
 
@@ -504,7 +504,7 @@ usb_status usb_class_phdc_send_data
     status = usb_host_send_data(phdc_class->host_handle, phdc_class->bulk_out_pipe, tr_ptr);
     if (status != USB_OK)
     {
-        printf("\nError in usb_phdc_send_data: %x", status);
+        USB_PRINTF("\nError in usb_phdc_send_data: %x", (unsigned int)status);
         usb_host_release_tr(phdc_class->host_handle, tr_ptr);
         return USBERR_ERROR;
     }
@@ -547,7 +547,7 @@ usb_status usb_class_phdc_set_callbacks
 
     if (phdc_class == NULL)
     {
-        printf("usb_class_phdc_set_callbacks fail\n");
+        USB_PRINTF("usb_class_phdc_set_callbacks fail\n");
         return USBERR_ERROR;
     }
 
@@ -582,7 +582,7 @@ usb_status  usb_class_phdc_deinit
 
     if (phdc_class == NULL)
     {
-        printf("usb_class_phdc_deinit fail\n");
+        USB_PRINTF("usb_class_phdc_deinit fail\n");
         return USBERR_ERROR;
     }
 
@@ -592,7 +592,7 @@ usb_status  usb_class_phdc_deinit
         status = usb_host_close_pipe(phdc_class->host_handle, phdc_class->bulk_in_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_phdc_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_phdc_deinit to close pipe\n");
             return USBERR_ERROR;
         }
     }
@@ -602,7 +602,7 @@ usb_status  usb_class_phdc_deinit
         status = usb_host_close_pipe(phdc_class->host_handle, phdc_class->bulk_out_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_phdc_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_phdc_deinit to close pipe\n");
             return USBERR_ERROR;
         }
     }
@@ -613,7 +613,7 @@ usb_status  usb_class_phdc_deinit
         status = usb_host_close_pipe(phdc_class->host_handle, phdc_class->int_in_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_phdc_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_phdc_deinit to close pipe\n");
             return USBERR_ERROR;
         }
     }
@@ -649,7 +649,7 @@ usb_status usb_class_phdc_pre_deinit
 
     if (phdc_class == NULL)
     {
-        printf("_usb_host_cancel_call_interface fail\n");
+        USB_PRINTF("_usb_host_cancel_call_interface fail\n");
         return USBERR_ERROR;
     }
 
@@ -658,7 +658,7 @@ usb_status usb_class_phdc_pre_deinit
         status = usb_host_cancel(phdc_class->host_handle, phdc_class->bulk_in_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close pipe\n");
         }
     }
     if (phdc_class->bulk_out_pipe != NULL)
@@ -666,7 +666,7 @@ usb_status usb_class_phdc_pre_deinit
         status = usb_host_cancel(phdc_class->host_handle, phdc_class->bulk_out_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close pipe\n");
         }
     }
 
@@ -675,7 +675,7 @@ usb_status usb_class_phdc_pre_deinit
         status = usb_host_cancel(phdc_class->host_handle, phdc_class->int_in_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close pipe\n");
         }
     }
 
@@ -773,7 +773,7 @@ usb_status usb_class_phdc_recv_data
 
     if (usb_host_get_tr(phdc_class->host_handle, usb_class_phdc_recv_data_callback, call_param_ptr, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr\n");
+        USB_PRINTF("error to get tr\n");
         return USBERR_ERROR;
     }
     tr_ptr->rx_buffer = call_param_ptr->buff_ptr;
@@ -830,7 +830,7 @@ static void usb_class_phdc_recv_data_callback
 
     if (usb_host_release_tr(phdc_class->host_handle, tr_ptr) != USB_OK)
     {
-        printf("_usb_host_release_tr failed\n");
+        USB_PRINTF("_usb_host_release_tr failed\n");
     }
     if (usb_sts != USB_STATUS_IDLE)
     {
@@ -1023,7 +1023,7 @@ usb_status usb_class_phdc_send_control_request
 
     if (usb_host_get_tr(phdc_class->host_handle, usb_class_phdc_send_control_callback, call_param_ptr, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr hid\n");
+        USB_PRINTF("error to get tr hid\n");
         return USBERR_ERROR;
     }
     reqType = call_param_ptr->classRequestType;
@@ -1136,7 +1136,7 @@ static void usb_class_phdc_send_data_callback
 
     if (usb_host_release_tr(phdc_class->host_handle, tr_ptr) != USB_OK)
     {
-        printf("_usb_host_release_tr failed\n");
+        USB_PRINTF("_usb_host_release_tr failed\n");
     }
 
     /* exit if input pointer is NULL */
@@ -1318,7 +1318,7 @@ static void usb_class_phdc_send_control_callback
         phdc_class = (usb_phdc_class_struct_t*)(call_param_ptr->class_ptr);
         if (usb_host_release_tr(phdc_class->host_handle, tr_ptr) != USB_OK)
         {
-            printf("_usb_host_release_tr failed\n");
+            USB_PRINTF("_usb_host_release_tr failed\n");
         }
 
         pipeHandle = (pipe_struct_t*)call_param_ptr->tr_pipe_handle;

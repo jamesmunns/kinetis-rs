@@ -29,39 +29,36 @@
  *
  */
 
-/*******************************************************************************
- * Standard C Included Files
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <string.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-/*******************************************************************************
- * SDK Included Files
- ******************************************************************************/
+// SDK Included Files
 #include "fsl_soundcard.h"
 #include "fsl_sai_driver.h"
-#include "fsl_sai_features.h"
 #include "fsl_sgtl5000_driver.h"
-/*******************************************************************************
- * Application Included Files
- ******************************************************************************/
+// Application Included Files
 #include "audio.h"
 #include "terminal_menu.h"
-/*******************************************************************************
- * Include CMSIS-DSP library
- ******************************************************************************/
+// Include CMSIS-DSP library
 #include "arm_math.h"
-/*******************************************************************************
- * Global Variables
- ******************************************************************************/
+
+////////////////////////////////////////////////////////////////////////////////
+// Variables
+////////////////////////////////////////////////////////////////////////////////
+
 #if !(defined(CPU_MK22FN128VDC10) || defined(CPU_MK22FN256VDC12))
 extern float32_t g_dspStore[2 * AUDIO_BUFFER_BLOCK_SIZE];
 extern float32_t g_dspResult[AUDIO_BUFFER_BLOCK_SIZE];
 #endif
 
-sai_data_format_t *g_format;
+static sai_data_format_t g_format;
 
 static sound_card_t g_txCard;
 static sound_card_t g_rxCard;
@@ -72,24 +69,25 @@ static sai_state_t g_rxState;
 static volatile bool g_firstCopy = true;
 static edma_state_t g_edmaState;
 static edma_user_config_t g_edmaUserConfig;
-static sgtl_handler_t g_codecHandler;
-/*******************************************************************************
- * Function Definitions
- ******************************************************************************/  
+static sgtl_handler_t g_codecHandler = {
+    .i2c_instance = BOARD_SAI_DEMO_I2C_INSTANCE
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// Code
+////////////////////////////////////////////////////////////////////////////////
+
 void audio_wav_init(wave_file_t *newWav)
 {
-    OSA_Init();
-
     get_wav_data(newWav);
 
-    /* Configure the play audio g_format */
-    g_format = (sai_data_format_t *)OSA_MemAllocZero(sizeof(sai_data_format_t));
-    g_format->bits = newWav->header.bitSamp;
-    g_format->sample_rate = newWav->header.sampFreq;
-    g_format->mclk = 384 * g_format->sample_rate;
-    g_format->mono_streo = (sai_mono_streo_t)((newWav->header.channels) - 1);
+    // Configure the play audio g_format
+    g_format.bits = newWav->header.bitSamp;
+    g_format.sample_rate = newWav->header.sampFreq;
+    g_format.mclk = 384 * g_format.sample_rate;
+    g_format.mono_streo = (sai_mono_streo_t)((newWav->header.channels) - 1);
 
-    /* SAI configuration */
+    // SAI configuration
     g_txConfig.protocol = kSaiBusI2SLeft;
     g_txConfig.channel = 0;
     g_txConfig.slave_master = kSaiMaster;
@@ -118,7 +116,6 @@ void audio_wav_init(wave_file_t *newWav)
     g_txCard.controller.dma_source = kDmaRequestMux0I2S0Tx;
     g_rxCard.controller.dma_source = kDmaRequestMux0I2S0Rx;
 #endif
-    //sgtl_handler_t *g_codecHandler = (sgtl_handler_t *)OSA_MemAllocZero(sizeof(sgtl_handler_t));
     g_txCard.codec.handler = &g_codecHandler;
     g_rxCard.codec.handler = &g_codecHandler;
     g_txCard.codec.ops = &g_sgtl_ops;
@@ -128,15 +125,13 @@ void audio_wav_init(wave_file_t *newWav)
 
 void audio_stream_init(void)
 {
-    OSA_Init();
-    /* Configure the play audio g_format */
-    g_format = (sai_data_format_t *)OSA_MemAllocZero(sizeof(sai_data_format_t));
-    g_format->bits = 16;
-    g_format->sample_rate = 48000;
-    g_format->mclk = 512 * g_format->sample_rate;
-    g_format->mono_streo = kSaiStreo;
+    // Configure the play audio g_format
+    g_format.bits = 16;
+    g_format.sample_rate = 48000;
+    g_format.mclk = 512 * g_format.sample_rate;
+    g_format.mono_streo = kSaiStreo;
 
-    /* SAI configuration */
+    // SAI configuration
     g_txConfig.protocol = kSaiBusI2SLeft;
     g_txConfig.channel = 0;
     g_txConfig.slave_master = kSaiMaster;
@@ -165,7 +160,7 @@ void audio_stream_init(void)
     g_txCard.controller.dma_source = kDmaRequestMux0I2S0Tx;
     g_rxCard.controller.dma_source = kDmaRequestMux0I2S0Rx;
 #endif
-    //sgtl_handler_t *g_codecHandler = (sgtl_handler_t *)OSA_MemAllocZero(sizeof(sgtl_handler_t));
+
     g_txCard.codec.handler = &g_codecHandler;
     g_rxCard.codec.handler = &g_codecHandler;
     g_txCard.codec.ops = &g_sgtl_ops;
@@ -232,7 +227,7 @@ snd_status_t get_wav_data(wave_file_t *waveFile)
 {
     uint8_t *dataTemp = (uint8_t *)waveFile->data;
 
-    /* check for RIFF */
+    // check for RIFF
     memcpy(waveFile->header.riff, dataTemp, 4);
     dataTemp += 4;
     if( memcmp( (uint8_t*)waveFile->header.riff, "RIFF", 4) )
@@ -240,11 +235,11 @@ snd_status_t get_wav_data(wave_file_t *waveFile)
         return kStatus_SND_Fail;
     }
 
-    /* Get size */
+    // Get size
     memcpy(&waveFile->header.size, dataTemp, 4);
     dataTemp += 4;
 
-    /* .wav file flag */
+    // .wav file flag
     memcpy(waveFile->header.waveFlag, dataTemp, 4);
     dataTemp += 4;
     if( memcmp( (uint8_t*)waveFile->header.waveFlag, "WAVE", 4) )
@@ -252,7 +247,7 @@ snd_status_t get_wav_data(wave_file_t *waveFile)
         return kStatus_SND_Fail;
     }
 
-    /* fmt */
+    // fmt
     memcpy(waveFile->header.fmt, dataTemp, 4);
     dataTemp += 4;
     if( memcmp( (uint8_t*)waveFile->header.fmt, "fmt ", 4) )
@@ -260,31 +255,31 @@ snd_status_t get_wav_data(wave_file_t *waveFile)
         return kStatus_SND_Fail;
     }
 
-    /* fmt length */
+    // fmt length
     memcpy(&waveFile->header.fmtLen, dataTemp, 4);
     dataTemp += 4;
 
-    /* Tag: PCM or not */
+    // Tag: PCM or not
     memcpy(&waveFile->header.tag, dataTemp, 4);
     dataTemp += 2;
 
-    /* Channels */
+    // Channels
     memcpy(&waveFile->header.channels, dataTemp, 4);
     dataTemp += 2;
 
-    /* Sample Rate in Hz */
+    // Sample Rate in Hz
     memcpy(&waveFile->header.sampFreq, dataTemp, 4);
     dataTemp += 4;
     memcpy(&waveFile->header.byteRate, dataTemp, 4);
     dataTemp += 4;
 
-    /* quantize bytes for per samp point */
+    // quantize bytes for per samp point
     memcpy(&waveFile->header.blockAlign, dataTemp, 4);
     dataTemp += 2;
     memcpy(&waveFile->header.bitSamp, dataTemp, 4);
     dataTemp += 2;
 
-    /* Data */
+    // Data
     memcpy(waveFile->header.dataFlag, dataTemp, 4);
     dataTemp += 4;
     if( memcmp( (uint8_t*)waveFile->header.dataFlag, "data ", 4) )
@@ -317,8 +312,8 @@ snd_status_t stream_audio(dsp_types_t dspType, uint8_t volumeCtrl)
 
     SND_TxInit(&g_txCard, &g_txConfig, NULL, &g_txState);
     SND_RxInit(&g_rxCard, &g_rxConfig, NULL, &g_rxState);
-    SND_TxConfigDataFormat(&g_txCard,g_format);
-    SND_RxConfigDataFormat(&g_rxCard,g_format);
+    SND_TxConfigDataFormat(&g_txCard,&g_format);
+    SND_RxConfigDataFormat(&g_rxCard,&g_format);
 
     SND_RxStart(&g_rxCard);
 
@@ -327,7 +322,7 @@ snd_status_t stream_audio(dsp_types_t dspType, uint8_t volumeCtrl)
     for(count = 0; count < 3000; count++)
     {
         pData = data;
-        /* Record the data */
+        // Record the data
         SND_WaitEvent(&g_rxCard);
         SND_GetStatus(&g_rxCard, &rx_status);
         memcpy(pData, rx_status.output_address, rx_status.size);
@@ -338,7 +333,7 @@ snd_status_t stream_audio(dsp_types_t dspType, uint8_t volumeCtrl)
         switch(dspType)
         {
             case kFFT:
-                tempF = do_fft(g_format, pData, g_dspStore, g_dspResult);
+                tempF = do_fft(&g_format, pData, g_dspStore, g_dspResult);
                 break;
 
             case kNoDSP:
@@ -351,7 +346,7 @@ snd_status_t stream_audio(dsp_types_t dspType, uint8_t volumeCtrl)
         }
 #endif
 
-        /* Play the data */
+        // Play the data
         if(g_firstCopy)
         {
             g_firstCopy = false;
@@ -388,6 +383,9 @@ snd_status_t stream_audio(dsp_types_t dspType, uint8_t volumeCtrl)
         printf("\r\nFrequency is %d Hz\r\n", (unsigned int)tempF);
     }
 #endif
+    
+    memset(&g_txCard,0, sizeof(sound_card_t));
+    memset(&g_rxCard,0, sizeof(sound_card_t));    
 
     return kStatus_SND_Success;
 }
@@ -410,18 +408,19 @@ snd_status_t play_wav(uint32_t *pcmBuffer, uint8_t volumeCtrl)
 
     SND_TxInit(&g_txCard, &g_txConfig, NULL, &g_txState);
 
-    SND_TxConfigDataFormat(&g_txCard,g_format);
+    SND_TxConfigDataFormat(&g_txCard,&g_format);
 
     config_volume(g_txCard.codec.handler, kSgtlModuleHP, (uint32_t)volumeCtrl);
 
-    /* Remove header size from byte count */
-    bytesToRead = (newWav->header.length - WAVE_FILE_HEADER_SIZE); /* Adjust note duration by divider value, wav tables in pcm_data.h are 200ms by default */
+    // Remove header size from byte count
+    // Adjust note duration by divider value, wav tables in pcm_data.h are 200ms by default
+    bytesToRead = (newWav->header.length - WAVE_FILE_HEADER_SIZE);
     bytesRead = WAVE_FILE_HEADER_SIZE;
 
-    /* Send .wav data */
+    // Send .wav data
     while (bytesRead < bytesToRead)
     {
-        send_wav((uint8_t *)(newWav->data + bytesRead), bytesToRead, g_format);
+        send_wav((uint8_t *)(newWav->data + bytesRead), bytesToRead, &g_format);
         bytesRead += bytesToRead;
     }
 
@@ -449,7 +448,9 @@ void send_wav(uint8_t *dataBuffer, uint32_t length, sai_data_format_t *dataForma
     uint32_t count = 0; 
     uint8_t *pData = dataBuffer;
     snd_state_t tx_status;
-    //As the sync can not initialized to be non-zero value, application have to copy a period of data firstly
+
+    // As the sync can not initialized to be non-zero value, 
+    // application have to copy a period of data firstly
     if(g_firstCopy)
     {
         g_firstCopy = false;
@@ -478,9 +479,3 @@ void send_wav(uint8_t *dataBuffer, uint32_t length, sai_data_format_t *dataForma
         SND_TxUpdateStatus(&g_txCard, tx_status.size);
     }
 }
-
-
-
-/*******************************************************************************
- * EOF                                           
- *******************************************************************************/

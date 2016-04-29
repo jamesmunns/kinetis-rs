@@ -117,7 +117,7 @@ static uint8_t *bdt;
     #pragma data_alignment=512
     __no_init usb_device_khci_data_t g_khci_data;
 #elif defined (__CC_ARM) || defined(__GNUC__)
-    __attribute__((aligned(512))) usb_device_khci_data_t g_khci_data = { 1 };
+    __attribute__((aligned(512))) usb_device_khci_data_t g_khci_data;
 #else
     #error Unsupported compiler, please use IAR, Keil or arm gcc compiler and rebuild the project.
 #endif
@@ -126,15 +126,11 @@ static uint8_t *bdt;
     usb_device_khci_data_t* g_khci_data_ptr = NULL;
 #endif
 
-static usb_instance_t g_usb_instance =    
-{
-    .name = (uint8_t*)"khci_usb0",
-    .instance = 0,
-};
+
 
 static bool g_zero_pkt_send = FALSE;
 
-static usb_khci_dev_state_struct_t g_khci_dev[MAX_KHCI_DEV_NUM] = {0};
+static usb_khci_dev_state_struct_t g_khci_dev[MAX_KHCI_DEV_NUM];
 
 #if USBCFG_KHCI_4BYTE_ALIGN_FIX
 static uint8_t *_usb_khci_dev_swap_buf_ptr = NULL;
@@ -142,10 +138,38 @@ static uint8_t *_usb_khci_dev_swap_buf_ptr = NULL;
 
 
 extern usb_status _usb_device_call_service(uint8_t,usb_event_struct_t*);
+extern uint32_t soc_get_usb_base_address(uint8_t controller_id);
+
 #ifdef USBCFG_OTG
 extern usb_otg_handle *  g_usb_otg_handle;
 #endif
 extern uint8_t soc_get_usb_vector_number(uint8_t);
+
+#if USBCFG_DEV_DETACH_ENABLE
+/*FUNCTION*-------------------------------------------------------------
+*
+*  Function Name  : usb_dci_khci_detach
+*  Returned Value : void
+*  Comments       :
+*        this function is called if device known it's detached.
+*
+*END*-----------------------------------------------------------------*/
+void usb_dci_khci_detach(void)
+{
+    usb_event_struct_t event;
+    usb_khci_dev_state_struct_t* state_ptr;
+    state_ptr = (usb_khci_dev_state_struct_t*)(&g_khci_dev[0]);
+    
+    /* Initialize the event strucutre to be passed to the upper layer*/
+    event.handle = (usb_device_handle)state_ptr->upper_layer_handle;
+    event.ep_num = 0;
+    event.setup = 0;
+    event.direction = 0;
+ 
+    /* propagate control to upper layers for processing */
+    _usb_device_call_service(USB_SERVICE_DETACH, &event);
+}
+#endif
 
 /*FUNCTION*-------------------------------------------------------------
 *
@@ -215,7 +239,7 @@ usb_status usb_dci_khci_get_xd
      */
     if (!usb_dev_ptr->xd_entries)
     {
-        OS_Mutex_unlock(usb_dev_ptr->mutex);
+        OS_Unlock();
         return USBERR_DEVICE_BUSY;
     }
 
@@ -307,14 +331,14 @@ static void _usb_khci_next_setup_token_prep
     {
         //BD_ADDR_RX(USB_CONTROL_ENDPOINT, state_ptr->ep_info[USB_CONTROL_ENDPOINT].rx_buf_odd) =
         //    USB_LONG_LE_TO_HOST((uint32_t)state_ptr->setup_buff);
-        usb_hal_khci_bdt_set_address(g_usb_instance.instance, (uint32_t)bdt, USB_CONTROL_ENDPOINT, USB_RECV, 0, (uint32_t)state_ptr->setup_buff);
+        usb_hal_khci_bdt_set_address( (uint32_t)bdt, USB_CONTROL_ENDPOINT, USB_RECV, 0, (uint32_t)state_ptr->setup_buff);
         xd_ptr_temp->wstartaddress = state_ptr->setup_buff;
     }
     else
     {
         //BD_ADDR_RX(USB_CONTROL_ENDPOINT, state_ptr->ep_info[USB_CONTROL_ENDPOINT].rx_buf_odd) =
         //    USB_LONG_LE_TO_HOST((uint32_t)state_ptr->setup_buff+ SETUP_PACKET_LENGTH);
-        usb_hal_khci_bdt_set_address(g_usb_instance.instance, (uint32_t)bdt, USB_CONTROL_ENDPOINT, USB_RECV, 1, (uint32_t)(state_ptr->setup_buff+SETUP_PACKET_LENGTH));
+        usb_hal_khci_bdt_set_address( (uint32_t)bdt, USB_CONTROL_ENDPOINT, USB_RECV, 1, (uint32_t)(state_ptr->setup_buff+SETUP_PACKET_LENGTH));
         xd_ptr_temp->wstartaddress = state_ptr->setup_buff + SETUP_PACKET_LENGTH;
     }
     xd_ptr_temp->ep_num = USB_CONTROL_ENDPOINT;
@@ -327,16 +351,16 @@ static void _usb_khci_next_setup_token_prep
     //USB_XD_QUEUE_ENQUEUE(&state_ptr->ep_info[USB_CONTROL_ENDPOINT].xd_queue_recv, xd_ptr_temp);
     state_ptr->ep_info[USB_CONTROL_ENDPOINT].recv_xd = xd_ptr_temp;
     /* toggle send buffer */
-    state_ptr->ep_info[USB_CONTROL_ENDPOINT].tx_buf_odd ^= 1;
+    //state_ptr->ep_info[USB_CONTROL_ENDPOINT].tx_buf_odd ^= 1;
     
     /* configure data pid for setup token and give control to SEI*/
     state_ptr->ep_info[USB_CONTROL_ENDPOINT].rx_data0 = 0;
-    usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, USB_CONTROL_ENDPOINT, USB_RECV, state_ptr->ep_info[USB_CONTROL_ENDPOINT].rx_buf_odd,
+    usb_hal_khci_bdt_set_control( (uint32_t)bdt, USB_CONTROL_ENDPOINT, USB_RECV, state_ptr->ep_info[USB_CONTROL_ENDPOINT].rx_buf_odd,
                                  USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(SETUP_PACKET_LENGTH)| USB_BD_OWN | USB_BD_DTS | USB_BD_DATA01(state_ptr->ep_info[USB_CONTROL_ENDPOINT].rx_data0))));
     //BD_CTRL_RX(USB_CONTROL_ENDPOINT, state_ptr->ep_info[USB_CONTROL_ENDPOINT].rx_buf_odd) =
     //USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(SETUP_PACKET_LENGTH)|
     //    USB_BD_OWN | USB_BD_DTS | USB_BD_DATA01(state_ptr->ep_info[USB_CONTROL_ENDPOINT].rx_data0)));
-    //printf("ready to receive on EP0 setup\n");
+    //USB_PRINTF("ready to receive on EP0 setup\n");
     /* setup token is always on DATA0 PID */
     return;
 }
@@ -378,14 +402,14 @@ static usb_status _usb_khci_ep_read
      * interrupt handler.
      */
     
-    usb_hal_khci_bdt_set_address(g_usb_instance.instance, (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd, (uint32_t)buf_ptr);
+    usb_hal_khci_bdt_set_address( (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd, (uint32_t)buf_ptr);
     //BD_ADDR_RX(ep_num, state_ptr->ep_info[ep_num].rx_buf_odd) =
     //    USB_LONG_LE_TO_HOST((uint32_t)buf_ptr);
 
     /* Program number of bytes to be received and give
      * the Control to the SEI
      */
-    usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd,
+    usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd,
                                  USB_LONG_LE_TO_HOST(USB_BD_BC(buf_num_bytes) | USB_BD_OWN | USB_BD_DTS | USB_BD_DATA01(state_ptr->ep_info[ep_num].rx_data0)));
     //BD_CTRL_RX(ep_num, state_ptr->ep_info[ep_num].rx_buf_odd) =
     //    USB_LONG_LE_TO_HOST(USB_BD_BC(buf_num_bytes) |
@@ -446,14 +470,14 @@ static usb_status _usb_khci_ep_write
      */
     //BD_ADDR_TX(ep_num, state_ptr->ep_info[ep_num].tx_buf_odd) =
     //    USB_LONG_LE_TO_HOST((uint32_t)buf_ptr);
-    usb_hal_khci_bdt_set_address(g_usb_instance.instance, (uint32_t)bdt, ep_num, USB_SEND, state_ptr->ep_info[ep_num].tx_buf_odd, (uint32_t)buf_ptr);
+    usb_hal_khci_bdt_set_address( (uint32_t)bdt, ep_num, USB_SEND, state_ptr->ep_info[ep_num].tx_buf_odd, (uint32_t)buf_ptr);
     /* Program the number of bytes to be sent in BDT and Give
      * the onership to SEI
      */
     //BD_CTRL_TX(ep_num, state_ptr->ep_info[ep_num].tx_buf_odd) =
     //    USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(buf_num_bytes) |
     //        USB_BD_OWN | USB_BD_DTS | USB_BD_DATA01(state_ptr->ep_info[ep_num].tx_data0)));
-    usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep_num, USB_SEND, state_ptr->ep_info[ep_num].tx_buf_odd,
+    usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep_num, USB_SEND, state_ptr->ep_info[ep_num].tx_buf_odd,
                                  USB_LONG_LE_TO_HOST(USB_BD_BC(buf_num_bytes) | USB_BD_OWN | USB_BD_DTS | USB_BD_DATA01(state_ptr->ep_info[ep_num].tx_data0)));
     
     usb_hal_khci_clr_token_busy(state_ptr->usbRegBase);
@@ -495,10 +519,10 @@ static usb_status _usb_khci_reset_ep_state
         /* Clearing all buffer descriptors for both ODD and even
          * for Both Receive and Transmit direction
          */
-        usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep, USB_RECV, 0, 0);
-        usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep, USB_RECV, 1, 0);
-        usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep, USB_SEND, 0, 0);
-        usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep, USB_SEND, 1, 0);
+        usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep, USB_RECV, 0, 0);
+        usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep, USB_RECV, 1, 0);
+        usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep, USB_SEND, 0, 0);
+        usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep, USB_SEND, 1, 0);
         //BD_CTRL_RX(ep, EVEN_BUFF) = 0;
         //BD_CTRL_RX(ep, ODD_BUFF) = 0;
 
@@ -535,8 +559,8 @@ static usb_status _usb_khci_reset_ep_state
 
     /* Set Default device status */
     state_ptr->usb_device_status = 
-    (USBCFG_DEV_SELF_POWER << (USB_DESC_CFG_ATTRIBUTES_SELF_POWERED_SHIFT)) |
-    (USBCFG_DEV_REMOTE_WAKEUP << (USB_DESC_CFG_ATTRIBUTES_REMOTE_WAKEUP_SHIFT));
+    (USBCFG_DEV_SELF_POWER << (USB_GET_STATUS_ATTRIBUTES_SELF_POWERED_SHIFT)) |
+    (USBCFG_DEV_REMOTE_WAKEUP << (USB_GET_STATUS_ATTRIBUTES_REMOTE_WAKEUP_SHIFT));
 
     /* Enable All Error Interrupts */
     usb_hal_khci_enable_all_error_interrupts(state_ptr->usbRegBase);
@@ -678,8 +702,8 @@ static void _usb_khci_service_err_intr
     device_error = (uint8_t)(usb_hal_khci_get_error_interrupt_status(state_ptr->usbRegBase) &
                              usb_hal_khci_get_error_interrupt_enable_status(state_ptr->usbRegBase));
     
-    #ifdef _DEV_DEBUG
-        printf("USB Err: 0x%x\n", device_error);
+    #ifdef _DEBUG
+        USB_PRINTF("USB Err: 0x%x\n", device_error);
     #endif   
     
     /* Initialize the event strucutre to be passed to the upper layer*/
@@ -801,7 +825,7 @@ static void _usb_khci_service_tk_dne_intr
      */
     usb_hal_khci_clr_interrupt(state_ptr->usbRegBase, INTR_TOKDNE);
 
-    control = usb_hal_khci_bdt_get_control(g_usb_instance.instance, (uint32_t)bdt, ep_num, dir, buf_odd);
+    control = usb_hal_khci_bdt_get_control( (uint32_t)bdt, ep_num, dir, buf_odd);
     
     /* Get length of Data transmited or recevied in the last transaction. */
     len = (USB_HOST_TO_LE_LONG(control) >> 16) & 0x3ff;
@@ -812,15 +836,19 @@ static void _usb_khci_service_tk_dne_intr
     /* if token PID is a setup token */
     setup = (token_pid == USB_SETUP_TOKEN) ? TRUE : FALSE;
 
-    //printf("23tk_dne ep %d dir %d len %d buff_odd %d\n", ep_num, dir, len, buf_odd);
+    //USB_PRINTF("23tk_dne ep %d dir %d len %d buff_odd %d\n", ep_num, dir, len, buf_odd);
     if(dir)
     {
         /* direction is USB_SEND*/
         /* Get head of the send queue */
         //USB_XD_QUEUE_GET_HEAD(&state_ptr->ep_info[ep_num].xd_queue_send,&xd_ptr);
-        //printf("get send xd_ptr 0x%x\n", xd_ptr);
+        //USB_PRINTF("get send xd_ptr 0x%x\n", xd_ptr);
         /* updating the WSOFAR field */
         xd_ptr = state_ptr->ep_info[ep_num].send_xd;
+        if(xd_ptr == NULL)
+        {
+            return;
+        }
         xd_ptr->wsofar += len;
 
         buf_num_bytes = (uint32_t)(xd_ptr->wtotallength - xd_ptr->wsofar);
@@ -854,22 +882,31 @@ static void _usb_khci_service_tk_dne_intr
     }
     else
     {
+        
+        if((ep_num == USB_CONTROL_ENDPOINT) && (!len))
+        {
+                goto callservice; // call up layer service function
+        }
         /* direction is USB_RECV*/
         if(g_zero_pkt_send == TRUE)
         {
             g_zero_pkt_send = FALSE;
         }
-        //printf("before ep %d : xd_head_ptr 0x%x xd_tail_ptr 0x%x\n", ep_num, 
+        //USB_PRINTF("before ep %d : xd_head_ptr 0x%x xd_tail_ptr 0x%x\n", ep_num, 
         //        state_ptr->EP_INFO[ep_num].xd_queue_recv.xd_head_ptr,
         //        state_ptr->EP_INFO[ep_num].xd_queue_recv.xd_tail_ptr);
         /* Get head of the send queue */
         //USB_XD_QUEUE_GET_HEAD(&state_ptr->ep_info[ep_num].xd_queue_recv, &xd_ptr);
         xd_ptr = state_ptr->ep_info[ep_num].recv_xd;
+        if(xd_ptr == NULL)
+        {
+            return;
+        }
 #if USBCFG_KHCI_4BYTE_ALIGN_FIX
         if (!xd_ptr->internal_dma_align)
         {
             //src = (uint8_t *)USB_LONG_LE_TO_HOST(BD_ADDR_RX(ep_num, state_ptr->ep_info[ep_num].rx_buf_odd));
-            src = (uint8_t*)USB_LONG_LE_TO_HOST(usb_hal_khci_bdt_get_address(g_usb_instance.instance, (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd));
+            src = (uint8_t*)USB_LONG_LE_TO_HOST(usb_hal_khci_bdt_get_address( (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd));
             dst = xd_ptr->wstartaddress + xd_ptr->wsofar;
             if (src != dst)
             {
@@ -889,7 +926,7 @@ static void _usb_khci_service_tk_dne_intr
             state_ptr->ep_info[ep_num].tx_data0 = 1;
             state_ptr->ep_info[ep_num].rx_data0 = 1;
             state_ptr->ep_info[ep_num].rx_buf_odd ^= 1;
-            state_ptr->ep_info[ep_num].tx_buf_odd ^= 1;
+            //state_ptr->ep_info[ep_num].tx_buf_odd ^= 1;
         }
         else
         {
@@ -898,7 +935,7 @@ static void _usb_khci_service_tk_dne_intr
             state_ptr->ep_info[ep_num].rx_buf_odd ^= 1;
         }
 
-        //printf("max packet size %d\n",state_ptr->EP_INFO[ep_num].max_packet_size);
+        //USB_PRINTF("max packet size %d\n",state_ptr->EP_INFO[ep_num].max_packet_size);
         /* dequeue if all bytes have been received or the last send transaction
            was of length less then the max packet size length configured for
            corresponding endpoint */
@@ -924,7 +961,7 @@ static void _usb_khci_service_tk_dne_intr
     {
         _usb_khci_next_setup_token_prep(state_ptr);
     }
-    
+callservice:    
     /* Initialize the event strucutre to be passed to the upper layer*/
     event.handle = (usb_device_handle)state_ptr->upper_layer_handle;
     event.ep_num = ep_num;
@@ -934,7 +971,7 @@ static void _usb_khci_service_tk_dne_intr
     /* propagate control to upper layers for processing */
     _usb_device_call_service(ep_num,&event);
 
-    //printf("_usb_khci_service_tk_dne_intr 3-- :%d \n",ep_num);
+    //USB_PRINTF("_usb_khci_service_tk_dne_intr 3-- :%d \n",ep_num);
     
     usb_hal_khci_clr_token_busy(state_ptr->usbRegBase);
     
@@ -1110,9 +1147,9 @@ static void _usb_khci_service_stall_intr
 		if (state_ptr->ep_info[ep].endpoint_status == USB_STATUS_STALLED)
 		{
 			usb_hal_khci_endpoint_clr_stall(state_ptr->usbRegBase, ep);
-			usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep, USB_SEND, state_ptr->ep_info[ep].tx_buf_odd,
+			usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep, USB_SEND, state_ptr->ep_info[ep].tx_buf_odd,
 							 USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(state_ptr->ep_info[ep].max_packet_size)| USB_BD_DTS | USB_BD_DATA01(0))));
-			usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep, USB_RECV, state_ptr->ep_info[ep].rx_buf_odd,
+			usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep, USB_RECV, state_ptr->ep_info[ep].rx_buf_odd,
 							 USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(state_ptr->ep_info[ep].max_packet_size)| USB_BD_DTS | USB_BD_DATA01(0))));
 		}
 	}
@@ -1180,7 +1217,7 @@ static void _usb_khci_isr(usb_khci_dev_state_struct_t* state_ptr)
      */
     if (usb_hal_khci_is_interrupt_issued(state_ptr->usbRegBase, INTR_TOKDNE))
     {
-    //  printf("done ++");
+    //  USB_PRINTF("done ++");
         _usb_khci_service_tk_dne_intr(state_ptr);
     }
     /* This reset interrupt comes when the USB Module has decoded a valid USB reset.
@@ -1307,8 +1344,9 @@ usb_status usb_dci_khci_init
 #endif
     usb_khci_dev_state_struct_t* usb_dev_ptr = (usb_khci_dev_state_struct_t*)handle;
     //volatile USB_MemMapPtr             usb_ptr;
-     
+
     usb_dev_ptr->dev_vec = soc_get_usb_vector_number(controller_id);
+    
     usb_dev_ptr->usbRegBase = soc_get_usb_base_address(controller_id);
     /* Get the maximum number of endpoints supported by this USB controller */
     usb_dev_ptr->max_endpoints = KHCI_MAX_ENDPOINT;
@@ -1353,7 +1391,7 @@ usb_status usb_dci_khci_init
     _usb_khci_reset_ep_state(usb_dev_ptr); 
           
     
-    //printf("11usb_dci_khci_init ++");
+    //USB_PRINTF("11usb_dci_khci_init ++");
     /* Enable Sleep,Token Done,Error,USB Reset,Stall,
      * Resume and SOF Interrupt.
      */
@@ -1434,7 +1472,7 @@ usb_status usb_dci_khci_init_endpoint
         return USBERR_EP_INIT_FAILED;
     }
 #endif
-    //printf("init ep %d dir %d\n", xd_ptr->EP_NUM, xd_ptr->BDIRECTION);
+    //USB_PRINTF("init ep %d dir %d\n", xd_ptr->EP_NUM, xd_ptr->BDIRECTION);
 
     /* mark this endpoint as initialized */
     state_ptr->ep_info[xd_ptr->ep_num].ep_init_flag[xd_ptr->bdirection] = TRUE;
@@ -1572,8 +1610,8 @@ usb_status usb_dci_khci_deinit_endpoint
     usb_hal_khci_endpoint_shut_down(state_ptr->usbRegBase, ep_num);
   
     /* uninitialise the strucrure for this endpoint */
-    usb_hal_khci_bdt_set_address(g_usb_instance.instance, (uint32_t)bdt, ep_num, direction, EVEN_BUFF, USB_LONG_LE_TO_HOST_CONST((uint32_t)USB_UNINITIALIZED_VAL_32));
-    usb_hal_khci_bdt_set_address(g_usb_instance.instance, (uint32_t)bdt, ep_num, direction, ODD_BUFF, USB_LONG_LE_TO_HOST_CONST((uint32_t)USB_UNINITIALIZED_VAL_32));
+    usb_hal_khci_bdt_set_address( (uint32_t)bdt, ep_num, direction, EVEN_BUFF, USB_LONG_LE_TO_HOST_CONST((uint32_t)USB_UNINITIALIZED_VAL_32));
+    usb_hal_khci_bdt_set_address( (uint32_t)bdt, ep_num, direction, ODD_BUFF, USB_LONG_LE_TO_HOST_CONST((uint32_t)USB_UNINITIALIZED_VAL_32));
     //BD_ADDR(ep_num,direction,EVEN_BUFF) =
     //    USB_LONG_LE_TO_HOST_CONST((uint32_t)USB_UNINITIALIZED_VAL_32);
     //BD_ADDR(ep_num,direction,ODD_BUFF) =
@@ -1614,7 +1652,7 @@ usb_status usb_dci_khci_send
     {
         state_ptr->ep_info[xd_ptr->ep_num].send_xd = xd_ptr;
         //USB_XD_QUEUE_ENQUEUE(&state_ptr->ep_info[xd_ptr->ep_num].xd_queue_send, xd_ptr);
-        //printf("after send ep %d enqueue: xd_head_ptr 0x%x xd_tail_ptr 0x%x\n", xd_ptr->EP_NUM, 
+        //USB_PRINTF("after send ep %d enqueue: xd_head_ptr 0x%x xd_tail_ptr 0x%x\n", xd_ptr->EP_NUM, 
         //        state_ptr->EP_INFO[xd_ptr->EP_NUM].xd_queue_send.xd_head_ptr,
         //        state_ptr->EP_INFO[xd_ptr->EP_NUM].xd_queue_send.xd_tail_ptr);
         
@@ -1724,6 +1762,14 @@ usb_status usb_dci_khci_recv
         usb_dci_khci_free_xd(state_ptr, xd_ptr);
     }
     
+    if(buf_num_bytes ==0 && (xd_ptr->ep_num== USB_CONTROL_ENDPOINT))
+    {
+        usb_dci_khci_free_xd(state_ptr, xd_ptr); 
+
+        state_ptr->ep_info[USB_CONTROL_ENDPOINT].rx_buf_odd ^= 1;
+        _usb_khci_next_setup_token_prep(state_ptr);  
+        // prime the next setup transaction here
+    }
     return error;
 }
 
@@ -1759,7 +1805,7 @@ usb_status usb_dci_khci_stall_endpoint
     if (direction)
     {
         /* USB_SEND */
-        usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep_num, USB_SEND, state_ptr->ep_info[ep_num].tx_buf_odd,
+        usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep_num, USB_SEND, state_ptr->ep_info[ep_num].tx_buf_odd,
                                  USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(state_ptr->ep_info[ep_num].max_packet_size)| USB_BD_OWN | USB_BD_STALL | USB_BD_DTS)));
         //BD_CTRL_TX(ep_num, state_ptr->ep_info[ep_num].tx_buf_odd) =
         //    USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(state_ptr->ep_info[ep_num].max_packet_size)| USB_BD_OWN | USB_BD_STALL | USB_BD_DTS));
@@ -1767,7 +1813,7 @@ usb_status usb_dci_khci_stall_endpoint
     else
     {
         /* USB_RECV */
-        usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd,
+        usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd,
                                  USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(state_ptr->ep_info[ep_num].max_packet_size)| USB_BD_OWN | USB_BD_STALL | USB_BD_DTS)));
         /* If Stall is for Receive transaction, Update Recevice BDT*/
         //BD_CTRL_RX(ep_num, state_ptr->ep_info[ep_num].rx_buf_odd) =
@@ -1817,7 +1863,7 @@ usb_status usb_dci_khci_unstall_endpoint
         /*BD_CTRL_TX(ep_num, state_ptr->ep_info[ep_num].tx_buf_odd) =
             USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(state_ptr->ep_info[ep_num].max_packet_size) |
             USB_BD_DTS | USB_BD_DATA01(0)));*/
-        usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep_num, USB_SEND, state_ptr->ep_info[ep_num].tx_buf_odd,
+        usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep_num, USB_SEND, state_ptr->ep_info[ep_num].tx_buf_odd,
                                  USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(state_ptr->ep_info[ep_num].max_packet_size)| USB_BD_DTS | USB_BD_DATA01(0))));
     }
     else
@@ -1828,12 +1874,12 @@ usb_status usb_dci_khci_unstall_endpoint
         if (ep_num == USB_CONTROL_ENDPOINT)
         {
             /* something important need to do is toggle the tx buffer odd */
-            state_ptr->ep_info[USB_CONTROL_ENDPOINT].tx_buf_odd ^= 1;
+            //state_ptr->ep_info[USB_CONTROL_ENDPOINT].tx_buf_odd ^= 1;
             _usb_khci_next_setup_token_prep(state_ptr);
         }
         else
         {
-            usb_hal_khci_bdt_set_control(g_usb_instance.instance, (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd,
+            usb_hal_khci_bdt_set_control( (uint32_t)bdt, ep_num, USB_RECV, state_ptr->ep_info[ep_num].rx_buf_odd,
                                  USB_LONG_LE_TO_HOST((uint32_t)(USB_BD_BC(state_ptr->ep_info[ep_num].max_packet_size)| USB_BD_DTS | USB_BD_DATA01(0))));
         }
     }

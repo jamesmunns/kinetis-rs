@@ -110,7 +110,7 @@
 #define configMINIMAL_STACK_SIZE                  ((unsigned portSHORT)200) /* stack size in addressable stack units */
 /*----------------------------------------------------------*/
 /* Heap Memory */
-#define configFRTOS_MEMORY_SCHEME                 2 /* either 1 (only alloc), 2 (alloc/free), 3 (malloc) or 4 (coalesc blocks) */
+#define configFRTOS_MEMORY_SCHEME                 3 /* either 1 (only alloc), 2 (alloc/free), 3 (malloc) or 4 (coalesc blocks) */
 #define configTOTAL_HEAP_SIZE                     ((size_t)(0x8000)) /* size of heap in bytes */
 #define configUSE_HEAP_SECTION_NAME               0 /* set to 1 if a custom section name (configHEAP_SECTION_NAME_STRING) shall be used, 0 otherwise */
 #if configUSE_HEAP_SECTION_NAME
@@ -141,7 +141,7 @@
 
 /* Software timer definitions. */
 #define configUSE_TIMERS                          1
-#define configTIMER_TASK_PRIORITY                 17
+#define configTIMER_TASK_PRIORITY                 ( configMAX_PRIORITIES - 1)
 #define configTIMER_QUEUE_LENGTH                  10
 #define configTIMER_TASK_STACK_DEPTH              ( configMINIMAL_STACK_SIZE * 2 )
 
@@ -161,6 +161,7 @@
 #define INCLUDE_xTaskGetIdleTaskHandle            0
 #define INCLUDE_eTaskGetState                     0
 #define INCLUDE_pcTaskGetTaskName                 0
+#define INCLUDE_xEventGroupSetBitFromISR          1
 #define INCLUDE_xTimerPendFunctionCall            1
 /* -------------------------------------------------------------------- */
 /* Macros to identify the compiler used: */

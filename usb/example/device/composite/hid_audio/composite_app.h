@@ -34,12 +34,43 @@
 #ifndef _COMPOSITE_APP_H
 #define _COMPOSITE_APP_H
 
-#define  HIGH_SPEED           (0)
+
+/******************************************************************************
+ * Constants - None
+ *****************************************************************************/
+
+/******************************************************************************
+ * Macro's
+ *****************************************************************************/
+#define COMPOSITE_CFG_MAX            2
+
+#define AUDIO_INTERFACE_INDEX        0
+#define HID_MOUSE_INTERFACE_INDEX    1
+
+#define  HIGH_SPEED                  (0)
 
 #if HIGH_SPEED
-#define CONTROLLER_ID         USB_CONTROLLER_EHCI_0
+#define CONTROLLER_ID                USB_CONTROLLER_EHCI_0
 #else
-#define CONTROLLER_ID         USB_CONTROLLER_KHCI_0
+#define CONTROLLER_ID                USB_CONTROLLER_KHCI_0
 #endif
+/******************************************************************************
+ * Types
+ *****************************************************************************/
+typedef struct composite_device_struct
+{
+    composite_handle_t          composite_device;
+    audio_handle_t              audio_handle;
+    hid_mouse_struct_t          hid_mouse;
+    composite_config_struct_t   composite_device_config_callback;
+    class_config_struct_t       composite_device_config_list[COMPOSITE_CFG_MAX];
+}composite_device_struct_t;
 
+/*****************************************************************************
+ * Global variables
+ *****************************************************************************/
+extern composite_device_struct_t                 g_composite_device;
+/*****************************************************************************
+ * Global Functions
+ *****************************************************************************/
 #endif

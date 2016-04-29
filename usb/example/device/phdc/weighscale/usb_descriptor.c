@@ -107,7 +107,7 @@ uint8_t g_device_descriptor[DEVICE_DESCRIPTOR_SIZE] =
     /* Max Packet size */
     CONTROL_MAX_PACKET_SIZE,
     /* Vendor ID */
-    0x04,0x25,
+    0xa2,0x15,
     /* Product ID */
     0x00,0x04,  /* for basic demo of phdc */
     /* BCD Device version */

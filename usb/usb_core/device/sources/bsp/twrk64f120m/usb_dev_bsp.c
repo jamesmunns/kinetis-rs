@@ -30,7 +30,6 @@
 #include <assert.h>
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
-#define SIM_SOPT2_IRC48MSEL_MASK                 0x30000u
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
     #if (defined(CPU_MK64F12))
 #include "MK64F12/MK64F12_sim.h"
@@ -40,6 +39,8 @@
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
 #include "MK64F12.h"
 #endif
+#define SIM_SOPT2_IRC48MSEL_MASK                 0x30000u
+extern uint8_t soc_get_usb_vector_number(uint8_t controller_id);
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #define BSP_USB_INT_LEVEL                (4)
@@ -50,7 +51,7 @@ static int32_t bsp_usb_dev_io_init
     int32_t i
 )
 {
-	int32_t ret = 0;
+    int32_t ret = 0;
     if (i == 0)
     {
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
@@ -84,51 +85,66 @@ static int32_t bsp_usb_dev_io_init
 #endif
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #if BSPCFG_USB_USE_IRC48M
-	/* USB clock divider */
-	if(kClockManagerSuccess != CLOCK_SYS_SetDivider(kClockDividerUsbDiv, 0U))
-	{
-		ret = -1;
-	}
-	if(kClockManagerSuccess != CLOCK_SYS_SetDivider(kClockDividerUsbFrac, 0U))
-	{
-		ret = -1;
-	}
-	/* PLL/FLL selected as CLK source */
-	if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockUsbSrc, 1U))
-	{
-		ret = -1;
-	}
-	if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockPllfllSel, 3U))
-	{
-		ret = -1;
-	}
-	/* USB Clock Gating */
-	CLOCK_SYS_EnableUsbClock(i);
-	/* Enable IRC 48MHz for USB module */
-	USB_CLK_RECOVER_IRC_EN = 0x03;
-#else
-	/* PLL/FLL selected as CLK source */
-	if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockUsbSrc, 1U))
-	{
-		ret = -1;
-	}
-	if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockPllfllSel, 1U))
-	{
-		ret = -1;
-	}
-	
-	/* USB Clock Gating */
-	CLOCK_SYS_EnableUsbClock(i);
-	
-	/* Enable clock gating to all ports, A, B, C, D, E*/
-	CLOCK_SYS_EnablePortClock(1);
-	CLOCK_SYS_EnablePortClock(2);
-	CLOCK_SYS_EnablePortClock(3);
-	CLOCK_SYS_EnablePortClock(4);
-	CLOCK_SYS_EnablePortClock(5);
+    /* USB clock divider */
+    CLOCK_SYS_SetUsbfsDiv(i, 0U, 0U);
 
-	/* Weak pull downs */
-	HW_USB_USBCTRL_WR(0x40);
+    /* PLL/FLL selected as CLK source */
+    CLOCK_SYS_SetUsbfsSrc(i, kClockUsbfsSrcPllFllSel);
+    CLOCK_SYS_SetPllfllSel(kClockPllFllSelIrc48M);
+
+    /* USB Clock Gating */
+    CLOCK_SYS_EnableUsbfsClock(i);
+    /* Enable IRC 48MHz for USB module */
+    USB_CLK_RECOVER_IRC_EN = 0x03;
+#else
+    /* PLL/FLL selected as CLK source */
+    CLOCK_SYS_SetUsbfsSrc(i, kClockUsbfsSrcPllFllSel);
+    CLOCK_SYS_SetPllfllSel(kClockPllFllSelPll);
+    
+    /* USB Clock Gating */
+    CLOCK_SYS_EnableUsbfsClock(i);
+    
+    /* Enable clock gating to all ports, A, B, C, D, E*/
+    CLOCK_SYS_EnablePortClock(0);
+    CLOCK_SYS_EnablePortClock(1);
+    CLOCK_SYS_EnablePortClock(2);
+    CLOCK_SYS_EnablePortClock(3);
+    CLOCK_SYS_EnablePortClock(4);
+
+    /* Weak pull downs */
+    HW_USB_USBCTRL_WR(0x40);
+#endif
+#endif
+#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
+#if BSPCFG_USB_USE_IRC48M
+    /*
+    * Configure SIM_CLKDIV2: USBDIV = 0, USBFRAC = 0
+    */
+    SIM_CLKDIV2 &= ~(SIM_CLKDIV2_USBFRAC_MASK | SIM_CLKDIV2_USBDIV_MASK);
+    /* Configure USB to be clocked from IRC 48MHz */
+    SIM_SOPT2 |= (SIM_SOPT2_USBSRC_MASK | SIM_SOPT2_IRC48MSEL_MASK);
+    /* Enable USB-OTG IP clocking */
+    SIM_SCGC4 |= SIM_SCGC4_USBOTG_MASK;
+    /* Enable IRC 48MHz for USB module */
+    USB0_CLK_RECOVER_IRC_EN = 0x03;
+#else
+    /* USB Clock Gating */
+    SIM_SCGC4 |= (SIM_SCGC4_USBOTG_MASK);       
+                                            
+
+              /* Enable clock gating to all ports */
+    SIM_SCGC5 |=   SIM_SCGC5_PORTA_MASK \
+                             | SIM_SCGC5_PORTB_MASK \
+                             | SIM_SCGC5_PORTC_MASK \
+                             | SIM_SCGC5_PORTD_MASK \
+                             | SIM_SCGC5_PORTE_MASK;
+
+
+    /* PLL/FLL selected as CLK source */
+    SIM_SOPT2 |= (SIM_SOPT2_USBSRC_MASK | SIM_SOPT2_PLLFLLSEL(0x01));
+
+    /* Weak pull downs */
+    USB0_USBCTRL = (0x40);
 #endif
 #endif
     }
@@ -156,21 +172,39 @@ int32_t bsp_usb_dev_init(uint8_t controller_id)
     if (0 == controller_id)
     {
         /* Configure enable USB regulator for device */
-		HW_SIM_SOPT1CFG_SET(SIM_BASE, SIM_SOPT1CFG_URWE_MASK);
-		HW_SIM_SOPT1_SET(SIM_BASE, SIM_SOPT1_USBREGEN_MASK);
+        HW_SIM_SOPT1CFG_SET(SIM_BASE, SIM_SOPT1CFG_URWE_MASK);
+        HW_SIM_SOPT1_SET(SIM_BASE, SIM_SOPT1_USBREGEN_MASK);
 
         /* reset USB CTRL register */
-		HW_USB_USBCTRL_WR(USB0_BASE, 0);
+        HW_USB_USBCTRL_WR(USB0_BASE, 0);
 
         /* Enable internal pull-up resistor */
-		HW_USB_CONTROL_WR(USB0_BASE, USB_CONTROL_DPPULLUPNONOTG_MASK);
-		HW_USB_USBTRC0_SET(USB0_BASE, 0x40); /* Software must set this bit to 1 */
+        HW_USB_CONTROL_WR(USB0_BASE, USB_CONTROL_DPPULLUPNONOTG_MASK);
+        HW_USB_USBTRC0_SET(USB0_BASE, 0x40); /* Software must set this bit to 1 */
         /* setup interrupt */
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
         OS_intr_init(USB0_IRQn + 16, BSP_USB_INT_LEVEL, 0, TRUE);
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
         OS_intr_init(USB0_IRQn, BSP_USB_INT_LEVEL, 0, TRUE);
 #endif
+
+#elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
+    /* MPU is disabled. All accesses from all bus masters are allowed */
+    MPU_CESR=0;
+    if (0 == controller_id)
+    {
+        /* Configure enable USB regulator for device */
+        SIM_SOPT1CFG |= (SIM_SOPT1CFG_URWE_MASK);
+        SIM_SOPT1 |= SIM_SOPT1_USBREGEN_MASK;
+
+        /* reset USB CTRL register */
+        USB0_USBCTRL = 0;
+
+        /* Enable internal pull-up resistor */
+        USB0_CONTROL = USB_CONTROL_DPPULLUPNONOTG_MASK;
+        USB0_USBTRC0 = 0x40; /* Software must set this bit to 1 */
+        /* setup interrupt */
+        OS_intr_init(INT_USB0, BSP_USB_INT_LEVEL, 0, TRUE);
 #else
     /* MPU is disabled. All accesses from all bus masters are allowed */
     HW_MPU_CESR_WR(0);
@@ -186,7 +220,7 @@ int32_t bsp_usb_dev_init(uint8_t controller_id)
         /* Enable internal pull-up resistor */
         HW_USB_CONTROL_WR(USB_CONTROL_DPPULLUPNONOTG_MASK);
         /* setup interrupt */
-        OS_intr_init(soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
+        OS_intr_init((IRQn_Type)soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
 #endif
     }
     else

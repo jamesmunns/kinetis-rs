@@ -36,7 +36,6 @@
 
 /* Public functions */
 
-extern uint32_t  _usb_otg_device_hnp_enable(usb_otg_handle handle, uint8_t enable);
-extern uint32_t  _usb_otg_device_on_class_init(usb_otg_handle  otg_handle, usb_device_handle  dev_handle, uint8_t bm_attributes );
-extern uint32_t  _usb_otg_host_on_detach_event(usb_otg_handle  otg_handle);
+extern uint32_t  usb_otg_device_hnp_enable(usb_otg_handle handle, uint8_t enable);
+extern uint32_t  usb_otg_device_on_class_init(usb_otg_handle  otg_handle, usb_device_handle  dev_handle, uint8_t bm_attributes );
 #endif /* __usb_otg_dev_api__ */

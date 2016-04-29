@@ -41,6 +41,8 @@
 #include "MK22F51212.h"
 #endif
 
+extern uint8_t soc_get_usb_vector_number(uint8_t controller_id);
+
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #define BSP_USB_INT_LEVEL                (4)
 #define USB_CLK_RECOVER_IRC_EN (*(volatile unsigned char *)0x40072144)
@@ -52,7 +54,7 @@ static int32_t bsp_usb_dev_io_init
     int32_t i
 )
 {
-	int32_t ret = 0;
+    int32_t ret = 0;
     if (i == USB_CONTROLLER_KHCI_0)
     {
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
@@ -77,50 +79,27 @@ static int32_t bsp_usb_dev_io_init
 #endif
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
         #if BSPCFG_USB_USE_IRC48M
-		/* USB clock divider */
-		if(kClockManagerSuccess != CLOCK_SYS_SetDivider(kClockDividerUsbDiv, 0U))
-		{
-			ret = -1;
-		}
-		if(kClockManagerSuccess != CLOCK_SYS_SetDivider(kClockDividerUsbFrac, 0U))
-		{
-			ret = -1;
-		}
-		/* PLL/FLL selected as CLK source */
-		if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockUsbSrc, 1U))
-		{
-			ret = -1;
-		}
-		if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockPllfllSel, 3U))
-		{
-			ret = -1;
-		}
-		/* USB Clock Gating */
-		CLOCK_SYS_EnableUsbClock(i);
+        /* USB clock divider */
+        CLOCK_SYS_SetUsbfsDiv(i, 0U, 0U);
+
+        /* PLL/FLL selected as CLK source */
+        CLOCK_SYS_SetUsbfsSrc(i, kClockUsbfsSrcPllFllSel);
+        CLOCK_SYS_SetPllfllSel(kClockPllFllSelIrc48M);
+
+        /* USB Clock Gating */
+        CLOCK_SYS_EnableUsbfsClock(i);
         /* Enable IRC 48MHz for USB module */
         USB_CLK_RECOVER_IRC_EN = 0x03;
 #else
-		/* USB clock divider */
-		if(kClockManagerSuccess != CLOCK_SYS_SetDivider(kClockDividerUsbDiv, 0U))
-		{
-			ret = -1;
-		}
-		if(kClockManagerSuccess != CLOCK_SYS_SetDivider(kClockDividerUsbFrac, 0U))
-		{
-			ret = -1;
-		}
-		/* PLL/FLL selected as CLK source */
-		if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockUsbSrc, 1U))
-		{
-			ret = -1;
-		}
-		if(kClockManagerSuccess != CLOCK_SYS_SetSource(kClockPllfllSel, 1U))
-		{
-			ret = -1;
-		}
-		
-		/* USB Clock Gating */
-		CLOCK_SYS_EnableUsbClock(i);
+        /* USB clock divider */
+        CLOCK_SYS_SetUsbfsDiv(i, 0U, 0U);
+
+        /* PLL/FLL selected as CLK source */
+        CLOCK_SYS_SetUsbfsSrc(i, kClockUsbfsSrcPllFllSel);
+        CLOCK_SYS_SetPllfllSel(kClockPllFllSelPll);
+        
+        /* USB Clock Gating */
+        CLOCK_SYS_EnableUsbfsClock(i);
 #endif
 #else
 #if BSPCFG_USB_USE_IRC48M
@@ -175,6 +154,8 @@ int32_t bsp_usb_dev_init(uint8_t controller_id)
         /* Enable internal pull-up resistor */
         USB0_CONTROL = (USB_CONTROL_DPPULLUPNONOTG_MASK);
         USB0_USBTRC0 |= (0x40); /* Software must set this bit to 1 */
+          /* setup interrupt */
+        OS_intr_init(soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
         /* Configure enable USB regulator for device */
         HW_SIM_SOPT1CFG_SET(SIM_BASE, SIM_SOPT1CFG_URWE_MASK);
@@ -186,6 +167,8 @@ int32_t bsp_usb_dev_init(uint8_t controller_id)
         /* Enable internal pull-up resistor */
         HW_USB_CONTROL_WR(USB0_BASE, USB_CONTROL_DPPULLUPNONOTG_MASK);
         HW_USB_USBTRC0_SET(USB0_BASE, 0x40); /* Software must set this bit to 1 */
+         /* setup interrupt */
+        OS_intr_init((IRQn_Type)soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
 #else
         /* Configure enable USB regulator for device */
         HW_SIM_SOPT1CFG_SET(SIM_SOPT1CFG_URWE_MASK);
@@ -197,9 +180,9 @@ int32_t bsp_usb_dev_init(uint8_t controller_id)
         /* Enable internal pull-up resistor */
         HW_USB_CONTROL_WR(USB_CONTROL_DPPULLUPNONOTG_MASK);
         HW_USB_USBTRC0_SET(0x40); /* Software must set this bit to 1 */
+         /* setup interrupt */
+        OS_intr_init((IRQn_Type)soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
 #endif
-        /* setup interrupt */
-        OS_intr_init(soc_get_usb_vector_number(0), BSP_USB_INT_LEVEL, 0, TRUE);
     }
     else
     {

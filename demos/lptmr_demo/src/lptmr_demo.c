@@ -28,37 +28,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+//  Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdio.h>
-#include <stdlib.h>
-
-#include "fsl_device_registers.h"
+// SDK Included Files
 #include "fsl_lptmr_driver.h"
-#include "fsl_uart_driver.h"
-#include "fsl_clock_manager.h"
 #include "board.h"
-#include "fsl_debug_console.h"
 
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 
-/*******************************************************************************
- * Definitions
- ******************************************************************************/
 #define LPTMR_INSTANCE 0
 
-/*******************************************************************************
- * Global Variables
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
+
 static lptmr_state_t gLPTMRState;
 uint8_t gLPTMR_counter;
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
+
+///////////////////////////////////////////////////////////////////////////////
+// Prototypes
+///////////////////////////////////////////////////////////////////////////////
+
 void lptmr_isr_callback(void);
-/*******************************************************************************
- * Code
- ******************************************************************************/
 
-
-
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
 
 /*!
  * @brief LPTMR interrupt callback
@@ -69,51 +70,46 @@ void lptmr_isr_callback(void)
     printf("%d ",gLPTMR_counter);
 }
 
-/********************************************************************/
+/*!
+ * @brief Main function
+ */
 int main (void)
 {
     gLPTMR_counter=0;
 
     lptmr_user_config_t lptmrUserConfig =
     {
-        .timerMode = kLptmrTimerModeTimeCounter, /* Use LPTMR in Time Counter mode*/
-        .freeRunningEnable = false, /*When hit compare value, set counter back to zero */
-        .prescalerEnable = false, /* bypass prescaler */
-        .prescalerClockSource = kLptmrPrescalerClockSourceLpo, /* use 1kHz Low Power Clock */
+        .timerMode = kLptmrTimerModeTimeCounter, // Use LPTMR in Time Counter mode
+        .freeRunningEnable = false, // When hit compare value, set counter back to zero
+        .prescalerEnable = false, // bypass prescaler
+        .prescalerClockSource = kClockLptmrSrcLpoClk, // use 1kHz Low Power Clock
         .isInterruptEnabled = true
     };
 
-
-    /* Initialize standard SDK demo application pins */
+    // Initialize standard SDK demo application pins
     hardware_init();
 
-    /* Configure the UART TX/RX pins */
-    configure_uart_pins(BOARD_DEBUG_UART_INSTANCE);
-
-    /* Call this function to initialize the console UART.  This function
-       enables the use of STDIO functions (printf, scanf, etc.) */
+    // Call this function to initialize the console UART. This function
+    // enables the use of STDIO functions (printf, scanf, etc.)
     dbg_uart_init();
 
     printf("Low Power Timer Example\n\r");
 
-    /* Initialize LPTMR */
+    // Initialize LPTMR
     LPTMR_DRV_Init(LPTMR_INSTANCE,&lptmrUserConfig,&gLPTMRState);
 
-    /* Set the timer period for 1 second */
+    // Set the timer period for 1 second
     LPTMR_DRV_SetTimerPeriodUs(LPTMR_INSTANCE,1000000);
 
-    /* Specify the callback function when a LPTMR interrupt occurs */
+    // Specify the callback function when a LPTMR interrupt occurs
     LPTMR_DRV_InstallCallback(LPTMR_INSTANCE,lptmr_isr_callback);
 
-    /* Start counting */
+    // Start counting
     LPTMR_DRV_Start(LPTMR_INSTANCE);
 
     printf("Started LPTMR\n\r");
 
-    /* Wait for LPTMR interrupt once every second */
+    // Wait for LPTMR interrupt once every second
     while(1)
     {}
 }
-/********************************************************************/
-/********************************************************************/
-

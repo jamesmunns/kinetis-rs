@@ -28,23 +28,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdio.h>
+// SDK Included Files
 #include "adc_hw_trigger.h"
 #include "fsl_pdb_driver.h"
 #include "fsl_clock_manager.h"
 
-/* driver state store */
-static pdb_state_t gPDBState;
-extern const uint32_t gSimBaseAddr[];
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
+
+extern const uint32_t gSimBaseAddr[]; // driver state store
+
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
 
 /*!
  * @Brief PDB0 IRQ Handler to handle the seq error if any
  */
 void PDB0_IRQHandler(void)
 {
-    /* clear the IF */
+    // clear the IF
     PDB_DRV_ClearPdbCounterIntFlag(0);
-    /* clear the EIE */
+    // clear the EIE
     if (PDB_DRV_GetAdcPreTriggerFlag(0, 0, 0, kPdbAdcPreChnErrFlag))
     {
         PDB_DRV_ClearAdcPreTriggerFlag(0, 0, 0, kPdbAdcPreChnErrFlag);
@@ -68,19 +80,17 @@ void init_trigger_source(uint32_t adcInstance)
     uint32_t busClock, modValue;
     uint8_t preDivider = 1 << divMode;
 
-    /* get the bus clock freq which for PDB */
+    // get the bus clock freq which for PDB
     CLOCK_SYS_GetFreq(kBusClock, &busClock);
 
-    /* calculate for MOD value */
+    // calculate for MOD value
     modValue = INPUT_SIGNAL_FREQ*NR_SAMPLES;
     modValue = busClock/preDivider/modValue*4;
 
-    /*
-    * init the pdb user config structure for
-    * enable SW trigger, enable continuous mode,
-    * set the correct MOD and DLY
-    * Enable the sequency error interrupt.
-    */
+    // init the pdb user config structure for
+    // enable SW trigger, enable continuous mode,
+    // set the correct MOD and DLY
+    // Enable the sequency error interrupt.
     PDB_DRV_StructInitUserConfigForSoftTrigger(&pdbUserConfig);
     pdbUserConfig.continuousModeEnable = true;
     pdbUserConfig.pdbModulusValue = modValue;
@@ -89,30 +99,32 @@ void init_trigger_source(uint32_t adcInstance)
     pdbUserConfig.clkPrescalerDivMode = divMode;
     pdbUserConfig.multFactorMode = kPdbMultFactorAs1;
 
-    /* Initialize PDB driver. */
-    PDB_DRV_Init(0, &pdbUserConfig, &gPDBState);
+    // Initialize PDB driver
+    PDB_DRV_Init(0, &pdbUserConfig);
 
-    /* Configure the PDB channel for ADC_adcInstance */
-    /* disable BACK to BACK mode */
+    // Configure the PDB channel for ADC_adcInstance
+    // disable BACK to BACK mode
     pdbAdcTriggerConfig.backToBackModeEnable = false;
-    /* enable pretrigger out */
+
+    // enable pretrigger out
     pdbAdcTriggerConfig.preTriggerOutEnable = true;
     pdbAdcTriggerConfig.delayValue = modValue/4;
-    /* Configure the pre trigger A for ADC */
+
+    // Configure the pre trigger A for ADC
     PDB_DRV_EnableAdcPreTrigger(0, adcInstance, 0, &pdbAdcTriggerConfig);
-    /*
-    * the Pre-trigger A delay is set to 1/4 MOD,
-    * the Pre-trigger B delay is set to 3/4 MOD,
-    * so the trigger interval between A/B, B/A is same.
-    */
+
+    // the Pre-trigger A delay is set to 1/4 MOD,
+    // the Pre-trigger B delay is set to 3/4 MOD,
+    // so the trigger interval between A/B, B/A is same.
     pdbAdcTriggerConfig.delayValue = modValue*3/4;
-    /* Configure the pre trigger B for ADC */
+
+    // Configure the pre trigger B for ADC
     PDB_DRV_EnableAdcPreTrigger(0, adcInstance, 1, &pdbAdcTriggerConfig);
 
-    /* Configure SIM for ADC hw trigger source PDB */
+    // Configure SIM for ADC hw trigger source PDB
     SIM_HAL_SetAdcAlternativeTriggerCmd(gSimBaseAddr[0], adcInstance, false);
 
-    /* Trigger the PDB, let it go in continuous mode */
+    // Trigger the PDB, let it go in continuous mode
     PDB_DRV_SoftTriggerCmd(0);
 }
 

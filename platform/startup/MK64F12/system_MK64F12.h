@@ -1,6 +1,10 @@
 /*
 ** ###################################################################
-**     Processor:           MK64FN1M0VMD12
+**     Processors:          MK64FN1M0VDC12
+**                          MK64FN1M0VLL12
+**                          MK64FN1M0VLQ12
+**                          MK64FN1M0VMD12
+**
 **     Compilers:           Keil ARM C/C++ Compiler
 **                          Freescale C/C++ for Embedded ARM
 **                          GNU C Compiler
@@ -8,8 +12,8 @@
 **                          IAR ANSI C/C++ Compiler for ARM
 **
 **     Reference manual:    K64P144M120SF5RM, Rev.2, January 2014
-**     Version:             rev. 2.5, 2014-02-10
-**     Build:               b140611
+**     Version:             rev. 2.7, 2014-10-14
+**     Build:               b141016
 **
 **     Abstract:
 **         Provides a system configuration function and a global variable that
@@ -72,14 +76,19 @@
 **         The declaration of clock configurations has been moved to separate header file system_MK64F12.h
 **         Update of SystemInit() and SystemCoreClockUpdate() functions.
 **         Module access macro module_BASES replaced by module_BASE_PTRS.
+**     - rev. 2.6 (2014-08-28)
+**         Update of system files - default clock configuration changed.
+**         Update of startup files - possibility to override DefaultISR added.
+**     - rev. 2.7 (2014-10-14)
+**         Interrupt INT_LPTimer renamed to INT_LPTMR0, interrupt INT_Watchdog renamed to INT_WDOG_EWM.
 **
 ** ###################################################################
 */
 
 /*!
  * @file MK64F12
- * @version 2.5
- * @date 2014-02-10
+ * @version 2.7
+ * @date 2014-10-14
  * @brief Device specific configuration file for MK64F12 (header file)
  *
  * Provides a system configuration function and a global variable that contains
@@ -97,7 +106,9 @@ extern "C" {
 #include <stdint.h>
 
 
-#define DISABLE_WDOG                   1
+#ifndef DISABLE_WDOG
+  #define DISABLE_WDOG                 1
+#endif
 
 #ifndef CLOCK_SETUP
   #define CLOCK_SETUP                  4

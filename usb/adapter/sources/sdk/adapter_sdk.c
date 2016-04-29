@@ -102,7 +102,7 @@ uint32_t OS_Task_create(task_start_t pstart, void* param, uint32_t pri, uint32_t
         goto err3;
     }
 #endif
-    status = OSA_TaskCreate((task_t)pstart, task_name, stack_size,
+    status = OSA_TaskCreate((task_t)pstart, (uint8_t*)task_name, stack_size,
                   task_struct->stack_mem, pri, (task_param_t)param, false, &task_struct->handler);
     if (kStatus_OSA_Success == status)
     {
@@ -110,7 +110,7 @@ uint32_t OS_Task_create(task_start_t pstart, void* param, uint32_t pri, uint32_t
     }
     else
     {
-        return OS_TASK_ERROR;
+        return (uint32_t)OS_TASK_ERROR;
     }
 
 #if defined (FSL_RTOS_UCOSIII)
@@ -120,10 +120,10 @@ err3:
 err2:
     OSA_MemFree(task_struct);
 err1:
-    return OS_TASK_ERROR;
+    return (uint32_t)OS_TASK_ERROR;
 #else //((defined (FSL_RTOS_UCOSII)) || (defined (FSL_RTOS_UCOSIII)))
     task_handler_t task_handler;
-    status = OSA_TaskCreate((task_t)pstart, task_name, stack_size, NULL, pri, (task_param_t)param, false, &task_handler);
+    status = OSA_TaskCreate((task_t)pstart, (uint8_t*)task_name, stack_size, NULL, pri, (task_param_t)param, false, &task_handler);
     
     if (kStatus_OSA_Success == status)
     {
@@ -131,7 +131,7 @@ err1:
     }
     else
     {
-        return OS_TASK_ERROR;
+        return (uint32_t)OS_TASK_ERROR;
     }
 #endif //((defined (FSL_RTOS_UCOSII)) || (defined (FSL_RTOS_UCOSIII)))
 }
@@ -143,16 +143,16 @@ uint32_t OS_Task_delete(uint32_t task_id)
 
     if (kStatus_OSA_Success != OSA_TaskDestroy(task_struct->handler))
     {
-        return OS_TASK_ERROR;
+        return (uint32_t)OS_TASK_ERROR;
     }
 #if defined (FSL_RTOS_UCOSIII)
     OSA_MemFree(task_struct->handler); // Free TCB
 #endif
     OSA_MemFree(task_struct->stack_mem); // Free stack memory
     OSA_MemFree(task_struct);
-    return OS_TASK_OK;
+    return (uint32_t)OS_TASK_OK;
 #else
-    return (kStatus_OSA_Success == OSA_TaskDestroy((task_handler_t)task_id)) ? OS_TASK_OK : OS_TASK_ERROR;
+    return (kStatus_OSA_Success == OSA_TaskDestroy((task_handler_t)task_id)) ? (uint32_t)OS_TASK_OK : (uint32_t)OS_TASK_ERROR;
 #endif
 }
 
@@ -181,11 +181,11 @@ uint32_t OS_Event_destroy(os_event_handle handle)
     if (kStatus_OSA_Success == OSA_EventDestroy(obj))
     {
         OSA_MemFree(handle);
-        return OS_EVENT_OK; 
+        return (uint32_t)OS_EVENT_OK; 
     }
     else
     {
-        return OS_EVENT_ERROR;
+        return (uint32_t)OS_EVENT_ERROR;
     }
 }
 
@@ -258,11 +258,11 @@ uint32_t OS_MsgQ_destroy(os_msgq_handle msgq)
 #if !defined (FSL_RTOS_FREE_RTOS)
         OSA_MemFree(msgq);
 #endif
-        return OS_MSGQ_OK;
+        return (uint32_t)OS_MSGQ_OK;
     }
     else
     {
-        return OS_MSGQ_ERROR;
+        return (uint32_t)OS_MSGQ_ERROR;
     }
 }
 
@@ -290,11 +290,11 @@ uint32_t OS_Mutex_destroy(os_mutex_handle handle)
     if (kStatus_OSA_Success == OSA_MutexDestroy((mutex_t*)handle))
     {
         OSA_MemFree(handle);
-        return OS_MUTEX_OK;
+        return (uint32_t)OS_MUTEX_OK;
     }
     else
     {
-        return OS_MUTEX_ERROR;
+        return (uint32_t)OS_MUTEX_ERROR;
     }
 }
 
@@ -322,20 +322,18 @@ uint32_t OS_Sem_destroy(os_sem_handle handle)
     if (kStatus_OSA_Success == OSA_SemaDestroy((semaphore_t*)handle))
     {
         OSA_MemFree(handle);
-        return OS_SEM_OK;
+        return (uint32_t)OS_SEM_OK;
     }
     else
     {
-        return OS_SEM_ERROR;
+        return (uint32_t)OS_SEM_ERROR;
     }
 }
 
 /* Events */
 uint32_t OS_Event_check_bit(event_t* handle,uint32_t bitmask) 
 {
-    event_flags_t event_bit;
-    OSA_EventWait(handle, bitmask, false, 0, &event_bit);
-    return event_bit;
+    return (((uint32_t)OSA_EventGetFlags(handle)) & bitmask);
 }
 
 uint32_t OS_Event_set(event_t* handle, uint32_t bitmask)    
@@ -367,11 +365,11 @@ uint32_t OS_Event_wait(event_t* handle,uint32_t bitmask,uint32_t flag,uint32_t t
     switch (status)
     {
         case kStatus_OSA_Success:
-            return OS_EVENT_OK;
+            return (uint32_t)OS_EVENT_OK;
         case kStatus_OSA_Timeout:
-            return OS_EVENT_TIMEOUT;
+            return (uint32_t)OS_EVENT_TIMEOUT;
         default:
-            return OS_EVENT_ERROR;
+            return (uint32_t)OS_EVENT_ERROR;
     }
 }
 
@@ -397,11 +395,11 @@ uint32_t OS_Sem_wait(semaphore_t* handle, uint32_t timeout)
     switch (status)
     {
         case kStatus_OSA_Success:
-            return OS_SEM_OK;
+            return (uint32_t)OS_SEM_OK;
         case kStatus_OSA_Timeout:
-            return OS_SEM_TIMEOUT;
+            return (uint32_t)OS_SEM_TIMEOUT;
         default:
-            return OS_SEM_ERROR;
+            return (uint32_t)OS_SEM_ERROR;
     }
 }
 
@@ -419,9 +417,9 @@ uint32_t OS_Mutex_lock(os_mutex_handle handle)
     switch (status)
     {
         case kStatus_OSA_Success:
-            return OS_MUTEX_OK;
+            return (uint32_t)OS_MUTEX_OK;
         default:
-            return OS_MUTEX_ERROR;
+            return (uint32_t)OS_MUTEX_ERROR;
     }
 }
 
@@ -443,11 +441,11 @@ uint32_t OS_MsgQ_recv(msg_queue_handler_t msgq, void* msg, uint32_t flag, uint32
     switch (status)
     {
         case kStatus_OSA_Success:
-            return OS_MSGQ_OK;
+            return (uint32_t)OS_MSGQ_OK;
         case kStatus_OSA_Timeout:
-            return OS_MSGQ_TIMEOUT;
+            return (uint32_t)OS_MSGQ_TIMEOUT;
         default:
-            return OS_MSGQ_ERROR;
+            return (uint32_t)OS_MSGQ_ERROR;
     }
 }
 
@@ -470,6 +468,7 @@ uint32_t soc_get_usb_base_address(uint8_t controller_id)
     {
         return (uint32_t)USB_BASE_ADDRS;
     }
+    return (uint32_t)NULL;
 }
 
 

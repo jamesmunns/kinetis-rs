@@ -132,53 +132,7 @@ usb_status USB_Class_Send_Data
     uint32_t                        size      /* [IN] length of the transfer */
 ); 
 
-#if 0
-/**************************************************************************//*!
- *
- * @name  USB_Class_Get_Desc
- *
- * @brief  This function is called in to get the descriptor as specified in cmd.
- *
- * @param handle:           USB class handle. Received from
- *                          USB_Class_Init      
- * @param cmd:              command for USB discriptor to get.
- * @param in_data:          input to the Application functions.
- * @param out_buf           buffer which will contian the discriptors.
- * @return status:       
- *                        USB_OK : When Successfull       
- *                        Others : When Error
- *
- *****************************************************************************/
-usb_status USB_Class_Get_Desc(
-    class_handle_t                  handle,     /*[IN]*/
-    int32_t                         cmd,        /*[IN]*/
-    uint8_t                         input_data, /*[IN]*/
-    uint8_t**                       in_buf      /*[OUT]*/
-);
 
-/**************************************************************************//*!
- *
- * @name  USB_Class_Set_Desc
- *
- * @brief  This function is called in to Set the descriptor as specified in cmd.
- *
- * @param handle:           USB class handle. Received from
- *                          USB_Class_Init      
- * @param cmd:              command for USB discriptor to get.
- * @param in_data:          input to the Application functions.
- * @param in_buf           buffer which will contian the discriptors.
- * @return status:       
- *                        USB_OK : When Successfull       
- *                        Others : When Error
- *
- *****************************************************************************/
-usb_status USB_Class_Set_Desc(
-    class_handle_t                  handle,     /*[IN]*/
-    int32_t                         cmd,        /*[IN]*/
-    uint8_t                         input_data, /*[IN]*/
-    uint8_t**                       out_buf     /*[IN]*/
-);
-#endif
 
 /**************************************************************************//*!
  *

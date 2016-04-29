@@ -40,7 +40,7 @@
 #endif
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
-#include "usb_otg_khci_max3353_prv.h"
+#include "usb_otg.h"
 #define BSP_USB_INT_LEVEL                (4)
 #define USB_CLK_RECOVER_IRC_EN (*(volatile unsigned char *)0x40072144)
 #define SIM_SOPT2_IRC48MSEL_MASK                 0x30000u
@@ -62,20 +62,22 @@
 #define I2C_CHANNEL                  0                  /* I2C Channel */
 #endif
 #define MAX3353_INT_PIN              27 /*MAX3353_INT_PIN*/
-static const struct usb_khci_max3353_otg_init_struct g_khci0_max3353_otg_init_param = {
-    {
-        (void*)KHCI_BASE_PTR,
-        KHCI_VECTOR,
-        BSP_USB_INT_LEVEL ,
-    },
-    {
-        (void*)MAX_3353_INT_PORT,
-        MAX3353_INT_PIN,
-        MAX3353_VECTOR,
-        BSP_USB_OTG_MAX3353_INT_LEVEL,
-        I2C_CHANNEL,
-        0x2C
-    }
+
+static const usb_khci_otg_int_struct_t g_khci0_otg_init_param = 
+{
+    (void*)KHCI_BASE_PTR,
+    KHCI_VECTOR,
+    BSP_USB_INT_LEVEL ,
+};
+
+static const usb_otg_max3353_init_struct_t g_otg_max3353_init_param = 
+{
+    (void*)MAX_3353_INT_PORT,
+    MAX3353_INT_PIN,
+    MAX3353_VECTOR,
+    BSP_USB_OTG_MAX3353_INT_LEVEL,
+    I2C_CHANNEL,
+    0x2C
 };
 /*FUNCTION*-------------------------------------------------------------------
 *
@@ -124,14 +126,29 @@ void _bsp_usb_otg_max3353_set_pin_int
     }
 }
 
-void* bsp_usb_otg_get_max3353_init_param
+void* bsp_usb_otg_get_init_param
 (
     uint8_t controller_id
 )
 {
-    if (controller_id ==0)
+    if (controller_id == USB_CONTROLLER_KHCI_0)
     {
-        return (void*)(&g_khci0_max3353_otg_init_param);
+        return (void*)(&g_khci0_otg_init_param);
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+void* bsp_usb_otg_get_peripheral_init_param
+(
+    uint8_t peripheral_id
+)
+{
+    if (peripheral_id == USB_OTG_PERIPHERAL_MAX3353)
+    {
+        return (void*)(&g_otg_max3353_init_param);
     }
     else
     {

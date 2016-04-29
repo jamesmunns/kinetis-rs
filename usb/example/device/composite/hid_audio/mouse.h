@@ -53,13 +53,13 @@
 /******************************************************************************
  * Types
  *****************************************************************************/
-typedef struct _mouse_variable_struct
+typedef struct hid_mouse_struct
 {
     hid_handle_t app_handle;
     bool mouse_init;/* flag to check lower layer status*/
     uint8_t rpt_buf[MOUSE_BUFF_SIZE];/*report/data buff for mouse application*/
     uint8_t app_request_params[2]; /* for get/set idle and protocol requests*/
-}MOUSE_GLOBAL_VARIABLE_STRUCT, * PTR_MOUSE_GLOBAL_VARIABLE_STRUCT; 
+}hid_mouse_struct_t; 
 
 /*****************************************************************************
  * Global variables
@@ -68,7 +68,7 @@ typedef struct _mouse_variable_struct
 /*****************************************************************************
  * Global Functions
  *****************************************************************************/
-
+void hid_mouse_init(void* param);
 
 #endif 
 

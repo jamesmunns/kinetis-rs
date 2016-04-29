@@ -40,7 +40,7 @@
 #include "usb_device_stack_interface.h"
 #include "usb_descriptor.h"
 
-extern void MSD_Event_Callback
+extern void USB_App_Class_Callback
 (   uint8_t event_type, 
     uint16_t value,  
     uint8_t ** data, 
@@ -77,30 +77,21 @@ usb_endpoints_t usb_desc_ep =
 #define USB_MSD_CFG_MAX 1
 #define USB_MSD_CLASS_TYPE_1 1
 #define TOTAL_LOGICAL_ADDRESS_BLOCKS_NORMAL 60
-#define LENGTH_OF_EACH_LAB 					512
-#define LOGICAL_UNIT_SUPPORTED				1
+#define LENGTH_OF_EACH_LAB                  512
+#define LOGICAL_UNIT_SUPPORTED              1
 
 static usb_if_struct_t usb_if[USB_MSD_IF_MAX];
 static device_lba_info_struct_t usb_msc_lba_info_struct;
 static const usb_class_struct_t usb_dec_class[USB_MSD_CFG_MAX] =
 {
   {
-	  USB_CLASS_MSC,
-	  {
-		   1, /* Count */
-		   usb_if
-	  }
+      USB_CLASS_MSC,
+      {
+           1, /* Count */
+           usb_if
+      }
   },
 };
-
-#if 0
-DEVICE_LBA_INFO_STRUCT usb_msc_lba_info =
-{
-		TOTAL_LOGICAL_ADDRESS_BLOCKS_NORMAL,
-		LENGTH_OF_EACH_LAB,
-		LOGICAL_UNIT_SUPPORTED,	
-};
-#endif
 
 uint8_t g_device_descriptor[DEVICE_DESCRIPTOR_SIZE] =  
 {
@@ -119,7 +110,7 @@ uint8_t g_device_descriptor[DEVICE_DESCRIPTOR_SIZE] =
     /* Max Packet size */
     CONTROL_MAX_PACKET_SIZE,
     /* Vendor ID */
-    0x04,0x25,
+    0xa2,0x15,
     /* Product ID */
     0x00,0x02,  
     /* BCD Device version */
@@ -423,7 +414,7 @@ uint8_t *g_string_descriptors[USB_MAX_STRING_DESCRIPTORS+1] =
     };    
 
 usb_language_t usb_language[USB_MAX_SUPPORTED_INTERFACES] = 
-{ (uint16_t)0x0409,g_string_descriptors, g_string_desc_size};
+{{ (uint16_t)0x0409,g_string_descriptors, g_string_desc_size}};
                                                                                                    
 usb_all_languages_t g_languages = 
     { USB_STR_0, sizeof(USB_STR_0), USB_MAX_LANGUAGES_SUPPORTED,
@@ -632,7 +623,7 @@ uint8_t USB_Desc_Set_Interface
  *****************************************************************************/
 bool USB_Desc_Valid_Configation(uint32_t handle,uint16_t config_val)
 {
-    uint8_t 	loop_index=0;
+    uint8_t     loop_index=0;
     UNUSED_ARGUMENT (handle)
     /* check with only supported val right now */
     while(loop_index < (USB_MAX_CONFIG_SUPPORTED+1)) 
@@ -695,7 +686,7 @@ usb_endpoints_t *USB_Desc_Get_Endpoints(uint32_t handle)
  *****************************************************************************/
 uint8_t USB_Set_Configation
 (
-		msd_handle_t handle, uint8_t config
+        msd_handle_t handle, uint8_t config
 
 ) 
 {
@@ -720,20 +711,20 @@ uint8_t USB_Set_Configation
 uint8_t USB_Desc_Get_Entity(msd_handle_t handle,entity_type type, uint32_t * object)
 {
 
-	switch(type)  
+    switch(type)  
     {
         case USB_CLASS_INFO:
-			usb_if[0].index = 1;
-			usb_if[0].endpoints = usb_desc_ep;
+            usb_if[0].index = 1;
+            usb_if[0].endpoints = usb_desc_ep;
             *object = (unsigned long)&usb_dec_class;
             break;
             
         case USB_MSC_LBA_INFO:
-			
-			MSD_Event_Callback(USB_MSC_DEVICE_GET_INFO,USB_REQ_VAL_INVALID,NULL,(uint32_t *)&usb_msc_lba_info_struct,NULL);
-        	*object = (unsigned long)&usb_msc_lba_info_struct;
-        	break;
-			
+            
+            USB_App_Class_Callback(USB_MSC_DEVICE_GET_INFO,USB_REQ_VAL_INVALID,NULL,(uint32_t *)&usb_msc_lba_info_struct,NULL);
+            *object = (unsigned long)&usb_msc_lba_info_struct;
+            break;
+            
        
         default :           
           

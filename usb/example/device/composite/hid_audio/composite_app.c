@@ -42,10 +42,9 @@
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
-//#include "board.h"
+#include "board.h"
 #include "fsl_debug_console.h"
 #include "fsl_port_hal.h"
-#include "fsl_gpio_common.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,8 +60,6 @@
  *****************************************************************************/
  #define MAIN_TASK       10
  
-#define COMPOSITE_CFG_MAX 2
-
 /*****************************************************************************
  * Global Functions Prototypes
  *****************************************************************************/
@@ -72,11 +69,9 @@ extern void Main_Task(uint32_t param);
 /****************************************************************************
  * Global Variables
  ****************************************************************************/              
-extern usb_endpoints_t usb_desc_ep;
-comosite_handle_t   g_app_handle;
+composite_device_struct_t                 g_composite_device;
 extern usb_desc_request_notify_struct_t  desc_callback;
-extern audio_handle_t   g_audio_handle;
-extern MOUSE_GLOBAL_VARIABLE_STRUCT g_mouse;
+
 extern void Main_Task(uint32_t param);
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
 TASK_TEMPLATE_STRUCT  MQX_template_list[] =
@@ -100,20 +95,14 @@ TASK_TEMPLATE_STRUCT  MQX_template_list[] =
 /*****************************************************************************
  * Local Functions
  *****************************************************************************/
-static class_config_struct_t       audio_config_callback; 
-
-static class_config_struct_t       Hid_config_callback;
-
-static composite_config_struct_t usb_composite_callback;
-static class_config_struct_t       composite_cfg[COMPOSITE_CFG_MAX] = {0};
-extern void Audio_USB_App_Callback(uint8_t event_type, void* val,void* arg);
-extern void Hid_App_Callback(uint8_t event_type, void* val,void* arg); 
+extern void Audio_USB_App_Device_Callback(uint8_t event_type, void* val,void* arg);
+extern void Hid_USB_App_Device_Callback(uint8_t event_type, void* val,void* arg); 
 extern void Hid_TestApp_Init(void);
 extern void Audio_TestApp_Init(void);
-extern  uint8_t Hid_App_Param_Callback(uint8_t request, uint16_t value, 
-    				uint8_t ** data, uint32_t* size,void* arg);
-extern	uint8_t Audio_App_Param_Callback(uint8_t request, uint16_t value, 
-					 uint8_t ** data, uint32_t* size,void* arg);
+extern uint8_t Hid_USB_App_Class_Callback(uint8_t request, uint16_t value, 
+                     uint8_t ** data, uint32_t* size,void* arg);
+extern uint8_t Audio_USB_App_Class_Callback(uint8_t request, uint16_t value, 
+                     uint8_t ** data, uint32_t* size,void* arg);
 
  /*****************************************************************************
  *  
@@ -128,40 +117,41 @@ extern	uint8_t Audio_App_Param_Callback(uint8_t request, uint16_t value,
  *****************************************************************************/
 void APP_init(void)
 {
-  
-   printf("Hid_audio_TestApp_Init\n");
-   audio_config_callback.composite_application_callback.callback = Audio_USB_App_Callback;
-   audio_config_callback.composite_application_callback.arg = &g_audio_handle;
-   audio_config_callback.class_specific_callback.callback = Audio_App_Param_Callback;
-   audio_config_callback.class_specific_callback.arg = &g_audio_handle;
-   audio_config_callback.desc_callback_ptr = &desc_callback;
-   audio_config_callback.type = USB_CLASS_AUDIO;	   
-   /* initialize the Global Variable Structure */
-   OS_Mem_zero(&g_mouse, sizeof(MOUSE_GLOBAL_VARIABLE_STRUCT));
-
-   /* Initialize the USB interface */
-
-   Hid_config_callback.composite_application_callback.callback = Hid_App_Callback;
-   Hid_config_callback.composite_application_callback.arg = &g_mouse.app_handle;
-   Hid_config_callback.class_specific_callback.callback = Hid_App_Param_Callback;
-   Hid_config_callback.class_specific_callback.arg = &g_mouse.app_handle;
-   Hid_config_callback.desc_callback_ptr = &desc_callback;
-   Hid_config_callback.type = USB_CLASS_HID;
+    class_config_struct_t*       audio_config_callback_handle; 
+    class_config_struct_t*       hid_mouse_config_callback_handle;
     
-   usb_composite_callback.count = 2;
-   usb_composite_callback.class_app_callback = composite_cfg;
-   usb_composite_callback.class_app_callback[0] = audio_config_callback;
-   usb_composite_callback.class_app_callback[1] = Hid_config_callback;
- 
-   /* Initialize the USB interface */
-   USB_Composite_Init(CONTROLLER_ID, &usb_composite_callback, &g_app_handle);
-   USB_Composite_Get_Class_Handle(g_app_handle, USB_CLASS_HID, &g_mouse.app_handle);
-   USB_Composite_Get_Class_Handle(g_app_handle, USB_CLASS_AUDIO, &g_audio_handle);
-   
-   Hid_TestApp_Init();
-   Audio_TestApp_Init();
-   
-  // while(1);
+    USB_PRINTF("Hid_audio_TestApp_Init\n");
+    
+    /* audio device */
+    audio_config_callback_handle = &g_composite_device.composite_device_config_list[AUDIO_INTERFACE_INDEX];
+    audio_config_callback_handle->composite_application_callback.callback = Audio_USB_App_Device_Callback;
+    audio_config_callback_handle->composite_application_callback.arg = &g_composite_device.audio_handle;
+    audio_config_callback_handle->class_specific_callback.callback = Audio_USB_App_Class_Callback;
+    audio_config_callback_handle->class_specific_callback.arg = &g_composite_device.audio_handle;
+    audio_config_callback_handle->desc_callback_ptr = &desc_callback;
+    audio_config_callback_handle->type = USB_CLASS_AUDIO;
+
+    /* hid mouse device */
+    hid_mouse_config_callback_handle = &g_composite_device.composite_device_config_list[HID_MOUSE_INTERFACE_INDEX];
+    hid_mouse_config_callback_handle->composite_application_callback.callback = Hid_USB_App_Device_Callback;
+    hid_mouse_config_callback_handle->composite_application_callback.arg = &g_composite_device.hid_mouse;
+    hid_mouse_config_callback_handle->class_specific_callback.callback = Hid_USB_App_Class_Callback;
+    hid_mouse_config_callback_handle->class_specific_callback.arg = &g_composite_device.hid_mouse;
+    hid_mouse_config_callback_handle->desc_callback_ptr = &desc_callback;
+    hid_mouse_config_callback_handle->type = USB_CLASS_HID;
+    OS_Mem_zero(&g_composite_device.hid_mouse, sizeof(hid_mouse_struct_t));
+
+    g_composite_device.composite_device_config_callback.count = 2;
+    g_composite_device.composite_device_config_callback.class_app_callback = g_composite_device.composite_device_config_list;
+
+    /* Initialize the USB interface */
+    USB_Composite_Init(CONTROLLER_ID, &g_composite_device.composite_device_config_callback, &g_composite_device.composite_device);
+
+    g_composite_device.audio_handle = (audio_handle_t)g_composite_device.composite_device_config_list[AUDIO_INTERFACE_INDEX].class_handle;
+    g_composite_device.hid_mouse.app_handle = (hid_handle_t)g_composite_device.composite_device_config_list[HID_MOUSE_INTERFACE_INDEX].class_handle;
+
+    hid_mouse_init(&g_composite_device.hid_mouse);
+    audio_init(&g_composite_device.audio_handle);
 } 
 
 void APP_task(void)
@@ -208,7 +198,13 @@ static void Task_Start(void *arg)
 #if defined(FSL_RTOS_MQX)
 void Main_Task(uint32_t param)
 #else
+
+#if defined(__CC_ARM) || defined(__GNUC__)
+int main(void)
+#else
 void main(void)
+#endif
+
 #endif
 {
     OSA_Init();
@@ -224,6 +220,9 @@ void main(void)
     OS_Task_create(Task_Start, NULL, 9L, 3000L, "task_start", NULL);
 #endif
     OSA_Start();
+#if (!defined(FSL_RTOS_MQX))&(defined(__CC_ARM) || defined(__GNUC__))
+    return 1;
+#endif
 }
 #endif
 

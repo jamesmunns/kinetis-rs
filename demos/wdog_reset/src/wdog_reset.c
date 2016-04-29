@@ -28,14 +28,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdio.h>
+
+// SDK Included Files
 #include "fsl_wdog_driver.h"
-#include "fsl_gpio_driver.h"
 #include "fsl_os_abstraction.h"
 #include "board.h"
+#include "fsl_clock_manager.h"
 
-#define SLOW_BLINK_TIME         80    /* The slow blink time is 80ms*10=800ms */
-#define FAST_BLINK_TIME         400   /* The fast blink time is 400ms */
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
+
+#define SLOW_BLINK_TIME         80    // The slow blink time is 80ms*10=800ms
+#define FAST_BLINK_TIME         400   // The fast blink time is 400ms
+
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
 
 static void toggle_active_led(void)
 {
@@ -56,44 +71,46 @@ static uint32_t is_key_pressed(void)
  */
 static void print_reset_reason(void)
 {
-    /* Determine the last cause(s) of reset */
+    // Determine the last cause(s) of reset
     printf("\r\n\r\n********************************");
     if (RCM->SRS1 & RCM_SRS1_SW_MASK)
-	{
+    {
         printf("\r\nSoftware Reset");
-	}
+    }
     if (RCM->SRS1 & RCM_SRS1_LOCKUP_MASK)
-	{
+    {
         printf("\r\nCore Lockup Event Reset");
-	}
+    }
+#if FSL_FEATURE_RCM_HAS_JTAG
     if (RCM->SRS1 & RCM_SRS1_JTAG_MASK)
-	{
+    {
         printf("\r\nJTAG Reset");
-	}
+    }
+#endif
     if (RCM->SRS0 & RCM_SRS0_POR_MASK)
-	{
+    {
         printf("\r\nPower-on Reset");
-	}
+    }
     if (RCM->SRS0 & RCM_SRS0_PIN_MASK)
-	{
+    {
         printf("\r\nExternal Pin Reset");
-	}
+    }
     if (RCM->SRS0 & RCM_SRS0_WDOG_MASK)
-	{
+    {
         printf("\r\nWatchdog(COP) Reset");
-	}
+    }
     if (RCM->SRS0 & RCM_SRS0_LOC_MASK)
-	{
+    {
         printf("\r\nLoss of Clock Reset");
-	}
+    }
     if (RCM->SRS0 & RCM_SRS0_LVD_MASK)
-	{
+    {
         printf("\r\nLow-voltage Detect Reset");
-	}
+    }
     if (RCM->SRS0 & RCM_SRS0_WAKEUP_MASK)
-	{
+    {
         printf("\r\nLLWU Reset");
-	}
+    }
 }
 
 /*!
@@ -113,52 +130,52 @@ int main(void)
 
     const wdog_user_config_t wdogInit = 
     {
-        .timeoutValue = 2048U,	/* Watchdog overflow time is about 2s */
-        .windowValue = 0U,      /* Watchdog window value, 0--disable window function */
-        .clockPrescalerValue = kWdogClockPrescalerValueDevide1, /* Watchdog clock prescaler */
-        .updateRegisterEnable = true, /* Update register enabled */
-        .clockSource = kWdogClockSourceLpoClock, /* Watchdog clock source is LPO 1KHz */
-        .workInWaitModeEnable = true, /* Enable watchdog in wait mode */
-        .workInStopModeEnable = true, /* Enable watchdog in stop mode */
-        .workInDebugModeEnable = false, /* Disable watchdog in debug mode */
+        .timeoutValue = 2048U,  // Watchdog overflow time is about 2s
+        .windowValue = 0U,      // Watchdog window value, 0--disable window function
+        .clockPrescalerValue = kWdogClockPrescalerValueDevide1, // Watchdog clock prescaler
+        .updateRegisterEnable = true, // Update register enabled
+        .clockSource = kClockWdogSrcLpoClk, // Watchdog clock source is LPO 1KHz
+        .workInWaitModeEnable = true, // Enable watchdog in wait mode
+        .workInStopModeEnable = true, // Enable watchdog in stop mode
+        .workInDebugModeEnable = false, // Disable watchdog in debug mode
     };
 
     OSA_Init();
     hardware_init();
     dbg_uart_init();
     GPIO_DRV_Init(switchPins, ledPins);
-	
-    /* Initialize wdog before the WDOG timer has a chance to reset the device */
+
+    // Initialize wdog before the WDOG timer has a chance to reset the device
     WDOG_DRV_Init(&wdogInit);
-		
-    /* print chip reset reason */
-    print_reset_reason();     
-    
-    /* if not wdog reset, clear reset count */
+
+    // print chip reset reason
+    print_reset_reason();
+
+    // if not wdog reset, clear reset count
     if (!(RCM->SRS0 & RCM_SRS0_WDOG_MASK)) 
     {
         WDOG_DRV_ClearResetCount();
     }
-		
+
     printf("\r\nWatchdog(cop) reset count: %u", (unsigned int)WDOG_DRV_GetResetCount());
     
-    /*******************************************************************/
-    /* Continue to run in loop to refresh watchdog until SW1 is pushed */
-    /*******************************************************************/
+    /////////////////////////////////////////////////////////////////////
+    // Continue to run in loop to refresh watchdog until SW1 is pushed //
+    /////////////////////////////////////////////////////////////////////
     while (1) 
     {
-        /* LED toggle shows we are refreshing the watchdog */
+        // LED toggle shows we are refreshing the watchdog
         toggle_active_led();
 
-        /* delay before we refresh the watchdog, check for SW1 button push which forces watchog to expire */
+        // delay before we refresh the watchdog, check for SW1 button push which forces watchog to expire
         for (delay = 0U; delay < 10U; delay++)
         {
-            /* Check for SW1 button push.  Pin is grounded when button is pushed */
+            // Check for SW1 button push.  Pin is grounded when button is pushed
             if (is_key_pressed())
             {
               while (1) 
-              {                
-                /* button has been pushed, blink LED rapidly showing that the watchdog is about to expire */
+              {
+                // button has been pushed, blink LED rapidly showing that the watchdog is about to expire
                 toggle_active_led();
                 OSA_TimeDelay(FAST_BLINK_TIME);
               } 
@@ -166,15 +183,11 @@ int main(void)
 
             OSA_TimeDelay(SLOW_BLINK_TIME);
         }
-        /* Refresh the watchdog so we don't reset */
-        WDOG_DRV_Refresh();        
+        // Refresh the watchdog so we don't reset
+        WDOG_DRV_Refresh();
         
-        /* Print total loops */
+        // Print total loops
         printf("\n\rWatchdog example running, Loop #: %u, press <SW> to start watchdog timeout...",
                (unsigned int)wdogDemoLoopCount++);
     } 
 }
-
-/*************************************************************
- * EOF
- *************************************************************/

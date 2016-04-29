@@ -7,8 +7,8 @@
 **                          IAR ANSI C/C++ Compiler for ARM
 **
 **     Reference manual:    KV31P100M120SF7RM, Rev. 1, March 24, 2014
-**     Version:             rev. 1.4, 2014-05-06
-**     Build:               b140611
+**     Version:             rev. 1.6, 2014-10-14
+**     Build:               b141016
 **
 **     Abstract:
 **         Provides a system configuration function and a global variable that
@@ -59,14 +59,19 @@
 **         Update according to reference manual rev. 1.0,
 **         Update of system and startup files.
 **         Module access macro module_BASES replaced by module_BASE_PTRS.
+**     - rev. 1.5 (2014-08-28)
+**         Update of system files - default clock configuration changed.
+**         Update of startup files - possibility to override DefaultISR added.
+**     - rev. 1.6 (2014-10-14)
+**         Interrupt INT_LPTimer renamed to INT_LPTMR0, interrupt INT_Watchdog renamed to INT_WDOG_EWM.
 **
 ** ###################################################################
 */
 
 /*!
  * @file MKV31F51212
- * @version 1.4
- * @date 2014-05-06
+ * @version 1.6
+ * @date 2014-10-14
  * @brief Device specific configuration file for MKV31F51212 (header file)
  *
  * Provides a system configuration function and a global variable that contains
@@ -84,7 +89,9 @@ extern "C" {
 #include <stdint.h>
 
 
-#define DISABLE_WDOG                   1
+#ifndef DISABLE_WDOG
+  #define DISABLE_WDOG                 1
+#endif
 
 #ifndef CLOCK_SETUP
   #define CLOCK_SETUP                  1

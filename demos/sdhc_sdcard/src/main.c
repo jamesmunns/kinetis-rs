@@ -28,27 +28,28 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <assert.h>
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "device/fsl_device_registers.h"
-#include "fsl_debug_console.h"
-#include "fsl_clock_manager.h"
-#include "fsl_gpio_hal.h"
-#include "fsl_port_hal.h"
-#include "fsl_interrupt_manager.h"
-#include "fsl_os_abstraction.h"
-#include "fsl_uart_hal.h"
-#include "board.h"
 
+// SDK Included Files
+#include "fsl_clock_manager.h"
+#include "fsl_os_abstraction.h"
+#include "board.h"
+#include "fsl_mpu_driver.h"
 #include "fsl_sdhc_card.h"
-#include "sdmmc.h"
+#include "fsl_sdmmc_card.h"
 #include "sdhc_sdcard.h"
 
-/*******************************************************************************
- * Defination
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
+
 #define TEST_BLOCK_NUM          4U 
 #define TEST_START_BLOCK        4U
 
@@ -59,49 +60,45 @@ typedef enum
     kTestResultInitFailed,
     kTestResultAborted,
 } test_result_t;
-/*******************************************************************************
- * Variables
- ******************************************************************************/
+
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
+
 const char *monthStr[] = {
     "Jan", "Feb", "Mar", "Apr", "May", "Jun",
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 };
-
 static uint8_t refData[FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE]; /*!< Buffer to hold a reference data used for write/read/compare tests */
 static uint8_t testData[FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE]; /*!< Buffer to reac back data from card for write/read/compare tests */
 static uint8_t refData2[FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE*TEST_BLOCK_NUM]; /*!< Buffer to hold a reference data used for write/read/compare tests */
 static uint8_t testData2[FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE*TEST_BLOCK_NUM]; /*!< Buffer to reac back data from card for write/read/compare tests */
-
 static semaphore_t cd; /*!< Semaphore for card detection indication */
 static volatile uint32_t cardInserted = 0; /*!< Flag to indicate a card has been inserted */
 static volatile uint32_t cardInited = 0; /*!< Flag to indicate the card has been initialized successfully */
 
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-
-/*******************************************************************************
- * Code
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+//  Code
+///////////////////////////////////////////////////////////////////////////////
 
 /*!
  * @brief A function to fill a memory buffer of 'len' no of bytes 
- * with a reference data goverened by a seed value.
+ * with a reference data governed by a seed value.
  */
 static uint32_t fill_reference_data(uint8_t *pdata, uint8_t seed, uint32_t len)
 {
-  uint32_t i, j;
-    
-    /* Check if either buffer pointer or length parameters are null */
+    uint32_t i, j;
+
+    // Check if either buffer pointer or length parameters are null
     if ((NULL == pdata) || (0 == len))
     {
         return 1U;
     }
-    
-    /* claer buffer with all '0's */
+
+    // clear buffer with all '0's
     memset(pdata, 0, len);
-    
-    /* fill in the buffer processed with seed value */
+
+    // fill in the buffer processed with seed value
     for (i = 0; i < len; i++)
     {
         j = i % 4;
@@ -153,8 +150,8 @@ static float decode_taac(uint8_t taac)
 {
     uint32_t t1, t2;
     float out = 0;
-    
-    /* Below parsing done as per SD Physical Layer specification */
+
+    // Below parsing done as per SD Physical Layer specification
     t1 = taac & 0x7;
     t2 = (taac & 0x78U) >> 3;
     switch(t1)
@@ -246,8 +243,8 @@ static float decode_transpeed(uint8_t ts)
 {
     uint32_t t1, t2;
     float out = 0;
-    
-    /* Parse card data transfer speed as per SD Physical Layer Specification */
+
+    // Parse card data transfer speed as per SD Physical Layer Specification
     t1 = ts & 0x7;
     t2 = (ts & 0x78U) >> 3;
     switch(t1)
@@ -326,20 +323,20 @@ static float decode_transpeed(uint8_t ts)
 static void show_card_csd(sdcard_csd_t *csd)
 {
     uint32_t i = 0;
-    
-    /* Show CSD structure value */
+
+    // Show CSD structure value
     printf("CSD Structure: 0x%X\r\n", csd->csdStructure);
-    
-    /* decode and show card data read access time 1 value */
+
+    // decode and show card data read access time 1 value
     printf("taac: %.02f ns\r\n", decode_taac(csd->taac));
-    
-    /* decode and show card data read access time 2 in clock cycles value */
+
+    // decode and show card data read access time 2 in clock cycles value
     printf("nsac: %d clks\r\n", csd->nsac);
-    
-    /* decode and show card data transfer speed */
+
+    // decode and show card data transfer speed
     printf("tran speed: %.2f kbps\r\n", decode_transpeed(csd->tranSpeed));
-    
-    /* parse and show command classes supported by the card  */
+
+    // parse and show command classes supported by the card
     printf("ccc: class ");
     while ((0 != csd->ccc) && (i < 12))
     {
@@ -351,11 +348,11 @@ static void show_card_csd(sdcard_csd_t *csd)
         csd->ccc >>= 1;
     }
     printf("\r\n");
-        
-    /* show Max. read data block length */
+
+    // show Max. read data block length
     printf("max read block length: %d Bytes\r\n", (int)((uint32_t)1 << csd->readBlkLen));
-    
-    /* parse and display card CSD flags */
+
+    // parse and display card CSD flags
     if (csd->flags & SDCARD_CSD_READ_BL_PARTIAL)
     {
         printf("Support partial read\r\n");
@@ -372,11 +369,11 @@ static void show_card_csd(sdcard_csd_t *csd)
     {
         printf("DSR is implemented\r\n");
     }
-    
-    /* show device size */
+
+    // show device size
     printf("c_size: %d\r\n", (int)csd->cSize);
-    
-    /* Show read, write Max, Min current ratings in case CSD structure indicated 'Standard Capacity' card. */
+
+    // Show read, write Max, Min current ratings in case CSD structure indicated 'Standard Capacity' card.
     if (csd->csdStructure == 0)
     {
         printf("VDD_R_CURR_MIN: 0x%X\r\n", csd->vddRCurrMin);
@@ -385,8 +382,8 @@ static void show_card_csd(sdcard_csd_t *csd)
         printf("VDD_W_CURR_MAX: 0x%X\r\n", csd->vddWCurrMax);
         printf("c_size_mult: %d\r\n", csd->cSizeMult);
     }
-    
-    /* parse CSD flag and display if 'Erase single block' is enabled*/
+
+    // parse CSD flag and display if 'Erase single block' is enabled
     if (csd->flags & SDCARD_CSD_ERASE_BLK_ENABLED)
     {
         printf("Erase unit size is one or multiple units of 512 bytes\r\n");
@@ -396,45 +393,45 @@ static void show_card_csd(sdcard_csd_t *csd)
         printf("Erase unit size is one or multiple units of %d blocks\r\n", csd->sectorSize + 2);
     }
 
-    /* parse and show write protected group size */
+    // parse and show write protected group size
     printf("The size of write protected group is %d blocks\r\n", csd->wpGrpSize + 2);
-    
-    /* parse and show if 'write protection group' is enabled */
+
+    // parse and show if 'write protection group' is enabled
     if (csd->flags & SDCARD_CSD_WP_GRP_ENABLED)
     {
         printf("Write protection group is defined\r\n");
     }
-    
-    /* display Write speed factor */
+
+    // display Write speed factor
     printf("R2W_Factor: %d\r\n", csd->r2wFactor);
-    
-    /* display Max. write data block length */
+
+    // display Max. write data block length
     printf("max write block length: %d\r\n", csd->writeBlkLen);
-    
-    /* parse CSD flags and display whether 'Partial blocks for write' is allowed */
+
+    // parse CSD flags and display whether 'Partial blocks for write' is allowed
     if (csd->flags & SDCARD_CSD_WRITE_BL_PARTIAL)
     {
         printf("Smaller blocks can be used to write\r\n");
     }
-    
-    /* parse CSD flags and display whether card content is a COPY (not original) */
+
+    // parse CSD flags and display whether card content is a COPY (not original)
     if (csd->flags & SDCARD_CSD_COPY)
     {
         printf("The content is copied\r\n");
     }
-    /* parse CSD flags and display if the card content is write protected permanently */
+    // parse CSD flags and display if the card content is write protected permanently
     if (csd->flags & SDCARD_CSD_PERM_WRITE_PROTECT)
     {
         printf("The content is write protected permanently\r\n");
     }
-    
-    /* parse CSD flags and display if the card content is write protected temporarily */
+
+    // parse CSD flags and display if the card content is write protected temporarily
     if (csd->flags & SDCARD_CSD_TMP_WRITE_PROTECT)
     {
         printf("The content is write protected temporarily\r\n");
     }
-    
-    /* parse CSD file format and display */
+
+    // parse CSD file format and display
     if (!(csd->flags & SDCARD_CSD_FILE_FORMAT_GROUP))
     {
         switch(csd->fileFormat)
@@ -462,10 +459,10 @@ static void show_card_csd(sdcard_csd_t *csd)
  */
 static void show_card_scr(sdcard_scr_t *scr)
 {
-    /* print SCR structure value */
+    // print SCR structure value
     printf("SCR Structure: 0x%X\r\n", scr->scrStructure);
-    
-    /* print SD specs number */
+
+    // print SD specs number
     printf("SD Spec: 0x%X\r\n", scr->sdSpec);
     if (scr->sdSpec)
     {
@@ -478,14 +475,14 @@ static void show_card_scr(sdcard_scr_t *scr)
             printf("SD Spec 2.0\r\n");
         }
     }
-    
-    /* parse and show 'Data status after erases' */
+
+    // parse and show 'Data status after erases'
     if (scr->flags & SDCARD_SCR_DATA_STAT_AFTER_ERASE)
     {
         printf("Data status after erase is Set\r\n");
     }
-    
-    /* parse and show SD security and version */
+
+    // parse and show SD security and version
     switch(scr->sdSecurity)
     {
         case 0:
@@ -506,8 +503,8 @@ static void show_card_scr(sdcard_scr_t *scr)
         default:
             break;
     }
-    
-    /* parse and show SD card supported bus width */
+
+    // parse and show SD card supported bus width
     if (scr->sdBusWidths & 0x1)
     {
         printf("Card supports 1-bit bus width\r\n");
@@ -516,14 +513,14 @@ static void show_card_scr(sdcard_scr_t *scr)
     {
         printf("Card supports 4-bit bus width\r\n");
     }
-    
-    /* parse and show whether Extended security is supported */
+
+    // parse and show whether Extended security is supported
     if (scr->exSecurity)
     {
         printf("Extended security is supported\r\n");
     }
-    
-    /* parse and display Command support bits */
+
+    // parse and display Command support bits
     if (scr->cmdSupport & 0x1)
     {
         printf("Support set block count command\r\n");
@@ -540,11 +537,11 @@ static void show_card_scr(sdcard_scr_t *scr)
 static void show_card_info(sdhc_card_t *card, bool showDetail)
 {
     double temp;
-    
+
     printf("\r\n------- Card Information -------\r\n");
-    
-    /* show card type */
-    printf("Card Type: ");    
+
+    // show card type
+    printf("Card Type: ");
     switch(card->cardType)
     {
         case kCardTypeMmc:
@@ -572,8 +569,8 @@ static void show_card_info(sdhc_card_t *card, bool showDetail)
             break;
     }
     printf("\r\n");
-    
-    /* calculate and show capacity of the card */
+
+    // calculate and show capacity of the card
     printf("\r\nCard Capacity: ");
     temp = 1000000000 / card->blockSize;
     temp = ((float)card->blockCount / (float)temp);
@@ -585,17 +582,17 @@ static void show_card_info(sdhc_card_t *card, bool showDetail)
     {
         printf("%.02f MB\r\n", temp * 1000);
     }
-    
-    /* show Max. clock speed supported by the host */
+
+    // show Max. clock speed supported by the host
     printf("Host Clock Max Rate: %d MHz\r\n", (int)(card->host->maxClock / 1000000));
-    
-    /* show current clock speed of operation */
+
+    // show current clock speed of operation
     printf("Clock Rate: %d MHz\r\n", (int)(card->host->clock / 1000000));
 
-    /* show Card Identification (CID) */
+    // show Card Identification (CID)
     show_card_cid(&(card->cid));
-    
-    /* check if it's a SD card and if Yes, show CSD and SCR specific values */
+
+    // check if it's a SD card and if Yes, show CSD and SCR specific values
     if (IS_SD_CARD(card) && showDetail)
     {
         show_card_csd(&(card->csd));
@@ -608,7 +605,7 @@ static void show_card_info(sdhc_card_t *card, bool showDetail)
  */
 void sdhc_card_detection(bool inserted)
 {
-    /* set or clear cardInserted flag */
+    // set or clear cardInserted flag
     if (inserted)
     {
         cardInserted = 1;
@@ -617,8 +614,8 @@ void sdhc_card_detection(bool inserted)
     {
         cardInserted = 0;
     }
-    
-    /* Post semaphore object used for card detection */
+
+    // Post semaphore object used for card detection
     OSA_SemaPost(&cd);
 }
 
@@ -632,7 +629,7 @@ void sdhc_cd_irqhandler(void)
         sdhc_card_detection(true);
     else
         sdhc_card_detection(false);
-#elif defined TWR_K64F120M
+#elif defined TWR_K64F120M || defined TWR_K60D100M
         sdhc_card_detection(false);
     else
         sdhc_card_detection(true);
@@ -651,24 +648,24 @@ static test_result_t demo_card_data_access(void)
     sdhc_user_config_t config = {0};
     uint32_t i, status;
     uint8_t proceed;
-    
-    /* initailize user sdhc configuration structure */
-    config.transMode = kSdhcTransModePio;
+
+    // initialize user sdhc configuration structure
+    config.transMode = kSdhcTransModeAdma2;
     config.clock = SDMMC_CLK_100KHZ;
     config.cdType = kSdhcCardDetectGpio;
-    
+
     printf("This demo is going to access data on card\r\n");
     
-    /* initialize the SDHC driver with the user configuration */
+    // initialize the SDHC driver with the user configuration
     if (SDHC_DRV_Init(BOARD_SDHC_INSTANCE, &host, &config) != kStatus_SDHC_NoError)
     {
         return kTestResultFailed;
     }
 
-    /* wait for a card detection */
+    // wait for a card detection
     sdhc_cd_irqhandler();
 
-    /* card instertion is detected based on interrupt */
+    // card insertion is detected based on interrupt
     do
     {
         status = OSA_SemaWait(&cd, OSA_WAIT_FOREVER);
@@ -684,7 +681,7 @@ static test_result_t demo_card_data_access(void)
         return kTestResultFailed;
     }
 
-    /* A card is detecetd, now initialize the card driver */
+    // A card is detected, now initialize the card driver
     if (kStatus_SDHC_NoError != SDCARD_DRV_Init(&host, &card))
     {
         printf("SDCARD_DRV_Init failed\r\n");
@@ -693,24 +690,22 @@ static test_result_t demo_card_data_access(void)
     }
 
     printf("sdcard initialized\r\n");
-    
-    /* show card information */
+
+    // show card information
     show_card_info(&card, true);
 
-    /* 
-     * Check if the card is read only or not 
-     * It checks the write protection information from the card, not from on-board WP signal.
-     * High Capacity SD cards (More than 2GB and up to and including 32GB) doesn't support write protection.
-     * Standard Capacity (Up to and including 2 GBytes) SD cards may optionally support write protection.
-     */
+    // Check if the card is read only or not 
+    // It checks the write protection information from the card, not from on-board WP signal.
+    // High Capacity SD cards (More than 2GB and up to and including 32GB) doesn't support write protection.
+    // Standard Capacity (Up to and including 2 GBytes) SD cards may optionally support write protection.
     if (SDCARD_DRV_CheckReadOnly(&card))
     {
         printf("Card is write-protected, skip writing tests\r\n");
 
-        /* clear buffer refData before reading data from card */
+        // clear buffer refData before reading data from card
         memset(refData, 0, sizeof(refData));
-        
-        /* read 1 block of data from block no '2' */
+
+        // read 1 block of data from block no '2'
         if (kStatus_SDHC_NoError != SDCARD_DRV_ReadBlocks(&card, testData, 2, 1))
         {
             printf("ERROR: SDCARD_DRV_ReadBlocks failed, line %d\r\n", __LINE__);
@@ -720,10 +715,10 @@ static test_result_t demo_card_data_access(void)
         }
         printf("Single block read test passed!\r\n");
 
-        /* clear buffer refData2 before reading data from card */
+        // clear buffer refData2 before reading data from card
         memset(refData2, 0, sizeof(refData2));
-        
-        /* read multiple blocks of data starting from TEST_START_BLOCK */
+
+        // read multiple blocks of data starting from TEST_START_BLOCK
         if (kStatus_SDHC_NoError != SDCARD_DRV_ReadBlocks(&card, testData2, TEST_START_BLOCK, sizeof(refData2)/FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE))
         {
             printf("ERROR: SDCARD_DRV_ReadBlocks failed, line %d\r\n", __LINE__);
@@ -737,7 +732,7 @@ static test_result_t demo_card_data_access(void)
         return kTestResultFailed;
     }
 
-    /* Prompt user to take data backup*/
+    // Prompt user to take data backup
     printf("\r\n");
     printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! CAUTION  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\r\n");
     printf("THIS DEMO IS GOING TO ERASE AND WRITE RAW DATA TO THE CARD,\r\n");
@@ -752,11 +747,11 @@ static test_result_t demo_card_data_access(void)
     printf("\r\n");
     if(proceed != 'y')
     {
-        /* the demo is aborted */
+        // the demo is aborted
         return kTestResultAborted;
     }
-      
-    /* Erase a group of 20 blocks */
+
+    // Erase a group of 20 blocks
     if (kStatus_SDHC_NoError != SDCARD_DRV_EraseBlocks(&card, 0, 20))
     {
         printf("ERROR:SDCARD_DRV_EraseBlocks failed, line %d\r\n", __LINE__);
@@ -767,10 +762,10 @@ static test_result_t demo_card_data_access(void)
 
     printf("\r\nStart write/read/compare demo...\r\n");
 
-    /* claer refData with '0's */
+    // clear refData with '0's
     memset(refData, 0, sizeof(refData));
-    
-    /* fill refData buffer with reference data with a seed value '0x11' */
+
+    // fill refData buffer with reference data with a seed value '0x11'
     if (fill_reference_data(refData, 0x11, sizeof(refData))) {
         printf("ERROR: prepare reference data failed\r\n");
         SDCARD_DRV_Shutdown(&card);
@@ -778,7 +773,7 @@ static test_result_t demo_card_data_access(void)
         return kTestResultInitFailed;
     }
 
-    /* write 1 block of refData buffer data to card block no '2' */
+    // write 1 block of refData buffer data to card block no '2'
     if (kStatus_SDHC_NoError != SDCARD_DRV_WriteBlocks(&card, refData, 2, 1))
     {
         printf("ERROR: SDCARD_DRV_WriteBlocks failed, line %d\r\n", __LINE__);
@@ -787,7 +782,7 @@ static test_result_t demo_card_data_access(void)
         return kTestResultFailed;
     }
 
-    /* read back 1 block of data from card block no '2' to buffer testData */
+    // read back 1 block of data from card block no '2' to buffer testData
     if (kStatus_SDHC_NoError != SDCARD_DRV_ReadBlocks(&card, testData, 2, 1))
     {
         printf("ERROR: SDCARD_DRV_ReadBlocks failed, line %d\r\n", __LINE__);
@@ -796,7 +791,7 @@ static test_result_t demo_card_data_access(void)
         return kTestResultFailed;
     }
 
-    /* compare values match between buffers testData and refData */
+    // compare values match between buffers testData and refData
     for (i = 0; i < sizeof(testData); i++)
     {
         if (testData[i] != refData[i])
@@ -809,10 +804,10 @@ static test_result_t demo_card_data_access(void)
     }
     printf("Single block write/read/compare demo passed!\r\n");
 
-    /* claer refData2 with '0's */
+    // clear refData2 with '0's
     memset(refData2, 0, sizeof(refData2));
-    
-    /* fill refData2 buffer with reference data with different seed values */
+
+    // fill refData2 buffer with reference data with different seed values
     for (i = 0; i < sizeof(refData2)/FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE; i++)
     {
         if (fill_reference_data(&refData2[i * FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE], 0x44 + i, FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE))
@@ -824,7 +819,7 @@ static test_result_t demo_card_data_access(void)
         }
     }
 
-    /* write multiple blocks from refData buffer data to card block no TEST_START_BLOCK */
+    // write multiple blocks from refData buffer data to card block no TEST_START_BLOCK
     if (kStatus_SDHC_NoError != SDCARD_DRV_WriteBlocks(&card, refData2, TEST_START_BLOCK, sizeof(refData2)/FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE))
     {
         printf("ERROR: SDCARD_DRV_WriteBlocks failed, line %d\r\n", __LINE__);
@@ -833,7 +828,7 @@ static test_result_t demo_card_data_access(void)
         return kTestResultFailed;
     }
 
-    /* read back multiple blocks of data from card block no TEST_START_BLOCK to buffer testData2 */    
+    // read back multiple blocks of data from card block no TEST_START_BLOCK to buffer testData2
     if (kStatus_SDHC_NoError != SDCARD_DRV_ReadBlocks(&card, testData2, TEST_START_BLOCK, sizeof(refData2)/FSL_SDHC_CARD_DEFAULT_BLOCK_SIZE))
     {
         printf("ERROR: SDCARD_DRV_ReadBlocks failed, line %d\r\n", __LINE__);
@@ -842,7 +837,7 @@ static test_result_t demo_card_data_access(void)
         return kTestResultFailed;
     }
 
-    /* compare values match between buffers testData2 and refData2 */
+    // compare values match between buffers testData2 and refData2
     for (i = 0; i < sizeof(refData2); i++)
     {
         if (testData2[i] != refData2[i])
@@ -855,7 +850,7 @@ static test_result_t demo_card_data_access(void)
     }
     printf("Multi-block write/read/compare demo passed!\r\n");
 
-    /* Erase 1 block at TEST_START_BLOCK */
+    // Erase 1 block at TEST_START_BLOCK
     if (kStatus_SDHC_NoError != SDCARD_DRV_EraseBlocks(&card, TEST_START_BLOCK, 1))
     {
         printf("ERROR: SDCARD_DRV_EraseBlocks failed, line %d\r\n", __LINE__);
@@ -865,12 +860,12 @@ static test_result_t demo_card_data_access(void)
     }
     printf("Erase blocks demo passed!\r\n");
 
-    /* shut down SD Card driver instance */
+    // shut down SD Card driver instance
     SDCARD_DRV_Shutdown(&card);
-    
-    /* shut down SDHC host driver instance */
+
+    // shut down SDHC host driver instance
     SDHC_DRV_Shutdown(card.hostInstance);
-    
+
     return kTestResultPassed;
 }
 
@@ -879,32 +874,42 @@ static test_result_t demo_card_data_access(void)
  */
 int main(void)
 {
+    uint32_t i;
     test_result_t testResult;
-    
-    /* initialize the OS services */
-    OSA_Init();
-    
-    /* initialize target hw */
-    hardware_init();
-    
-    /* initialize uart for user communication over serial port */
-    dbg_uart_init();
-    
-    /* enable SDHC module instance */
-    CLOCK_SYS_EnableSdhcClock(0);
-    
-    /* init sync object for card detection */
-    OSA_SemaCreate(&cd, 0);    
 
-    /* Set pin muxing for card detection (CD) pin */
+    // initialize the OS services
+    OSA_Init();
+
+    // initialize target hw
+    hardware_init();
+    // initialize SDHC pin
+    configure_sdhc_pins(BOARD_SDHC_INSTANCE);
+    // initialize uart for user communication over serial port
+    dbg_uart_init();
+
+    // enable SDHC module instance
+    CLOCK_SYS_EnableSdhcClock(0);
+
+#ifdef HW_MPU_INSTANCE_COUNT
+    // disable MPU
+    for(i = 0; i < HW_MPU_INSTANCE_COUNT; i++)
+    {
+        MPU_HAL_Disable(g_mpuBaseAddr[i]);
+    }
+#endif
+
+    // init sync object for card detection
+    OSA_SemaCreate(&cd, 0);
+
+    // Set pin muxing for card detection (CD) pin
     GPIO_DRV_Init(sdhcCdPin, NULL);
 
     printf("SD Card Demo Start!\r\n\r\n");
     printf("\r\n");
 
-    /* Initiate a demo of data access on the card */
+    // Initiate a demo of data access on the card
     testResult = demo_card_data_access();
-    
+
     if (testResult == kTestResultFailed)
     {
         printf("ERROR: test failed\r\n");
@@ -914,14 +919,10 @@ int main(void)
         printf("ABORT: demo aborted\r\n");
     }
 
-    /* free sync object used for card detection */
+    // free sync object used for card detection
     OSA_SemaDestroy(&cd);
-   
+
     printf("\r\nSD Card Demo End!\r\n\r\n");
     
     return 0;
 }
-
-/*******************************************************************************
- * EOF
- ******************************************************************************/

@@ -1,33 +1,34 @@
 /*
- * Copyright (c) 2013 - 2014, Freescale Semiconductor, Inc.
+ * Copyright (c) 2001-2003 Swedish Institute of Computer Science.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  *
- * o Redistributions of source code must retain the above copyright notice, this list
- *   of conditions and the following disclaimer.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. The name of the author may not be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
  *
- * o Redistributions in binary form must reproduce the above copyright notice, this
- *   list of conditions and the following disclaimer in the documentation and/or
- *   other materials provided with the distribution.
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+ * SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+ * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+ * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+ * OF SUCH DAMAGE.
  *
- * o Neither the name of Freescale Semiconductor, Inc. nor the names of its
- *   contributors may be used to endorse or promote products derived from this
- *   software without specific prior written permission.
+ * This file is part of the lwIP TCP/IP stack.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Author: Adam Dunkels <adam@sics.se>
+ *
  */
-
 
 #include <string.h>
 #include "lwip/mem.h"
@@ -41,58 +42,32 @@
 #include "fsl_enet_hal.h"
 #include "fsl_phy_driver.h"
 
-/* Ethernet Receive buffer descriptors */
-#if defined ( __ICCARM__ ) /*!< IAR Compiler */
-  #pragma data_alignment=ENET_BD_ALIGNMENT   
-#endif
-__ALIGN_BEGIN enet_bd_struct_t RxBuffDescrip[ENET_RXBD_NUM] __ALIGN_END;
-/* Ethernet Transmit buffer descriptors */
-#if defined ( __ICCARM__ ) /*!< IAR Compiler */
-  #pragma data_alignment=ENET_BD_ALIGNMENT   
-#endif
-__ALIGN_BEGIN enet_bd_struct_t TxBuffDescrip[ENET_TXBD_NUM] __ALIGN_END;
-
-/* Ethernet Receive data Buffer */
-#if defined ( __ICCARM__ ) /*!< IAR Compiler */
-  #pragma data_alignment=ENET_RX_BUFFER_ALIGNMENT   
-#endif
-__ALIGN_BEGIN uint8_t RxDataBuff[ENET_RXBD_NUM][ENET_RXBuffSizeAlign(ENET_RXBUFF_SIZE)] __ALIGN_END; 
-/* Ethernet Transmit data Buffer */
-#if defined ( __ICCARM__ ) /*!< IAR Compiler */
-  #pragma data_alignment=ENET_TX_BUFFER_ALIGNMENT   
-#endif
-__ALIGN_BEGIN uint8_t TxDataBuff[ENET_TXBD_NUM][ENET_TXBuffSizeAlign(ENET_TXBUFF_SIZE)] __ALIGN_END; 
-#if !ENET_RECEIVE_ALL_INTERRUPT
-/* Ethernet Receive data Buffer */
-#if defined ( __ICCARM__ ) /*!< IAR Compiler */
-  #pragma data_alignment=ENET_RX_BUFFER_ALIGNMENT   
-#endif
-__ALIGN_BEGIN uint8_t ExtRxDataBuff[ENET_EXTRXBD_NUM][ENET_RXBuffSizeAlign(ENET_RXBUFF_SIZE)] __ALIGN_END; 
-#endif
-
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 /* Define those to better describe your network interface. */
 #define IFNAME0 'e'
 #define IFNAME1 'n'
 
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
 enet_config_rmii_t rmiiCfg = {kEnetCfgRmii, kEnetCfgSpeed100M, kEnetCfgFullDuplex, false, false};
 enet_mac_config_t g_enetMacCfg[HW_ENET_INSTANCE_COUNT] = 
 {
 {
     kEnetMacNormalMode,  /*!< ENET normal mode*/
-    kEnetMaxFrameSize,  /*!< ENET receive maximun frame length*/
-    kEnetDefaultTruncLen,  /*!< ENET default frame truncation length*/
-    kEnetDefaultIpg,       /*!< ENET default transmit inter packet gap*/
-    0,                 /*!< ENET Pause duration*/
     NULL,      /*!< ENET mac address*/
     &rmiiCfg,  /*!< ENET rmii interface*/
-    kEnetMdioHoldOneClkCycle,
     /*!< enet mac control flag recommended to use enet_mac_control_flag_t
       it is special control for loop mode, sleep mode, crc forward/terminate etc*/
     kEnetRxCrcFwdEnable | kEnetTxCrcBdEnable | kEnetMacEnhancedEnable,
-    NULL,     /*!< ENET rxaccelerator config*/
-    NULL,     /*!< ENET txaccelerator config*/
-    {0, kEnetMinFifoAlmostEmpty, 0, kEnetMinFifoAlmostEmpty}, /*!< ENET Rx FIFO threshold*/
-    {0, 0, 0, kEnetMinFifoAlmostEmpty, kEnetDefaultTxFifoAlmostFull}, /*!< ENET Tx FIFO threshold*/
+    NULL,     /*!< ENET Rx FIFO threshold*/
+    NULL,     /*!< ENET Tx FIFO threshold*/
+    0,     /*!< ENET rxaccelerator config*/
+    0,     /*!< ENET txaccelerator config*/
+    0,     /*!< ENET Pause duration*/
+    NULL,  /*!< ENET Special configure for MAC*/
 #if FSL_FEATURE_ENET_SUPPORT_PTP
     false,
 #endif
@@ -107,10 +82,23 @@ enet_mac_ptp_ts_data_t ptpTsTxData[ENET_PTP_TXTS_RING_LEN];
 #endif
 
 enet_dev_if_t enetDevIf[HW_ENET_INSTANCE_COUNT];
+///////////////////////////////////////////////////////////////////////////////
+// Prototypes
+///////////////////////////////////////////////////////////////////////////////
 
+#if defined(FSL_RTOS_MQX)
+extern void MQX_ENET_Transmit_IRQHandler(void);
+extern void MQX_ENET_Receive_IRQHandler(void);
+extern void MQX_ENET_1588_Timer_IRQHandler(void);
+#endif
 #if !ENET_RECEIVE_ALL_INTERRUPT&&!NO_SYS
 OSA_TASK_DEFINE(Enet_receive, RECV_TASK_STACK_SIZE);
 #endif
+
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
+
 #if !ENET_RECEIVE_ALL_INTERRUPT
 /*FUNCTION****************************************************************
  *
@@ -174,6 +162,143 @@ void ENET_receive(task_param_t param)
     }
 }
 #endif
+uint8_t *txBdPtr[HW_ENET_INSTANCE_COUNT], *rxBdPtr[HW_ENET_INSTANCE_COUNT];
+uint8_t *txBuffer[HW_ENET_INSTANCE_COUNT], *rxBuffer[HW_ENET_INSTANCE_COUNT];
+uint8_t *rxExtBuffer[HW_ENET_INSTANCE_COUNT];
+/*FUNCTION****************************************************************
+ *
+ * Function Name: ENET_buffer_init
+ * Return Value: The execution status.
+ * Description: Initialize enet mac buffer.
+ *
+ *END*********************************************************************/
+static uint32_t ENET_buffer_init(enet_dev_if_t * enetIfPtr, enet_buff_config_t *buffCfgPtr)
+{
+    uint32_t rxBufferSizeAlign, txBufferSizeAlign;
+    uint8_t  *txBufferAlign, *rxBufferAlign;
+    volatile enet_bd_struct_t *txBdPtrAlign, *rxBdPtrAlign;
+
+    /* Check input parameter*/
+    if((!enetIfPtr) || (!buffCfgPtr))
+    {
+        return kStatus_ENET_InvalidInput;
+    }
+
+    /* Allocate ENET receive buffer descriptors*/
+    txBdPtr[enetIfPtr->deviceNumber] = (uint8_t *)OSA_MemAllocZero(ENET_TXBD_NUM * sizeof(enet_bd_struct_t) + ENET_BD_ALIGNMENT);
+    if (!txBdPtr[enetIfPtr->deviceNumber])
+    {
+        return kStatus_ENET_MemoryAllocateFail;
+    }
+   txBdPtrAlign = (volatile enet_bd_struct_t *)ENET_ALIGN((uint32_t)txBdPtr[enetIfPtr->deviceNumber], ENET_BD_ALIGNMENT);
+
+    rxBdPtr[enetIfPtr->deviceNumber] = (uint8_t *)OSA_MemAllocZero(ENET_RXBD_NUM * sizeof(enet_bd_struct_t) + ENET_BD_ALIGNMENT);
+    if(!rxBdPtr[enetIfPtr->deviceNumber])
+    {
+         OSA_MemFree(txBdPtr[enetIfPtr->deviceNumber]);
+         return kStatus_ENET_MemoryAllocateFail;
+    }
+    rxBdPtrAlign = (volatile enet_bd_struct_t *)ENET_ALIGN((uint32_t)rxBdPtr[enetIfPtr->deviceNumber], ENET_BD_ALIGNMENT);
+
+    /* Allocate the transmit and receive date buffers*/
+    rxBufferSizeAlign = ENET_RXBuffSizeAlign(ENET_RXBUFF_SIZE);
+    rxBuffer[enetIfPtr->deviceNumber] = (uint8_t *)OSA_MemAllocZero(ENET_RXBD_NUM * rxBufferSizeAlign  + ENET_RX_BUFFER_ALIGNMENT);
+    if (!rxBuffer[enetIfPtr->deviceNumber])
+    {
+        OSA_MemFree(txBdPtr[enetIfPtr->deviceNumber]);
+        OSA_MemFree(rxBdPtr[enetIfPtr->deviceNumber]);
+        return kStatus_ENET_MemoryAllocateFail;
+    }
+    rxBufferAlign = (uint8_t *)ENET_ALIGN((uint32_t)rxBuffer[enetIfPtr->deviceNumber], ENET_RX_BUFFER_ALIGNMENT);
+
+    txBufferSizeAlign = ENET_RXBuffSizeAlign(ENET_TXBUFF_SIZE);
+    txBuffer[enetIfPtr->deviceNumber] = OSA_MemAllocZero(ENET_TXBD_NUM * txBufferSizeAlign + ENET_TX_BUFFER_ALIGNMENT);
+    if (!txBuffer[enetIfPtr->deviceNumber])
+    {
+        OSA_MemFree(txBdPtr[enetIfPtr->deviceNumber]);
+        OSA_MemFree(rxBdPtr[enetIfPtr->deviceNumber]);
+        OSA_MemFree(rxBuffer[enetIfPtr->deviceNumber]);
+        return kStatus_ENET_MemoryAllocateFail;
+    }
+    txBufferAlign = (uint8_t *)ENET_ALIGN((uint32_t)txBuffer[enetIfPtr->deviceNumber], ENET_TX_BUFFER_ALIGNMENT);
+
+#if FSL_FEATURE_ENET_SUPPORT_PTP
+    buffCfgPtr->ptpTsRxDataPtr = &ptpTsRxData[0];
+    buffCfgPtr->ptpTsRxBuffNum = ENET_PTP_RXTS_RING_LEN;
+    buffCfgPtr->ptpTsTxDataPtr = &ptpTsTxData[0];
+    buffCfgPtr->ptpTsTxBuffNum = ENET_PTP_TXTS_RING_LEN;
+#endif
+#if !ENET_RECEIVE_ALL_INTERRUPT
+    uint8_t *rxExtBufferAlign;
+    rxExtBuffer[enetIfPtr->deviceNumber] = (uint8_t *)OSA_MemAllocZero(ENET_EXTRXBD_NUM * rxBufferSizeAlign  + ENET_RX_BUFFER_ALIGNMENT);
+    if (!rxExtBuffer[enetIfPtr->deviceNumber])
+    {
+        OSA_MemFree(txBdPtr[enetIfPtr->deviceNumber]);
+        OSA_MemFree(rxBdPtr[enetIfPtr->deviceNumber]);
+        OSA_MemFree(rxBuffer[enetIfPtr->deviceNumber]);
+        OSA_MemFree(txBuffer[enetIfPtr->deviceNumber]);
+        return kStatus_ENET_MemoryAllocateFail;
+    }
+    rxExtBufferAlign = (uint8_t *)ENET_ALIGN((uint32_t)rxExtBuffer[enetIfPtr->deviceNumber], ENET_RX_BUFFER_ALIGNMENT);
+    buffCfgPtr->extRxBuffQue = rxExtBufferAlign;
+    buffCfgPtr->extRxBuffNum = ENET_EXTRXBD_NUM;
+#else
+    buffCfgPtr->extRxBuffQue = NULL;
+    buffCfgPtr->extRxBuffNum = 0;
+#endif
+
+    buffCfgPtr->rxBdNumber = ENET_RXBD_NUM;
+    buffCfgPtr->rxBdPtrAlign = rxBdPtrAlign;
+    buffCfgPtr->rxBufferAlign = rxBufferAlign;
+    buffCfgPtr->rxBuffSizeAlign = rxBufferSizeAlign;
+    buffCfgPtr->txBdNumber = ENET_TXBD_NUM;
+    buffCfgPtr->txBdPtrAlign = txBdPtrAlign;
+    buffCfgPtr->txBufferAlign = txBufferAlign;
+    buffCfgPtr->txBuffSizeAlign = txBufferSizeAlign;
+
+    return kStatus_ENET_Success;
+}
+
+/*FUNCTION****************************************************************
+ *
+ * Function Name: ENET_buffer_deinit
+ * Return Value: The execution status.
+ * Description: Initialize enet mac buffer.
+ *
+ *END*********************************************************************/
+static uint32_t ENET_buffer_deinit(enet_dev_if_t * enetIfPtr)
+{
+    /* Check input parameter*/
+    if(!enetIfPtr)
+    {
+        return kStatus_ENET_InvalidInput;
+    }
+
+    /* Free allocated memory*/
+    if(txBdPtr[enetIfPtr->deviceNumber])
+    {
+        OSA_MemFree(txBdPtr[enetIfPtr->deviceNumber]);
+    }
+    if(rxBdPtr[enetIfPtr->deviceNumber])
+    {
+        OSA_MemFree(rxBdPtr[enetIfPtr->deviceNumber]);
+    }
+    if(txBuffer[enetIfPtr->deviceNumber])
+    {
+        OSA_MemFree(txBuffer[enetIfPtr->deviceNumber]);
+    }
+    if(rxBuffer[enetIfPtr->deviceNumber])
+    {
+        OSA_MemFree(rxBuffer[enetIfPtr->deviceNumber]);
+    }
+#if !ENET_RECEIVE_ALL_INTERRUPT
+    if(rxExtBuffer[enetIfPtr->deviceNumber])
+    {
+        OSA_MemFree(rxExtBuffer[enetIfPtr->deviceNumber]);
+    }
+#endif
+    return kStatus_ENET_Success;
+}
 
 /**
  * In this function, the hardware should be initialized.
@@ -190,7 +315,9 @@ low_level_init(struct netif *netif)
   const enet_mac_config_t *macCfgPtr;
   enet_buff_config_t buffCfg;
   uint32_t devNumber = 0;
-  osa_status_t osaFlag;
+  enet_phy_speed_t physpeed;
+  enet_phy_duplex_t phyduplex;
+  bool linkstatus;
   
   #if LWIP_HAVE_LOOPIF
   devNumber = netif->num - 1;
@@ -238,26 +365,13 @@ low_level_init(struct netif *netif)
 #endif
     /* Create sync signal*/
     OSA_MutexCreate(&enetIfPtr->enetContextSync);	
+	 /* Initialize enet buffers*/
+    result = ENET_buffer_init(enetIfPtr, &buffCfg);
+	if(result != kStatus_ENET_Success)
+	{
+		return result;
+	}
 
-    memset(&buffCfg, 0,sizeof(enet_buff_config_t));
-    buffCfg.rxBdNumber = ENET_RXBD_NUM;
-    buffCfg.rxBdPtrAlign = RxBuffDescrip;
-    buffCfg.rxBufferAlign = &RxDataBuff[0][0];
-    buffCfg.rxBuffSizeAlign = ENET_RXBuffSizeAlign(ENET_RXBUFF_SIZE);
-    buffCfg.txBdNumber = ENET_TXBD_NUM;
-    buffCfg.txBdPtrAlign = TxBuffDescrip;
-    buffCfg.txBufferAlign = &TxDataBuff[0][0];
-    buffCfg.txBuffSizeAlign = ENET_TXBuffSizeAlign(ENET_TXBUFF_SIZE);
-#if !ENET_RECEIVE_ALL_INTERRUPT
-    buffCfg.extRxBuffQue = &ExtRxDataBuff[0][0];
-    buffCfg.extRxBuffNum = ENET_EXTRXBD_NUM;
-#endif
-#if FSL_FEATURE_ENET_SUPPORT_PTP
-    buffCfg.ptpTsRxDataPtr = &ptpTsRxData[0];
-    buffCfg.ptpTsRxBuffNum = ENET_PTP_RXTS_RING_LEN;
-    buffCfg.ptpTsTxDataPtr = &ptpTsTxData[0];
-    buffCfg.ptpTsTxBuffNum = ENET_PTP_TXTS_RING_LEN;
-#endif
      /* Initialize ENET device*/
     result = ENET_DRV_Init(enetIfPtr, macCfgPtr, &buffCfg);
     if (result == kStatus_ENET_Success)
@@ -277,8 +391,43 @@ low_level_init(struct netif *netif)
         }
 
         PHY_DRV_Init(devNumber, enetIfPtr->phyAddr, g_enetPhyCfg[devNumber].isLoopEnabled);
+        /*get negociation results and reconfigure MAC speed and duplex according to phy*/
+        result = PHY_DRV_GetLinkStatus(devNumber,enetIfPtr->phyAddr,&linkstatus);
+        if(result == kStatus_ENET_Success)
+        {
+    	    if(linkstatus == true)
+    	    {
+                result = PHY_DRV_GetLinkSpeed(devNumber,enetIfPtr->phyAddr,&physpeed);
+                if(result == kStatus_ENET_Success)
+                {
+    	           result = PHY_DRV_GetLinkDuplex(devNumber,enetIfPtr->phyAddr,&phyduplex);
+    	           if(result == kStatus_ENET_Success)
+    	           {
+    	               if (physpeed == kEnetSpeed10M)
+    	               {
+    	                   macCfgPtr->rmiiCfgPtr->speed = kEnetCfgSpeed10M;
+    	               }
+    	               else
+    	               {
+    	                   macCfgPtr->rmiiCfgPtr->speed = kEnetCfgSpeed100M;
+    	               }
+    	               if (phyduplex == kEnetFullDuplex)
+    	               {
+    	                   macCfgPtr->rmiiCfgPtr->duplex = kEnetCfgFullDuplex;
+    	               }
+    	               else
+    	               {
+    	                   macCfgPtr->rmiiCfgPtr->duplex = kEnetCfgHalfDuplex;
+    	               }
+    	               ENET_HAL_SetRMIIMode(g_enetBaseAddr[0], macCfgPtr->rmiiCfgPtr);
+
+    	           }
+    	         }
+    	    }
+        }
         enetIfPtr->isInitialized = true;
 #if !ENET_RECEIVE_ALL_INTERRUPT
+    osa_status_t osaFlag;
     osaFlag = OSA_EventCreate(&enetIfPtr->enetReceiveSync, kEventAutoClear);
     if(osaFlag != kStatus_OSA_Success)
     {
@@ -298,6 +447,7 @@ low_level_init(struct netif *netif)
     else
     {
         ENET_DRV_Deinit(enetIfPtr);
+		ENET_buffer_deinit(enetIfPtr);
         OSA_MutexDestroy(&enetIfPtr->enetContextSync);
 #if !ENET_RECEIVE_ALL_INTERRUPT
 #if USE_RTOS
@@ -451,7 +601,6 @@ ethernetif_input(void *enetPtr, enet_mac_packet_buffer_t *packetBuffer)
 	    if(netif->state == enetPtr)
 		break;
 	}
-
   /* move received packet into a new pbuf */
   p = low_level_input(netif,packetBuffer);
   /* no packet could be read, silently ignore this */
@@ -523,8 +672,13 @@ ethernetif_init(struct netif *netif)
    * is available...) */
   netif->output = etharp_output;
   netif->linkoutput = low_level_output;
-  
-  
+#if defined(FSL_RTOS_MQX)
+    OSA_InstallIntHandler(ENET_Transmit_IRQn, MQX_ENET_Transmit_IRQHandler);
+    OSA_InstallIntHandler(ENET_Receive_IRQn, MQX_ENET_Receive_IRQHandler);
+#if defined(FSL_RTOS_MQX)
+    OSA_InstallIntHandler(ENET_1588_Timer_IRQn, MQX_ENET_1588_Timer_IRQHandler); 
+#endif
+#endif  
   /* initialize the hardware */
   result = low_level_init(netif);
 

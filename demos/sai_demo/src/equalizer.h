@@ -31,63 +31,45 @@
 
 #ifndef __EQUALIZER_H__
 #define __EQUALIZER_H__
-/*******************************************************************************
- * Standard C Included Files
- ******************************************************************************/
+
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdint.h>
-/*******************************************************************************
- * SDK Included Files
- ******************************************************************************/
+// SDK Included Files
 #include "fsl_soundcard.h"
 #include "fsl_sai_driver.h"
-#include "fsl_sai_features.h"
-/*******************************************************************************
- * Include CMSIS-DSP library
- ******************************************************************************/
+// Include CMSIS-DSP library
 #include "arm_math.h"
-/*******************************************************************************
- * Definitions
- ******************************************************************************/
+
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
+
 #define WAV_PI 3.14159265
-/*******************************************************************************
- * Constants
- ******************************************************************************/
+
 /* DSP available */
 typedef enum DSP_Types
 {
     kFFT,
     kNoDSP
 }dsp_types_t;
-/*******************************************************************************
- * Data Structures
- ******************************************************************************/
 
+///////////////////////////////////////////////////////////////////////////////
+// Prototypes
+///////////////////////////////////////////////////////////////////////////////
 
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-/* CMSIS-DSP Based */
-
-/* 
+/*!
  * @brief Perform frequency analysis and find fundamental frequency of PCM data.
- *
- * @param dataFormat Pointer to audio data format structure.
  * 
- * @param buffer Pointer to data array to store modulated PCM data.
- * 
- * @param fftData Pointer to data array for storing Fast Fourier Transform data.
- * 
- * @param fftResult Point to data array for storing real frequency bins from FFT.
- *
- * @return float32_t Returns fundamental frequency in Hz. 
- *
+ * @param [in] dataFormat Pointer to audio data format structure.
+ * @param [in] buffer     Pointer to data array to store modulated PCM data.
+ * @param [in] fftData    Pointer to data array for storing Fast Fourier Transform data.
+ * @param [in] fftResult  Point to data array for storing real frequency bins from FFT.
+ * @return Returns fundamental frequency in Hz.
  */
-
 float32_t do_fft(sai_data_format_t *dataFormat, uint8_t *buffer, float32_t *fftData, float32_t *fftResult);
 
-
-#endif /* __EQUALIZER_H__ */
-
-/*******************************************************************************
- * EOF                                           
- *******************************************************************************/
+#endif // __EQUALIZER_H__

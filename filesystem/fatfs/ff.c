@@ -1,3 +1,33 @@
+/*
+ * Copyright (c) 2013 - 2014, Freescale Semiconductor, Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * o Redistributions of source code must retain the above copyright notice, this list
+ *   of conditions and the following disclaimer.
+ *
+ * o Redistributions in binary form must reproduce the above copyright notice, this
+ *   list of conditions and the following disclaimer in the documentation and/or
+ *   other materials provided with the distribution.
+ *
+ * o Neither the name of Freescale Semiconductor, Inc. nor the names of its
+ *   contributors may be used to endorse or promote products derived from this
+ *   software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 /*----------------------------------------------------------------------------/
 /  FatFs - FAT file system module  R0.09b                 (C)ChaN, 2013
 /-----------------------------------------------------------------------------/
@@ -97,8 +127,9 @@
 / Feb 24,'14 R0.09b f_printf() function writes a wrong string to the file. If a signed decimal with zero
 /                   padded, such as "%06d", is specified by format string and the value -123 is given, the
 /                   output must be "-00123" but "00-123" is written to the file.
-/                   To avoid this problem, do not use this fotmat for a negative value.
+/                   To avoid this problem, do not use this format for a negative value.
 /---------------------------------------------------------------------------*/
+
 #include "ff.h"			/* FatFs configurations and declarations */
 #include "diskio.h"		/* Declarations of low level disk I/O functions */
 
@@ -607,7 +638,7 @@ static int mem_cmp
 }
 
 
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
 uint8_t* convert_ptr(FATFS* fs, uint8_t* orignptr)
 {
     if(orignptr == 0)
@@ -619,7 +650,7 @@ uint32_t entry_start_clust = 0;
 uint16_t entry_start_free_index = 0;
 #endif
 
-#if ENABLE_MYCHANGE == 1
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 1
 #if WIN_SECTOR_NUM != 2
 #error WIN_SECTOR_NUM must be 2
 #endif
@@ -668,7 +699,7 @@ void set_dirty(FATFS* fs)
 {
     fs->wflag |= (0x01 << ((fs->win - fs->winprev) / SS(fs)));
 }
-#elif ENABLE_MYCHANGE == 2
+#elif _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 2
 uint8_t buff_validation(FATFS *fs, uint32_t sect)
 {
     if(fs->winsect == 0 || fs->winsectprev == 0)
@@ -937,7 +968,7 @@ static void clear_lock
 /*-----------------------------------------------------------------------*/
 
 #if !_FS_READONLY
-#if ENABLE_MYCHANGE == 1
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 1
 #define WIN_INDEX(fs)   (((fs)->win == (fs)->winprev) ? 0 : 1)
 
 static
@@ -999,7 +1030,7 @@ FRESULT sync_winindex(FATFS *fs, uint8_t index)
 	return FR_OK;
 }
 #define sync_window(fs, sector) sync_winindex(fs, sector)
-#elif ENABLE_MYCHANGE == 2
+#elif _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 2
 #define WIN_INDEX(fs)   (0)
 static
 FRESULT sync_windowprev (
@@ -1078,14 +1109,14 @@ static FRESULT move_window
 	  uint32_t sector	
   )/* Move to zero only writes back dirty window */	
 {
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
     uint8_t index = 0;
     if (!buff_validation(fs, sector)) {
 #else
 	if (sector != fs->winsect) {	/* Changed current window */
 #endif
 #if !_FS_READONLY
-#if ENABLE_MYCHANGE == 1//sync one sector, other sync all sectors.
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 1//sync one sector, other sync all sectors.
             if(fs->winsect != 0)
             {
 //                index = ((fs->win == fs->winprev) ? 1 : 0);
@@ -1097,7 +1128,7 @@ static FRESULT move_window
             if (sync_window(fs, WIN_INDEX(fs)) != FR_OK)
                 return FR_DISK_ERR;
 #endif
-#if ENABLE_MYCHANGE == 2        //read multi sectors.
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 2        //read multi sectors.
             uint32_t count = 0;
             count = WIN_SECTOR_NUM;
             if (sector >= fs->fatbase && sector < (fs->fatbase + fs->fsize))/* In FAT area? */
@@ -1122,10 +1153,10 @@ static FRESULT move_window
                 return FR_DISK_ERR;
             fs->winsect = sector;
 #endif
-#if ENABLE_MYCHANGE == 1
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 1
             fs->winsectprev[index] = sector;
             fs->winlastindex = index;
-#elif ENABLE_MYCHANGE == 2
+#elif _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 2
             fs->winsectprev = sector;
             fs->win = fs->winprev;
             fs->winnum = count;
@@ -1166,7 +1197,7 @@ FRESULT sync_fs (
 		/* Update FSInfo sector if needed */
 		if (fs->fs_type == FS_FAT32 && fs->fsi_flag) {
 			fs->winsect = 0;
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                         clear_buff(fs);
 #endif
 			/* Create FSInfo structure */
@@ -1422,7 +1453,7 @@ static uint32_t create_chain
 		cs = get_fat(fs, clst);			/* Check the cluster status */
 		if (cs < 2) return 1;			/* It is an invalid cluster *///簇号是从2开始编号的
 		if (cs < fs->n_fatent) return cs;	/* It is already followed by next cluster */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                 scl = fs->last_clust;
 #else
 		scl = clst;
@@ -1460,7 +1491,7 @@ static uint32_t create_chain
 	return ncl;		/* Return new cluster number or error code */
 }
 
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
 static uint32_t create_chain_for_clusts
   (
     /* [IN] File system object */
@@ -1511,7 +1542,7 @@ static uint32_t create_chain_for_clusts
                     *get_num = num;
 					return ncl;
                 }
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                 scl = fs->last_clust;
 #else				
 		        scl = clst;
@@ -1526,7 +1557,7 @@ static uint32_t create_chain_for_clusts
                 ++ncl;
                 if(ncl >= fs->n_fatent)/* Wrap around*/
                 {
-//                    printf("wrap around\n");
+//                    USB_PRINTF("wrap around\n");
                     ncl = 2;
                     num = 0;
                     ++try;
@@ -1571,7 +1602,7 @@ static uint32_t create_chain_for_clusts
         }
         if (num != 0)/* get some continuous free clusters in the most front */
         {
-//            printf("get desired clusters %d-%d\n", ncl, for_num);
+//            USB_PRINTF("get desired clusters %d-%d\n", ncl, for_num);
             *get_num = num;
 //                if(clst != 0)
 //                    res = put_fat(fs, clst, ncl - num + 1);
@@ -1632,7 +1663,7 @@ static uint32_t create_chain_for_clusts
         }
         else
         {
-//            printf("not get desired cluster\n");
+//            USB_PRINTF("not get desired cluster\n");
                 if(first_idle != 0)
 				    fs->last_clust = first_idle;
                     ncl = create_chain(fs, clst);
@@ -1777,19 +1808,19 @@ static FRESULT dir_next
 					if (sync_window(dj->fs, WIN_INDEX(dj->fs))) return FR_DISK_ERR;	/* Flush active window */
 					mem_set(dj->fs->win, 0, SS(dj->fs));			/* Clear window buffer */
 					dj->fs->winsect = clust2sect(dj->fs, clst);	/* Cluster start sector */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                         set_sectorprev(dj->fs, dj->fs->winsect);
 #endif                                        
 					for (c = 0; c < dj->fs->csize; c++) {		/* Fill the new cluster with 0 */
 						set_dirty(dj->fs);
 						if (sync_window(dj->fs, WIN_INDEX(dj->fs))) return FR_DISK_ERR;
 						dj->fs->winsect++;
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                                 set_sectorprev(dj->fs, dj->fs->winsect);
 #endif
 					}
 					dj->fs->winsect -= c;						/* Rewind window address */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                         set_sectorprev(dj->fs, dj->fs->winsect);
 #endif
 #else
@@ -1825,7 +1856,7 @@ FRESULT dir_alloc (
 	FRESULT res;
 	uint32_t n;
 
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
         if (entry_start_clust == dj->sclust)
             res = dir_sdi(dj, entry_start_free_index);
         else
@@ -2129,7 +2160,7 @@ static FRESULT dir_find
 		if (res != FR_OK) break;
 		dir = convert_ptr(dj->fs, dj->dir);					/* Ptr to the directory entry of current index */
                 c = dir[DIR_Name];
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                 if(entry_start_clust != dj->sclust && (c == DDE || c == 0))
                 {
                     entry_start_clust = dj->sclust;
@@ -2166,7 +2197,7 @@ static FRESULT dir_find
 		res = dir_next(dj, 0);		/* Next entry */
 	} while (res == FR_OK);
         
-#if ENABLE_MYCHANGE//may reach to FR_NO_FILE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION//may reach to FR_NO_FILE
         if(entry_start_clust != dj->sclust && (c == DDE || c == 0))
         {
             entry_start_clust = dj->sclust;
@@ -2943,7 +2974,7 @@ static FRESULT chk_mounted
 	fs->fs_type = fmt;		/* FAT sub-type */
 	fs->id = ++Fsid;		/* File system mount ID */
 	fs->winsect = 0;		/* Invalidate sector cache */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
         clear_buff(fs);
 #endif
 	clear_alldirty(fs);
@@ -3044,7 +3075,7 @@ FRESULT f_mount
 
 	if (fs) {
 		fs->fs_type = 0;		/* Clear new fs object */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
             clear_buff(fs);
 #endif
 #if _FS_REENTRANT				/* Create sync object for the new volume */
@@ -3113,7 +3144,7 @@ FRESULT f_open
 #endif
 	if (res == FR_OK) {
 		INIT_BUF(dj);
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                 /* need to create directory entry, do not let invalid free entry affect alloc entry */
                 if (mode & (FA_CREATE_ALWAYS | FA_OPEN_ALWAYS | FA_CREATE_NEW))
                 {
@@ -3254,7 +3285,7 @@ FRESULT f_read
 	uint32_t clst, sect, remain;
 	uint32_t rcnt, cc;
 	uint8_t csect, *rbuff = (uint8_t*)buff;
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
         uint32_t desired_num = 0;
         uint32_t get_num = 0;
         uint32_t prev_clst = 0;
@@ -3278,7 +3309,7 @@ FRESULT f_read
 		if ((fp->fptr % SS(fp->fs)) == 0) {		/* On the sector boundary? */
 			csect = (uint8_t)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));	/* Sector offset in the cluster */
 			if (!csect) {						/* On the cluster boundary? */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                 desired_num = (btr + (SS(fp->fs) - 1)) / SS(fp->fs);
                                 desired_num = desired_num / (fp->fs->csize) + ((desired_num & (fp->fs->csize - 1)) ? 1 : 0);
                                 if(desired_num > MAX_WRITE_CLUSTERS)
@@ -3297,7 +3328,7 @@ FRESULT f_read
 				if (clst < 2) ABORT(fp->fs, FR_INT_ERR);
 				if (clst == 0xFFFFFFFF) ABORT(fp->fs, FR_DISK_ERR);
 				fp->clust = clst;				/* Update current cluster */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                 //判断是否能连续个desired_num
                                 get_num = 1;
                                 if(desired_num > 1)
@@ -3325,7 +3356,7 @@ FRESULT f_read
 #endif
 			}
 			sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                         if(get_num > 1)
                           fp->clust += (get_num - 1);
 #endif
@@ -3333,7 +3364,7 @@ FRESULT f_read
 			sect += csect;
 			cc = btr / SS(fp->fs);				/* When remaining bytes >= sector size, */
 			if (cc) {							/* Read maximum contiguous sectors directly */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                 if(csect == 0 && get_num > 1)
                                 {
                                     if(cc > fp->fs->csize * get_num)
@@ -3348,7 +3379,7 @@ FRESULT f_read
 					ABORT(fp->fs, FR_DISK_ERR);
 #if !_FS_READONLY && _FS_MINIMIZE <= 2			/* Replace one of the read sectors with cached data if it contains a dirty sector */
 #if _FS_TINY
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                 if(judge_alldirty(fp->fs))
                                 {
                                     for (i = 0; i < WIN_SECTOR_NUM; ++i)
@@ -3434,7 +3465,7 @@ FRESULT f_write
 	uint32_t wcnt, cc;
 	uint8_t *wbuff = (uint8_t*)buff;
 	uint8_t csect;
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
         clst = 0;
         uint32_t desired_num = 0;
         uint32_t get_num = 0;
@@ -3457,7 +3488,7 @@ FRESULT f_write
 		if ((fp->fptr % SS(fp->fs)) == 0) {	/* On the sector boundary? */
 			csect = (uint8_t)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));	/* Sector offset in the cluster */
 			if (!csect) {					/* On the cluster boundary? */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                             desired_num = (btw + (SS(fp->fs) - 1)) / SS(fp->fs);
                             desired_num = desired_num / (fp->fs->csize) + ((desired_num & (fp->fs->csize - 1)) ? 1 : 0);
                             if(desired_num > MAX_WRITE_CLUSTERS)
@@ -3467,7 +3498,7 @@ FRESULT f_write
 					clst = fp->sclust;		/* Follow from the origin */
 					if (clst == 0)			/* When no cluster is allocated, */
                                         {
-#if ENABLE_MYCHANGE                                          
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION                                          
                                           clst = create_chain_for_clusts(fp->fs, 0, desired_num, &get_num);
 #else
 					  clst = create_chain(fp->fs, 0);	/* Create a new cluster chain */
@@ -3479,7 +3510,7 @@ FRESULT f_write
 						clst = clmt_clust(fp, fp->fptr);	/* Get cluster# from the CLMT */
 					else
 #endif
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                                 clst = create_chain_for_clusts(fp->fs, fp->clust, desired_num, &get_num);
 #else
                                                 clst = create_chain(fp->fs, fp->clust);	/* Follow or stretch cluster chain on the FAT */
@@ -3492,7 +3523,7 @@ FRESULT f_write
                                 if(fp->sclust == 0) fp->sclust = clst;	/* Set start cluster if the first write */
 			}
 #if _FS_TINY
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                         for (i = 0; i < WIN_SECTOR_NUM; ++i)
                         {
                             tmp = get_sectorprev(fp->fs, i);
@@ -3514,7 +3545,7 @@ FRESULT f_write
 			}
 #endif
 			sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                         if(get_num > 1)
                           fp->clust = clst + get_num - 1;
 #endif
@@ -3522,7 +3553,7 @@ FRESULT f_write
 			sect += csect;
 			cc = btw / SS(fp->fs);			/* When remaining bytes >= sector size, */
 			if (cc) {						/* Write maximum contiguous sectors directly */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                 if (csect == 0 && get_num > 1)//在csect==0的情况下，上面才会申请多个连续的cluster。
                                 {
                                     if(cc > fp->fs->csize * get_num)
@@ -3536,14 +3567,14 @@ FRESULT f_write
 				if (disk_write(fp->fs->drv, wbuff, sect, (uint8_t)cc) != RES_OK)
 					ABORT(fp->fs, FR_DISK_ERR);
 #if _FS_TINY
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                 for (i = 0; i < WIN_SECTOR_NUM; ++i)    /* Refill sector cache if it gets invalidated by the direct write */
                                 {
                                     tmp = get_sectorprev(fp->fs, i);
                                     if(tmp >= sect && tmp < sect + cc)
                                     {
                                         mem_cpy(fp->fs->winprev + i * SS(fp->fs), wbuff + (tmp - sect) * SS(fp->fs), SS(fp->fs));
-#if ENABLE_MYCHANGE == 1
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION == 1
                                         clear_dirty2(fp->fs, i);
 #endif
                                     }
@@ -3567,7 +3598,7 @@ FRESULT f_write
 			if (fp->fptr >= fp->fsize) {	/* Avoid silly cache filling at growing edge */
 				if (sync_window(fp->fs, WIN_INDEX(fp->fs))) ABORT(fp->fs, FR_DISK_ERR);
 				fp->fs->winsect = sect;
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                 set_sectorprev(fp->fs, sect);
 #endif
 			}
@@ -4437,7 +4468,7 @@ FRESULT f_unlink
 				if (res == FR_OK) {
 					if (dclst)				/* Remove the cluster chain if exist */
 						res = remove_chain(dj.fs, dclst);
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                         if (res == FR_OK) {
 						dj.fs->last_clust = dclst - 1;	/* Reuse the cluster hole */
 					}
@@ -4515,7 +4546,7 @@ FRESULT f_mkdir
 				st_clust(dir+SZ_DIR, pcl);
 				for (n = dj.fs->csize; n; n--) {	/* Write dot entries and clear following sectors */
 					dj.fs->winsect = dsc++;
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                                         set_sectorprev(dj.fs, dj.fs->winsect);
 #endif
                                         set_dirty(dj.fs);
@@ -5047,7 +5078,7 @@ FRESULT f_mkfs
 
 	/* Get disk statics */
 	stat = disk_initialize(pdrv);
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
         disk_read(pdrv, fs->win, 0, 1);
 #endif
 	if (stat & STA_NOINIT) return FR_NOT_READY;
@@ -5136,7 +5167,7 @@ FRESULT f_mkfs
 		if (sfd) {	/* No partition table (SFD) */
 			md = 0xF0;
 		} else {	/* Create partition table (FDISK) */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                   clear_buff(fs);
 #endif
 			mem_set(fs->win, 0, SS(fs));
@@ -5159,7 +5190,7 @@ FRESULT f_mkfs
 	}
 
 	/* Create BPB in the VBR */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                   clear_buff(fs);
 #endif
 	tbl = fs->win;							/* Clear sector */
@@ -5207,7 +5238,7 @@ FRESULT f_mkfs
 	/* Initialize FAT area */
 	wsect = b_fat;
 	for (i = 0; i < N_FATS; i++) {		/* Initialize each FAT copy */
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                   clear_buff(fs);
 #endif          
 		mem_set(tbl, 0, SS(fs));			/* 1st sector of the FAT  */
@@ -5223,7 +5254,7 @@ FRESULT f_mkfs
 		}
 		if (disk_write(pdrv, tbl, wsect++, 1) != RES_OK)
 			return FR_DISK_ERR;
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
                   clear_buff(fs);
 #endif                
 		mem_set(tbl, 0, SS(fs));			/* Fill following FAT entries with zero */
@@ -5282,7 +5313,7 @@ FRESULT f_fdisk (
 
 
 	stat = disk_initialize(pdrv);
-#if ENABLE_MYCHANGE
+#if _FS_ENABLE_THROUGHPUT_OPTIMIZATION
         disk_read(pdrv, work, 0, 1);
 #endif
 	if (stat & STA_NOINIT) return FR_NOT_READY;

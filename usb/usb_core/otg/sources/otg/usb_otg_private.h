@@ -97,7 +97,8 @@ typedef struct usb_otg_callback_functions_struct
    usb_status (_CODE_PTR_ otg_generate_resume)(usb_otg_handle, bool);
 } usb_otg_api_functions_struct_t;
 /* Public types */
-typedef struct usb_otg_struct
+
+typedef struct usb_otg_state_struct
 {
     const usb_otg_api_functions_struct_t *    otg_controller_api;
 #ifdef __CC_ARM

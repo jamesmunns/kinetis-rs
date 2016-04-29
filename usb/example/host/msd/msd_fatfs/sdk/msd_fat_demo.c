@@ -32,6 +32,9 @@
 #include "ff.h"
 #include "msd_diskio.h"
 #include "usb_host_msd_ufi.h"
+#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
+#include "fsl_clock_manager.h"
+#endif
 
 /* User-defined macros */
 #define DIR_OPERATION 1
@@ -41,7 +44,7 @@
 static FATFS fatfs;            /* File system object */
 static char buffer[257];
 
-/* Funtion prototypes */
+/* Function prototypes */
 static FRESULT put_rc (FRESULT rc);
 uint32_t out_stream ( const uint8_t *p,uint32_t btf);
 static void Display_File_Info(FILINFO*Finfo);
@@ -72,11 +75,11 @@ static FRESULT put_rc
     {
         while (*str++) ;
     }
-    printf("  returnCode=%u (FR_%s)\n\r", (uint32_t)rc, str);
+    USB_PRINTF("  returnCode=%u (FR_%s)\n\r", (uint32_t)rc, str);
     
     if (FR_OK != rc)
     {
-        printf("\n\r*------------------------------     DEMO FAILED       ------------------------ *"); 
+        USB_PRINTF("\n\r*------------------------------     DEMO FAILED       ------------------------ *"); 
     }
     
     return rc;
@@ -107,7 +110,7 @@ static FRESULT put_rc
     {              /* Transfer call */
        do 
        {    /* Repeat while there is any data to be sent */
-           printf("%c",*p++);
+           USB_PRINTF("%c",*p++);
            cnt++;
        } while (cnt < btf);
     }
@@ -124,7 +127,7 @@ static FRESULT put_rc
 *END*--------------------------------------------------------------------*/
 static void Display_File_Info(FILINFO*Finfo) 
 {
-    printf("    %c%c%c%c%c %u/%02u/%02u %02u:%02u %9lu  %s\n\r", 
+    USB_PRINTF("    %c%c%c%c%c %u/%02u/%02u %02u:%02u %9lu  %s\n\r", 
             (Finfo->fattrib & AM_DIR) ? 'D' : '-',
             (Finfo->fattrib & AM_RDO) ? 'R' : '-',
             (Finfo->fattrib & AM_HID) ? 'H' : '-',
@@ -144,7 +147,7 @@ static void Display_File_Info(FILINFO*Finfo)
 /*FUNCTION*----------------------------------------------------------------
 *
 * Function Name  : List_Directory
-* Returned Value : FR_OK: sucessful, != FR_OK: failed
+* Returned Value : FR_OK: successful, != FR_OK: failed
 * Comments       : List and display all the file and directory in the specified directory
 *
 *END*--------------------------------------------------------------------*/
@@ -163,7 +166,7 @@ static FRESULT List_Directory(const TCHAR *path)
     Finfo.lfsize = _MAX_LFN;
 #endif
     
-    printf(" Directory listing...\n\r");
+    USB_PRINTF(" Directory listing...\n\r");
     /* Open root directory */
     returnCode = f_opendir(&dir,path);
     if (returnCode)
@@ -197,7 +200,7 @@ static FRESULT List_Directory(const TCHAR *path)
         Display_File_Info(&Finfo);   
     }
     
-    printf("\n\n    %-4u File(s),%10lu bytes total\n    %-4u Dir(s)\n\r", file_no, size, dir_no);
+    USB_PRINTF("\n\n    %-4u File(s),%10lu bytes total\n    %-4u Dir(s)\n\r", file_no, size, dir_no);
 #if _USE_LFN
     if(NULL != Finfo.lfname)
     {
@@ -238,33 +241,33 @@ int fat_demo(void)
     Finfo.lfsize = _MAX_LFN;
 #endif
 
-    printf("\n\r******************************************************************************");
-    printf("\n\r*                              FatFS DEMO                                    *");
+    USB_PRINTF("\n\r******************************************************************************");
+    USB_PRINTF("\n\r*                              FatFS DEMO                                    *");
     if(_USE_LFN)
     {
-        printf("\n\r*          Configuration:  LNF Enabled, Code page  =%u                       *", _CODE_PAGE);
+        USB_PRINTF("\n\r*          Configuration:  LNF Enabled, Code page  =%u                       *", _CODE_PAGE);
     }
     else 
     {
-        printf("\n\r*          Configuration:  LNF Disabled, Code page =%u                       *", _CODE_PAGE);
+        USB_PRINTF("\n\r*          Configuration:  LNF Disabled, Code page =%u                       *", _CODE_PAGE);
     }
-    printf("\n\r******************************************************************************");
+    USB_PRINTF("\n\r******************************************************************************");
     
-    printf("\n\r******************************************************************************");
-    printf("\n\r*                             DRIVER OPERATION                               *");
-    printf("\n\r******************************************************************************");
+    USB_PRINTF("\n\r******************************************************************************");
+    USB_PRINTF("\n\r*                             DRIVER OPERATION                               *");
+    USB_PRINTF("\n\r******************************************************************************");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/ 
     /* DM1: Initialize logical driver <f_mount>                                             */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r1. Demo function: f_mount\n\n\r");
-    printf("  Initializing logical drive 0...\n\r");
+    USB_PRINTF("\n\r1. Demo function: f_mount\n\n\r");
+    USB_PRINTF("  Initializing logical drive 0...\n\r");
     returnCode = f_mount(0, &fatfs);
     if(returnCode)
     {
         goto Error1;
     }
-    printf("  Initialization complete \n\r");
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("  Initialization complete \n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     
     /* Send some SCSI requests first */
     disk_initialize(0);
@@ -273,21 +276,21 @@ int fat_demo(void)
 #endif
 
     /* Get the vendor information and display it */
-    printf("\n************************************************************************\n");
+    USB_PRINTF("\n************************************************************************\n");
     disk_ioctl(0, GET_VENDOR_INFO, &dev_info);
-    printf("Vendor Information:     %-1.8s Mass Storage Device\n",dev_info);
+    USB_PRINTF("Vendor Information:     %-1.8s Mass Storage Device\n",dev_info);
     disk_ioctl(0, GET_PRODUCT_ID,  &dev_info);
-    printf("Product Identification: %-1.16s\n",dev_info);
+    USB_PRINTF("Product Identification: %-1.16s\n",dev_info);
     disk_ioctl(0, GET_PRODUCT_REV, &dev_info);
-    printf("Product Revision Level: %-1.4s\n",dev_info);
-    printf("************************************************************************\n");
+    USB_PRINTF("Product Revision Level: %-1.4s\n",dev_info);
+    USB_PRINTF("************************************************************************\n");
     
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM2.  Show logical drive status <f_getfree, f_opendir, f_readdir>                    */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r2. Demo functions:f_getfree, f_opendir, f_readdir\n\n\r");
-    printf("getting drive 0 attributes............... \n\r");
-    printf("Logical drive 0 attributes:\n\r");
+    USB_PRINTF("\n\r2. Demo functions:f_getfree, f_opendir, f_readdir\n\n\r");
+    USB_PRINTF("getting drive 0 attributes............... \n\r");
+    USB_PRINTF("Logical drive 0 attributes:\n\r");
     /* Get free clusters */
     returnCode = f_getfree(_T("0:"),&fre_clust,&fs);
     if (returnCode)
@@ -295,22 +298,22 @@ int fat_demo(void)
         goto Error1;
     }
     /* Display drive status */
-    printf(" FAT type = FAT%u\n\r Bytes/Cluster = %lu\n Number of FATs = %u\n\r" \
+    USB_PRINTF(" FAT type = FAT%u\n\r Bytes/Cluster = %lu\n Number of FATs = %u\n\r" \
           " Root DIR entries = %u\n\r Sectors/FAT = %lu\n\r Number of clusters = %lu\n\r" \
           " FAT start (lba) = %lu\n DIR start (lba,clustor) = %lu\n Data start (lba) = %lu\n\n\r...\n",\
           ft[fs->fs_type & 3], fs->csize * 512UL, fs->n_fats,\
           fs->n_rootdir, fs->fsize, fs->n_fatent - 2, \
           fs->fatbase, fs->dirbase, fs->database);
     
-    printf("%lu KB total disk space.\n\r%lu KB available.\n\r",(((fs->n_fatent - 2)*(fs->csize ))/2), ((fre_clust * (fs->csize ))/2));
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("%lu KB total disk space.\n\r%lu KB available.\n\r",(((fs->n_fatent - 2)*(fs->csize ))/2), ((fre_clust * (fs->csize ))/2));
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM3.  Make file system <f_mkfs>                                                     */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 #if _USE_MKFS
     /* Format drive */
-    printf("\n\r3. Demo functions:f_mkfs\n\n\r");
-    printf("Formatting drive ...............\n\r");
+    USB_PRINTF("\n\r3. Demo functions:f_mkfs\n\n\r");
+    USB_PRINTF("Formatting drive ...............\n\r");
     returnCode = f_mkfs(0,0,4096);
     if (returnCode) 
     {
@@ -318,49 +321,49 @@ int fat_demo(void)
     }
     else
     {
-        printf("Format complete\n\r");
+        USB_PRINTF("Format complete\n\r");
     }
-    printf("getting drive 0 attributes............... \n\r");
-    printf("Logical drive 0 attributes:\n\r");
+    USB_PRINTF("getting drive 0 attributes............... \n\r");
+    USB_PRINTF("Logical drive 0 attributes:\n\r");
     /* Display drive status */
     returnCode = f_getfree("0:",&fre_clust,&fs);
     if (returnCode)
     {
         goto Error1;
     }
-    printf(" FAT type = FAT%u\n\r Bytes/Cluster = %lu\n\r Number of FATs = %u\n\r" \
+    USB_PRINTF(" FAT type = FAT%u\n\r Bytes/Cluster = %lu\n\r Number of FATs = %u\n\r" \
           " Root DIR entries = %u\n\r Sectors/FAT = %lu\n\r Number of clusters = %lu\n\r" \
           " FAT start (lba) = %lu\n\r DIR start (lba,clustor) = %lu\n\r Data start (lba) = %lu\n\n...\n\r",\
           ft[fs->fs_type & 3], fs->csize * 512UL, fs->n_fats,\
           fs->n_rootdir, fs->fsize, fs->n_fatent - 2, \
           fs->fatbase, fs->dirbase, fs->database);
     
-    printf("%lu KB total disk space.\n\r%lu KB available.\n\r",(((fs->n_fatent - 2)*(fs->csize ))/2), ((fre_clust * (fs->csize ))/2));
+    USB_PRINTF("%lu KB total disk space.\n\r%lu KB available.\n\r",(((fs->n_fatent - 2)*(fs->csize ))/2), ((fre_clust * (fs->csize ))/2));
 #endif
     
     
 #if (DIR_OPERATION)  
-    printf("\n\r******************************************************************************");
-    printf("\n\r*                             DRECTORY OPERATION                             *");
-    printf("\n\r******************************************************************************");
+    USB_PRINTF("\n\r******************************************************************************");
+    USB_PRINTF("\n\r*                             DRECTORY OPERATION                             *");
+    USB_PRINTF("\n\r******************************************************************************");
     
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM1. Directory listing <f_opendir, f_readdir>                                        */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     
-    printf("\n\r1. Demo functions:f_opendir, f_readdir\n\n");
+    USB_PRINTF("\n\r1. Demo functions:f_opendir, f_readdir\n\n");
     returnCode = List_Directory(_T(""));
     if (returnCode)
     {
         goto Error1;
     }
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM2. Create directory <f_mkdir>                                                      */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* Create Dir_1 as a sub directory of root */
-    printf("\n\r2. Demo functions:f_mkdir\n\n\r");
-    printf("2.0. Create <Dir_1> \n\r");
+    USB_PRINTF("\n\r2. Demo functions:f_mkdir\n\n\r");
+    USB_PRINTF("2.0. Create <Dir_1> \n\r");
     returnCode = f_mkdir(_T("Dir_1"));
     if((returnCode != FR_OK)&&(returnCode != FR_EXIST))
     {
@@ -368,7 +371,7 @@ int fat_demo(void)
     }
     
     /* Create Dir_2 as a sub directory of root */ 
-    printf("2.1. Create <Dir_2> \n\r");
+    USB_PRINTF("2.1. Create <Dir_2> \n\r");
     returnCode = f_mkdir(_T("Dir_2"));
     if((returnCode != FR_OK)&&(returnCode != FR_EXIST))
     {
@@ -376,33 +379,33 @@ int fat_demo(void)
     }
     
     /* Create Sub1 as a sub directory of Dir_1 */ 
-    printf("2.2. Create <Sub1> as a sub directory of <Dir_1> \n\r");
+    USB_PRINTF("2.2. Create <Sub1> as a sub directory of <Dir_1> \n\r");
     returnCode = f_mkdir(_T("Dir_1/sub1"));
     if((returnCode != FR_OK)&&(returnCode != FR_EXIST))
     {
         goto Error1;
     }
     /* List dir */
-    printf("2.3. Directory list\n\r");
+    USB_PRINTF("2.3. Directory list\n\r");
     returnCode = List_Directory(_T(""));
     if (returnCode)
     {
         goto Error1;
     }
     
-    printf("2.4. \"Dir_1\" Directory list\n\r");
+    USB_PRINTF("2.4. \"Dir_1\" Directory list\n\r");
     returnCode = List_Directory(_T("Dir_1"));
     if (returnCode)
     {
         goto Error1;
     }
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM3. Get and Change current directory <f_getcwd, f_chdir>                            */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r3. Demo functions:f_getcwd, f_chdir\n\n\r");
+    USB_PRINTF("\n\r3. Demo functions:f_getcwd, f_chdir\n\n\r");
     /* Get the current directory */
-    printf("3.0. Get the current directory \n\r");
+    USB_PRINTF("3.0. Get the current directory \n\r");
     returnCode = f_getcwd((TCHAR *)buffer,256);
     if (returnCode)
     {
@@ -410,11 +413,11 @@ int fat_demo(void)
     }
     else 
     {
-        printf("    CWD: %s\n\r",buffer);
+        USB_PRINTF("    CWD: %s\n\r",buffer);
     }
     
     /* Change directory to Dir_1 */
-    printf("3.1. Change current directory to <Dir_1>\n\r");
+    USB_PRINTF("3.1. Change current directory to <Dir_1>\n\r");
     returnCode = f_chdir(_T("/Dir_1"));
     if (returnCode)
     {
@@ -422,7 +425,7 @@ int fat_demo(void)
     }
     
     /* List dir */
-    printf("3.2. Directory listing \n\r");
+    USB_PRINTF("3.2. Directory listing \n\r");
     returnCode = List_Directory(_T("."));
     if (returnCode)
     {
@@ -430,7 +433,7 @@ int fat_demo(void)
     }
     
     /* Get the current directory */
-    printf("3.3. Get the current directory \n\r");
+    USB_PRINTF("3.3. Get the current directory \n\r");
     returnCode = f_getcwd((TCHAR *)buffer,256);
     if (returnCode)
     {
@@ -438,15 +441,15 @@ int fat_demo(void)
     }
     else 
     {
-        printf("    CWD: %s\n\r",buffer);
+        USB_PRINTF("    CWD: %s\n\r",buffer);
     }
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM4. Get directory status, Change attribute and time <f_stat, f_chmod, f_utime>      */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r4. Demo functions:f_stat(File status), f_chmod, f_utime\n\n\r");
+    USB_PRINTF("\n\r4. Demo functions:f_stat(File status), f_chmod, f_utime\n\n\r");
     /* Get directory status */ 
-    printf("4.1. Get directory information of <Dir_1>\n\r");
+    USB_PRINTF("4.1. Get directory information of <Dir_1>\n\r");
     returnCode = f_stat(_T("../Dir_1"),&Finfo);
     if(returnCode) 
     {
@@ -458,7 +461,7 @@ int fat_demo(void)
     }
     
     /* Change timestamp */
-    printf("4.2  Change the timestamp of Dir_1 to 12.25.2010: 23h 30' 20\n\r");
+    USB_PRINTF("4.2  Change the timestamp of Dir_1 to 12.25.2010: 23h 30' 20\n\r");
     Finfo.fdate.Bits.year = 2010 - YEAR_ORIGIN;
     Finfo.fdate.Bits.month = 12;
     Finfo.fdate.Bits.day = 25;
@@ -474,7 +477,7 @@ int fat_demo(void)
     }
     
     /* Chang directory attribute */
-    printf("4.3. Set Read Only Attribute to Dir_1\n\r");
+    USB_PRINTF("4.3. Set Read Only Attribute to Dir_1\n\r");
     returnCode = f_chmod(_T("../Dir_1"),AM_RDO,AM_RDO);
     if(returnCode)
     {
@@ -482,7 +485,7 @@ int fat_demo(void)
     } 
     
     /* Get directory status */
-    printf("4.4. Get directory information (Dir_1)\n\r");
+    USB_PRINTF("4.4. Get directory information (Dir_1)\n\r");
     returnCode = f_stat(_T("../Dir_1"),&Finfo);
     if(returnCode) 
     {
@@ -492,13 +495,13 @@ int fat_demo(void)
     {
         Display_File_Info(&Finfo);
     }
-    printf("-----------------------------------------------------------------------------\n");
+    USB_PRINTF("-----------------------------------------------------------------------------\n");
     
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM5. Rename, Move directory < f_rename>                                              */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r5. Demo functions:f_rename\n\n\r");
-    printf("Rename <sub1> to <sub1_rm> and move it to <Dir_2> \n\r");
+    USB_PRINTF("\n\r5. Demo functions:f_rename\n\n\r");
+    USB_PRINTF("Rename <sub1> to <sub1_rm> and move it to <Dir_2> \n\r");
     returnCode = f_rename(_T("./sub1"),_T("../Dir_2/sub1_rm"));
     if(returnCode && returnCode != FR_EXIST)
     {
@@ -512,14 +515,14 @@ int fat_demo(void)
     
     /* Back to home directory */
     /*
-    printf("\n\r6. Back to home directory\n\r");
+    USB_PRINTF("\n\r6. Back to home directory\n\r");
     returnCode = f_chdir(_T(".."));
     if (returnCode)
     {
         goto Error1;
     }
     
-    printf("\n\r7. List home files\n\n");
+    USB_PRINTF("\n\r7. List home files\n\n");
     returnCode = List_Directory(_T(""));
     if (returnCode)
     {
@@ -527,13 +530,13 @@ int fat_demo(void)
     }
     */
 
-    printf("-----------------------------------------------------------------------------\n");
+    USB_PRINTF("-----------------------------------------------------------------------------\n");
     
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    /* DM6. Delele directory < f_unlink>                                                    */
+    /* DM6. Delete directory < f_unlink>                                                    */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r6. Demo functions:f_unlink\n\n\r");
-    printf(" Delete Dir_1/sub1_rm\n\r");
+    USB_PRINTF("\n\r6. Demo functions:f_unlink\n\n\r");
+    USB_PRINTF(" Delete Dir_1/sub1_rm\n\r");
     returnCode = f_unlink(_T("../Dir_2/sub1_rm"));
     if(returnCode) 
     {
@@ -546,24 +549,24 @@ int fat_demo(void)
 #endif /* End of #if(DIR_OPERATION) */ 
     
 #if (FILE_OPERATION) 
-    printf("\n\r******************************************************************************");
-    printf("\n\r*                             FILE OPERATION                                 *");
-    printf("\n\r******************************************************************************");
+    USB_PRINTF("\n\r******************************************************************************");
+    USB_PRINTF("\n\r*                             FILE OPERATION                                 *");
+    USB_PRINTF("\n\r******************************************************************************");
     
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM1. Write to  file < f_open,f_write, f_printf, f_putc, f_puts, fclose>              */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r1. Demo functions:f_open,f_write, f_printf, f_putc, f_puts, fclose\n\n\r");
+    USB_PRINTF("\n\r1. Demo functions:f_open,f_write, f_printf, f_putc, f_puts, fclose\n\n\r");
     
     /* Create a new file to write */
-    printf("1.0. Create new file <New_F_1> (f_open)\n\r");
+    USB_PRINTF("1.0. Create new file <New_F_1> (f_open)\n\r");
     returnCode = f_stat(_T("New_F_1.dat"), &Finfo);
     if (returnCode == FR_OK)
     {
-        printf("    File exist\n");
+        USB_PRINTF("    File exist\n");
         if (Finfo.fattrib & AM_RDO)
         {
-            printf("    Clear readonly attribute\n");
+            USB_PRINTF("    Clear readonly attribute\n");
             returnCode = f_chmod(_T("New_F_1.dat"), 0, AM_RDO);
             if (returnCode)
                 goto Error1;
@@ -574,26 +577,26 @@ int fat_demo(void)
     {
         goto Error1;
     }
-    printf("    File size = %4d\n\r",fil.fsize);
+    USB_PRINTF("    File size = %4d\n\r",fil.fsize);
     
     /* Write data to file uses f_write function */
-    printf("1.1. Write data to <New_F_1>(f_write)\n\r");
+    USB_PRINTF("1.1. Write data to <New_F_1>(f_write)\n\r");
     returnCode = f_write(&fil,"Line 1: Write data to  file uses f_write function \n\r",52,&size);
     if (returnCode) 
     {
         goto Error1;
     }
     /* Flush cached data */
-    printf("1.2. Flush cached data\n\r");
+    USB_PRINTF("1.2. Flush cached data\n\r");
     returnCode = f_sync(&fil);
     if (returnCode) 
     {
         goto Error1;
     }
-    printf("    File size = %4d\n",fil.fsize);
+    USB_PRINTF("    File size = %4d\n",fil.fsize);
     
     /* Write data to file uses f_printf function */
-    printf("1.3. Write data to <New_F_1> (f_printf)\n\r");
+    USB_PRINTF("1.3. Write data to <New_F_1> (f_printf)\n\r");
     
     if (EOF == f_printf(&fil,_T("Line %d: %s"),2,_T("Write data to file uses f_printf function\n\r"))) 
     {
@@ -601,32 +604,32 @@ int fat_demo(void)
     }
     
     /* Flush cached data */
-    printf("1.4. Flush cached data\n\r");
+    USB_PRINTF("1.4. Flush cached data\n\r");
     returnCode = f_sync(&fil);
     if (returnCode) 
     {
         goto Error1;
     }
-    printf("    File size = %4d\n\r",fil.fsize);
+    USB_PRINTF("    File size = %4d\n\r",fil.fsize);
     
     /* Write data to file uses f_puts function */
-    printf("1.5. Write data to <New_F_1> (f_puts)\n\r");
+    USB_PRINTF("1.5. Write data to <New_F_1> (f_puts)\n\r");
     if (EOF == f_puts(_T("Line 3: Write data to file uses f_puts function\n\r"), &fil)) 
     {
         goto Error1;
     }
     /* Flush cached data */
-    printf("1.6. Flush cached data\n\r");
+    USB_PRINTF("1.6. Flush cached data\n\r");
     
     returnCode = f_sync(&fil);
     if (returnCode) 
     {
         goto Error1;
     }
-    printf("    File size = %4d\n\r",fil.fsize);
+    USB_PRINTF("    File size = %4d\n\r",fil.fsize);
     
     /* Write data to file uses f_putc function */
-    printf("1.7. Write data to <New_F_1> uses f_putc function\n\r");
+    USB_PRINTF("1.7. Write data to <New_F_1> uses f_putc function\n\r");
     while(*str_temp)
     {
         if (EOF == f_putc(*str_temp++,&fil))
@@ -635,30 +638,30 @@ int fat_demo(void)
         }
     }
     /* Flush cached data */
-    printf("1.8. Flush cached data\n\r");
+    USB_PRINTF("1.8. Flush cached data\n\r");
     returnCode = f_sync(&fil);
     if (returnCode) 
     {
         goto Error1;
     }
-    printf("    File size = %4d\n\r",fil.fsize);
+    USB_PRINTF("    File size = %4d\n\r",fil.fsize);
     
     /* Close file */
-    printf("1.9. Close file <New_F_1>\n\r");
+    USB_PRINTF("1.9. Close file <New_F_1>\n\r");
     returnCode = f_close(&fil);
     if (returnCode) 
     {
         goto Error1;
     }
     
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM2. Read from a file < f_open,f_read, f_gets, fclose>                       */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r2. Demo functions:f_open,f_read, f_seek, f_gets, f_close\n\n\r");
+    USB_PRINTF("\n\r2. Demo functions:f_open,f_read, f_seek, f_gets, f_close\n\n\r");
     
     /* Open New_F_1 to read */
-    printf("2.0. Open <New_F_1> to read (f_open)\n\r");
+    USB_PRINTF("2.0. Open <New_F_1> to read (f_open)\n\r");
     returnCode = f_open(&fil,_T("New_F_1.dat"),FA_READ);
     if(returnCode)
     {
@@ -666,13 +669,13 @@ int fat_demo(void)
     }
     
     /* Use f_gets to get a string from file */
-    printf("2.1. Get a string from file (f_gets)\n\r");
+    USB_PRINTF("2.1. Get a string from file (f_gets)\n\r");
     p_str = buffer;
     p_str = (char *)f_gets((TCHAR*)p_str,256,&fil);
-    printf("    %s",buffer);
+    USB_PRINTF("    %s",buffer);
     
     /* Use f_read to get the rest of file content */
-    printf("\n\r2.2. Get the rest of file content (f_read)\n\r");
+    USB_PRINTF("\n\r2.2. Get the rest of file content (f_read)\n\r");
     fil.fptr++;
     while(fil.fptr < fil.fsize) 
     {
@@ -684,24 +687,24 @@ int fat_demo(void)
         else
         {
             buffer[size] = '\0';
-            printf("    %s",buffer);
+            USB_PRINTF("    %s",buffer);
         }
     }
     
     /* Close file */
-    printf("\n\r2.3. Close file (f_close)\n\r");
+    USB_PRINTF("\n\r2.3. Close file (f_close)\n\r");
     returnCode = f_close(&fil);
     if(returnCode)
     {
         goto Error1;
     }
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM3.  Get file infor, Change attribute and timestamp of file <f_stat, f_utime, f_chmod>*/
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r3. Demo functions:f_stat, f_utime, f_chmod\n\n\r");
+    USB_PRINTF("\n\r3. Demo functions:f_stat, f_utime, f_chmod\n\n\r");
     
-    printf("3.1. Get  information of <New_F_1> file (f_stat)\n\r");
+    USB_PRINTF("3.1. Get  information of <New_F_1> file (f_stat)\n\r");
     returnCode = f_stat(_T("New_F_1.dat"),&Finfo);
     if(returnCode) 
     {
@@ -713,7 +716,7 @@ int fat_demo(void)
     }
     
     /* Change timestamp */
-    printf("3.2  Change the timestamp of Dir_1 to 12.25.2010: 23h 30' 20 (f_utime)\n\r");
+    USB_PRINTF("3.2  Change the timestamp of Dir_1 to 12.25.2010: 23h 30' 20 (f_utime)\n\r");
     Finfo.fdate.Bits.year = 2010 - YEAR_ORIGIN;
     Finfo.fdate.Bits.month = 12;
     Finfo.fdate.Bits.day = 25;
@@ -730,7 +733,7 @@ int fat_demo(void)
     }
     
     /* Chang directory attribute */
-    printf("3.3. Set Read Only Attribute to <New_F_1> (f_chmod) \n\r");
+    USB_PRINTF("3.3. Set Read Only Attribute to <New_F_1> (f_chmod) \n\r");
     returnCode = f_chmod(_T("New_F_1.dat"),AM_RDO,AM_RDO);
     if(returnCode)
     {
@@ -738,7 +741,7 @@ int fat_demo(void)
     } 
     
     /* Get directory status */
-    printf("3.4. Get directory information of <New_F_1> (f_stat)\n\r");
+    USB_PRINTF("3.4. Get directory information of <New_F_1> (f_stat)\n\r");
     returnCode = f_stat(_T("New_F_1.dat"),&Finfo);
     if(returnCode) 
     {
@@ -750,7 +753,7 @@ int fat_demo(void)
     }
     
     /* Chang directory attribute */
-    printf("3.5. Clear Read Only Attribute of <New_F_1> (f_chmod)\n\r");
+    USB_PRINTF("3.5. Clear Read Only Attribute of <New_F_1> (f_chmod)\n\r");
     returnCode = f_chmod(_T("New_F_1.dat"),0,AM_RDO);
     if(returnCode)
     {
@@ -758,7 +761,7 @@ int fat_demo(void)
     } 
     
     /* Get directory status */
-    printf("3.6. Get directory information of <New_F_1>\n\r");
+    USB_PRINTF("3.6. Get directory information of <New_F_1>\n\r");
     returnCode = f_stat(_T("New_F_1.dat"),&Finfo);
     if(returnCode) 
     {
@@ -769,12 +772,12 @@ int fat_demo(void)
         Display_File_Info(&Finfo);
     }
     
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM4.  Change file name <f_rename>                                                    */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r4. Demo functions:f_ulink\n\n\r");
-    printf(" Rename <New_F_1.dat> to  <File_Rm.txt> \n\r");
+    USB_PRINTF("\n\r4. Demo functions:f_ulink\n\n\r");
+    USB_PRINTF(" Rename <New_F_1.dat> to  <File_Rm.txt> \n\r");
     returnCode = f_rename(_T("New_F_1.dat"),_T("File_Rm.txt"));
     if(returnCode && returnCode != FR_EXIST)
     {
@@ -786,14 +789,14 @@ int fat_demo(void)
         List_Directory(_T("."));
     }
     
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* TC5.  Truncate file <f_truncate,f_lseek>                                             */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r5. Demo functions:f_truncate\n\n\r");
-    printf(" Truncate file <File_Rm.txt>\n\r");
+    USB_PRINTF("\n\r5. Demo functions:f_truncate\n\n\r");
+    USB_PRINTF(" Truncate file <File_Rm.txt>\n\r");
     /* Open File_Rm.txt to read */
-    printf("5.0. Open <File_Rm.txt> to write\n\r");
+    USB_PRINTF("5.0. Open <File_Rm.txt> to write\n\r");
     returnCode = f_open(&fil,_T("File_Rm.txt"),FA_WRITE);
     if(returnCode)
     {
@@ -801,43 +804,43 @@ int fat_demo(void)
     }
     
     /* Seek file pointer */
-    printf("5.1. Seek file pointer\n\r    Current file pointer: %4d\n\r",fil.fptr);
+    USB_PRINTF("5.1. Seek file pointer\n\r    Current file pointer: %4d\n\r",fil.fptr);
     returnCode = f_lseek(&fil, 102);
-    printf("    File pointer after seeking: %4d\n\r",fil.fptr);
+    USB_PRINTF("    File pointer after seeking: %4d\n\r",fil.fptr);
     
     /* Truncate file */
-    printf("5.2. Truncate file\n\r");
+    USB_PRINTF("5.2. Truncate file\n\r");
     returnCode = f_truncate(&fil); 
     if(returnCode)
     {
         goto Error1;
     }
-    printf("    File size = %4d\n\r",fil.fsize);
+    USB_PRINTF("    File size = %4d\n\r",fil.fsize);
     
     /* Close file */
-    printf("5.3. Close file\n\r");
+    USB_PRINTF("5.3. Close file\n\r");
     returnCode = f_close(&fil);
     if(returnCode)
     {
         goto Error1;
     }
     
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
 #if _FS_TINY
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM6.  Forward file <f_forward>                                                       */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r6. Demo functions:f_forward\n\n\r"); 
+    USB_PRINTF("\n\r6. Demo functions:f_forward\n\n\r"); 
     /* Open File_Rm.txt to read */
-    printf("6.0. Open <File_Rm.txt> to read\n\r");
+    USB_PRINTF("6.0. Open <File_Rm.txt> to read\n\r");
     returnCode = f_open(&fil,_T("File_Rm.txt"),FA_READ);
     if(returnCode)
     {
         goto Error1;
     }
     
-    /* Forward file to ternimal */ 
-    printf("6.1. Forward file to terminal\n\r");
+    /* Forward file to terminal */ 
+    USB_PRINTF("6.1. Forward file to terminal\n\r");
     returnCode = f_forward(&fil, out_stream, 102,&size);   
     if(returnCode)
     {
@@ -845,7 +848,7 @@ int fat_demo(void)
     }
     
     /* Close file */
-    printf("\n\r6.2. Close file\n\r");
+    USB_PRINTF("\n\r6.2. Close file\n\r");
     returnCode = f_close(&fil);
     if(returnCode)
     {
@@ -854,12 +857,12 @@ int fat_demo(void)
 #endif
     
     
-    printf("-----------------------------------------------------------------------------\n\r");
+    USB_PRINTF("-----------------------------------------------------------------------------\n\r");
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
     /* DM7.  Delete a file <f_ulink>                                                    */
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-    printf("\n\r7. Demo functions:f_ulink\n\n");
-    printf(" Delete <File_Rm.txt>\n\r");
+    USB_PRINTF("\n\r7. Demo functions:f_ulink\n\n");
+    USB_PRINTF(" Delete <File_Rm.txt>\n\r");
     /* returnCode = f_unlink(_T("File_Rm.txt")); */
     if(returnCode) 
     {
@@ -879,8 +882,8 @@ int fat_demo(void)
         ff_memfree(Finfo.lfname);
     }
 #endif
-    printf("\n\r*------------------------------   DEMO COMPLETED    ------------------------ *");
-    printf("\n\r******************************************************************************\n\r");
+    USB_PRINTF("\n\r*------------------------------   DEMO COMPLETED    ------------------------ *");
+    USB_PRINTF("\n\r******************************************************************************\n\r");
     return FR_OK;       
 Error1:
 #if _USE_LFN
@@ -892,4 +895,176 @@ Error1:
 #endif
     return(put_rc(returnCode));
 }
+
+#if THROUGHPUT_TEST_ENABLE
+
+#ifndef  DEMCR
+#define  DEMCR       *((volatile uint32_t *)0xE000EDFC)
+#endif
+#ifndef  DWT_CR
+#define  DWT_CR      *((volatile uint32_t *)0xE0001000)                   /* Data Watchpoint and Trace (DWT) Control Register     */                
+#endif
+#ifndef  DWT_CYCCNT
+#define  DWT_CYCCNT  *((volatile uint32_t *)0xE0001004)                   /* Data Watchpoint and Trace (DWT) Cycle Count Register */
+#endif
+#define  DEMCR_TRCENA                     (1 << 24)
+#define  DWT_CR_CYCCNTENA                (1 <<  0)
+
+
+#define EACH_TRANSFOR_SECTORS           (128)
+#define FATFS_FORMATE                   (0)
+
+uint32_t raw_size_arr[] = {100, 100}; /* 100M, unit M */
+uint8_t test_buffer[EACH_TRANSFOR_SECTORS * 512];
+char file_name[30];
+uint32_t g_cpu_core_clk_khz = 120000;
+FIL fil;
+
+
+void test_fun(void* volPtr);
+int fat_throughput_test(void)
+{
+    FRESULT returnCode;
+    uint8_t TEST_TIME = 0;
+    uint8_t vol = 0;
+    uint8_t volatile time = 0;
+    uint64_t time_sum;
+    uint32_t time_count;
+    uint32_t rw_time;
+    uint32_t size = 0;
+    uint64_t temp;
+    uint32_t raw_size = 0;
+    
+    /* get core clock */
+#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
+    extern const TCpuClockConfiguration PE_CpuClockConfigurations[];
+    g_cpu_core_clk_khz = PE_CpuClockConfigurations[Cpu_GetClockConfiguration()].cpu_core_clk_hz / 1000;
+#elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
+    CLOCK_SYS_GetFreq(kCoreClock, &g_cpu_core_clk_khz);
+    g_cpu_core_clk_khz /= 1000;
+#endif
+    
+    DEMCR |= DEMCR_TRCENA; /* enable DWT module counter */
+    TEST_TIME = sizeof(raw_size_arr) / sizeof(uint32_t);
+    
+    /* init write buffer */
+    for (uint32_t i = 0; i < sizeof(test_buffer); ++i)
+        test_buffer[i] = i;
+    
+    returnCode = f_mount(vol, &fatfs);
+    if (returnCode)
+    {
+        return(put_rc(returnCode));
+    }
+    else
+        USB_PRINTF("vol %d mount success\r\n", vol);
+    
+#if FATFS_FORMATE
+    USB_PRINTF("******************************************************************************\r\n");
+    USB_PRINTF("*                          vol %d FATFS MKFS                                   *\r\n", vol);
+    USB_PRINTF("******************************************************************************\r\n");
+    returnCode = f_mkfs(vol, 0, 4096);
+    if (returnCode)
+    {
+        put_rc(returnCode);
+        goto done;
+    }
+    USB_PRINTF("mkfs done\r\n");
+#endif
+    
+    USB_PRINTF("******************************************************************************\r\n");
+    USB_PRINTF("*             vol %d file.dat for write and read speed                        *\r\n", vol);
+    USB_PRINTF("******************************************************************************\r\n");
+    sprintf(file_name, "%c:/file.dat", vol + '0');
+    
+    for (time = 1; time <= TEST_TIME; ++time)
+    {
+        raw_size = raw_size_arr[time - 1];
+        returnCode = f_unlink(file_name);
+        if (returnCode != FR_OK && returnCode != FR_NO_FILE)
+        {
+            put_rc(returnCode);
+            goto done;
+        }
+        returnCode = f_open(&fil, file_name, FA_WRITE | FA_READ | FA_CREATE_ALWAYS);
+        if (returnCode)
+        {
+            put_rc(returnCode);
+            goto done;
+        }
+        
+        /* write speed test */
+        USB_PRINTF("***************************%d write %dM test**********************************\r\n", time, raw_size);
+        time_sum = 0;
+        rw_time = raw_size * 2048 / EACH_TRANSFOR_SECTORS;
+        while (rw_time--)
+        {
+            DWT_CYCCNT = (uint32_t)0u;
+            DWT_CR |= DWT_CR_CYCCNTENA;
+            returnCode = f_write(&fil, test_buffer, EACH_TRANSFOR_SECTORS << 9, &size);
+            
+            if (returnCode)
+            {
+                f_close(&fil);
+                {
+                    put_rc(returnCode);
+                    goto done;
+                }
+            }
+            time_count = DWT_CYCCNT;
+            DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
+            time_sum += (uint64_t)time_count;
+        }
+        time_sum = time_sum / (g_cpu_core_clk_khz);
+        temp = (uint64_t)((uint64_t)512*(uint64_t)(raw_size * 2048));
+        temp = temp * 1000 / (uint64_t)time_sum;
+        USB_PRINTF("write test results: time = %dms  speed = %dK/s\r\n", (uint32_t)time_sum, (uint32_t)(temp / 1024));
+
+        /* read speed test */
+        USB_PRINTF("***************************%d read %dM test***********************************\r\n", time, raw_size);
+        returnCode = f_lseek(&fil, 0);
+        if (returnCode)
+        {
+            put_rc(returnCode);
+            goto done;
+        }
+        time_sum = 0;
+        while (fil.fptr < fil.fsize)
+        {
+            DWT_CYCCNT = (uint32_t)0u;
+            DWT_CR |= DWT_CR_CYCCNTENA;
+            returnCode = f_read(&fil, test_buffer, EACH_TRANSFOR_SECTORS << 9, &size);
+            if(returnCode)
+            {
+                f_close(&fil);
+                {
+                    put_rc(returnCode);
+                    goto done;
+                }
+            }
+            time_count = DWT_CYCCNT;
+            DWT_CR &= ~((uint32_t)DWT_CR_CYCCNTENA);
+            time_sum += (uint64_t)time_count;
+        }
+        time_sum = time_sum / (g_cpu_core_clk_khz);
+        temp = (uint64_t)((uint64_t)512*(uint64_t)(raw_size * 2048));
+        temp = temp * 1000 / (uint64_t)time_sum;
+        USB_PRINTF("read test results: time = %dms  speed = %dK/s\r\n", (uint32_t)time_sum, (uint32_t)(temp / 1024));
+        
+        returnCode = f_close(&fil);
+        if (returnCode)
+        {
+            put_rc(returnCode);
+            goto done;
+        }
+    }
+
+done:
+    USB_PRINTF("******************************************************************************\r\n");
+    USB_PRINTF("*                          vol %d TEST DONE                                   *\r\n", vol);
+    USB_PRINTF("******************************************************************************\r\n");
+    
+    return 0;
+}
+#endif
 

@@ -71,10 +71,6 @@
 
 #define MSD_RECV_BUFFER_SIZE            (512)
 #define MSD_SEND_BUFFER_SIZE            (512)
-/*****************************************************************************
- * Global variables
- *****************************************************************************/
- 
 /******************************************************************************
  * Types
  *****************************************************************************/
@@ -90,19 +86,23 @@ typedef struct _disk_variable_struct
 }disk_struct_t; 
 
 /*****************************************************************************
+ * Global variables
+ *****************************************************************************/
+
+/*****************************************************************************
  * Global Functions
  *****************************************************************************/
-void Disk_App(void);
-void Disk_TestApp_Init(void);
-uint8_t MSD_Event_Callback
+void msc_disk_preinit(void);
+void msc_disk_init(void *param);
+uint8_t Disk_USB_App_Class_Callback
 (   uint8_t event_type, 
     uint16_t value,  
     uint8_t ** data, 
     uint32_t* size,
     void* arg
 ) ;
-void Disk_USB_App_Callback(uint8_t event_type, void* val,void* arg); 
-void Disk_TestApp_Task(void);
+void Disk_USB_App_Device_Callback(uint8_t event_type, void* val,void* arg); 
+void msc_disk_task(void);
 #endif
 
 

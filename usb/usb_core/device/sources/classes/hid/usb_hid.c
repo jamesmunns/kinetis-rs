@@ -51,7 +51,7 @@
 /****************************************************************************
  * Global Variables
  ****************************************************************************/         
-hid_device_struct_t g_hid_class; 
+hid_device_struct_t g_hid_class[MAX_HID_DEVICE];
 /*****************************************************************************
  * Local Types - None
  *****************************************************************************/
@@ -72,6 +72,55 @@ static uint8_t HID_USB_Map_Ep_To_Struct_Index(hid_device_struct_t* devicePtr,
 /*****************************************************************************
  * Local Functions
  *****************************************************************************/
+ 
+   /*************************************************************************//*!
+  *
+  * @name  USB_Hid_Allocate_Handle
+  *
+  * @brief The funtion reserves entry in device array and returns the index.
+  *
+  * @param none.
+  * @return returns the reserved handle or if no entry found device busy.      
+  *
+  *****************************************************************************/
+ static usb_status USB_Hid_Allocate_Handle(hid_device_struct_t** handle)
+ {
+     uint32_t cnt = 0;
+     for (;cnt< MAX_HID_DEVICE;cnt++)
+     {
+         if (g_hid_class[cnt].handle == NULL)
+         {
+             *handle = (hid_device_struct_t*)&g_hid_class[cnt];
+             return USB_OK;
+         }
+     }
+     return USBERR_DEVICE_BUSY;
+ }
+  /*************************************************************************//*!
+  *
+  * @name  USB_Hid_Free_Handle
+  *
+  * @brief The funtion releases entry in device array .
+  *
+  * @param handle  index in device array to be released..
+  * @return returns and error code or USB_OK.      
+  *
+  *****************************************************************************/
+ 
+ static usb_status USB_Hid_Free_Handle(hid_device_struct_t* handle)
+ {
+     int32_t cnt = 0;
+     for (;cnt< MAX_HID_DEVICE;cnt++)
+     {
+         if ((&g_hid_class[cnt]) == handle)
+         {
+             OS_Mem_zero((void*)handle, sizeof(hid_device_struct_t));
+             return USB_OK;
+         }
+     }
+     return USBERR_INVALID_PARAM;
+ }
+
  /*************************************************************************//*!
  *
  * @name  USB_Hid_Get_Device_Ptr
@@ -117,9 +166,10 @@ static uint8_t HID_USB_Map_Ep_To_Struct_Index(hid_device_struct_t* devicePtr, ui
     return count; 
 }
 #endif
+
 /**************************************************************************//*!
  *
- * @name  USB_Service_Hid
+ * @name  USB_Service_Hid_IN
  *
  * @brief The funtion ic callback function of HID endpoint 
  *
@@ -128,7 +178,7 @@ static uint8_t HID_USB_Map_Ep_To_Struct_Index(hid_device_struct_t* devicePtr, ui
  * @return None       
  *
  *****************************************************************************/
-void USB_Service_Hid
+void USB_Service_Hid_IN
 (
     usb_event_struct_t* event,
     void* arg
@@ -177,6 +227,65 @@ void USB_Service_Hid
 
 /**************************************************************************//*!
  *
+ * @name  USB_Service_Hid_OUT
+ *
+ * @brief The funtion ic callback function of HID endpoint 
+ *
+ * @param event
+ *
+ * @return None       
+ *
+ *****************************************************************************/
+void USB_Service_Hid_OUT
+(
+    usb_event_struct_t* event,
+    void* arg
+)
+{
+#if HID_IMPLEMENT_QUEUING
+    uint8_t index;
+    uint8_t producer;
+    uint8_t consumer;
+#endif
+    hid_device_struct_t*  devicePtr;
+    //usb_endpoints_t *ep_desc_data;
+   
+    devicePtr = (hid_device_struct_t*)arg;
+    
+    //ep_desc_data = devicePtr->ep_desc_data; 
+#if HID_IMPLEMENT_QUEUING
+     /* map the endpoint num to the index of the endpoint structure */
+    index = HID_USB_Map_Ep_To_Struct_Index(devicePtr, event->ep_num); 
+    producer = devicePtr->hid_endpoint_data.ep[index].bin_producer;
+        
+    /* if there are no errors de-queue the queue and decrement the no. of 
+     transfers left, else send the same data again */
+     /* de-queue if the send is complete with no error */
+    devicePtr->hid_endpoint_data.ep[index].bin_consumer++;  
+
+    consumer = devicePtr->hid_endpoint_data.ep[index].bin_consumer;
+
+    if (consumer != producer) 
+    {
+        /*if bin is not empty */
+        hid_queue_struct_t queue;    
+        /* send the next packet in queue */
+        queue = devicePtr->hid_endpoint_data.ep[index].queue[consumer % HID_MAX_QUEUE_ELEMS];
+        (void)USB_Class_Send_Data(devicePtr->class_handle, queue.channel, queue.app_buff, queue.size);
+    }
+#endif
+    /* notify the app of the send complete */
+     if (devicePtr->class_specific_callback.callback != NULL) 
+     {
+         devicePtr->class_specific_callback.callback(USB_DEV_EVENT_DATA_RECEIVED, USB_REQ_VAL_INVALID,NULL,0,
+                (event->len == 0xFFFFFFFF)? 0 : devicePtr->class_specific_callback.arg);
+    }
+
+}
+
+
+/**************************************************************************//*!
+ *
  * @name  USB_Class_Hid_Event
  *
  * @brief The funtion initializes HID endpoint 
@@ -195,14 +304,15 @@ void USB_Class_Hid_Event
     void *      arg
 ) 
 {
-    uint8_t index;
+    uint8_t                      index;
 #if USBCFG_DEV_COMPOSITE
     usb_composite_info_struct_t* usb_composite_info;
+    uint32_t                     interface_index = 0xFF;
 #else
-    usb_class_struct_t* usbclass;
+    usb_class_struct_t*          usbclass;
 #endif    
-    usb_ep_struct_t* ep_struct_ptr;
-    hid_device_struct_t*  devicePtr;
+    usb_ep_struct_t*             ep_struct_ptr;
+    hid_device_struct_t*         devicePtr;
 
     devicePtr = (hid_device_struct_t*)arg;
     if (event == USB_DEV_EVENT_CONFIG_CHANGED)
@@ -212,18 +322,31 @@ void USB_Class_Hid_Event
         uint8_t type_sel;
         devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr->handle,
             USB_COMPOSITE_INFO, (uint32_t *)&usb_composite_info);
-        for(type_sel = 0;type_sel < usb_composite_info->count;type_sel++)
+        devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr,
+            USB_CLASS_INTERFACE_INDEX_INFO, (uint32_t *)&interface_index);
+        
+        if(interface_index == 0xFF)
         {
-            if(usb_composite_info->class[type_sel].type == USB_CLASS_HID)
+            USB_PRINTF("not find interface index\n");
+            return;
+        }
+        for (type_sel = 0;type_sel < usb_composite_info->count;type_sel++)
+        {
+            if ((usb_composite_info->class[type_sel].type == USB_CLASS_HID) && (type_sel == interface_index))
             {
                 break;
             }
+        }
+        if(type_sel >= usb_composite_info->count)
+        {
+            USB_PRINTF("not find hid interface\n");
+            return;
         }
         devicePtr->ep_desc_data = (usb_endpoints_t *) &usb_composite_info->class[type_sel].interfaces.interface->endpoints;
         
         if (usb_composite_info->class[type_sel].interfaces.interface->endpoints.count > MAX_HID_CLASS_EP_NUM)
         {
-            printf("too many hid endpoint for the class driver\n");
+            USB_PRINTF("too many hid endpoint for the class driver\n");
             return;
         }
 
@@ -246,8 +369,8 @@ void USB_Class_Hid_Event
 
         if (usbclass->interfaces.interface->endpoints.count > MAX_HID_CLASS_EP_NUM)
         {
-        #ifdef _DEV_DEBUG
-            printf("too many hid endpoint for the class driver\n");
+        #ifdef _DEBUG
+            USB_PRINTF("too many hid endpoint for the class driver\n");
         #endif
             return;
         }
@@ -272,10 +395,23 @@ void USB_Class_Hid_Event
             ep_struct_ptr= (usb_ep_struct_t*) &ep_desc_data->ep[count];
             (void)usb_device_init_endpoint(devicePtr->handle, ep_struct_ptr, TRUE);
 
-            /* register callback service for endpoint 1 */
-            (void)usb_device_register_service(devicePtr->handle,
-                (uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num), 
-                USB_Service_Hid, arg);
+            if (ep_struct_ptr->direction == USB_SEND)
+            {
+                /* register callback service for endpoint */
+                (void)usb_device_register_service(devicePtr->handle,
+                    (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))), 
+                    USB_Service_Hid_IN, arg);
+            }
+            else if (ep_struct_ptr->direction == USB_RECV)
+            {
+                /* register callback service for endpoint */
+                (void)usb_device_register_service(devicePtr->handle,
+                    (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))), 
+                    USB_Service_Hid_OUT, arg);
+            }
+            else
+            {
+            }
             count++;
         }
     }
@@ -294,6 +430,34 @@ void USB_Class_Hid_Event
             }
         }
 #endif
+    }
+	else if(event == USB_DEV_EVENT_EP_UNSTALLED)
+    {
+        uint8_t value;
+        value = *((uint8_t *)val);
+        if (devicePtr->hid_endpoint_data.ep != NULL)
+		{
+            for (index = 0; index < MAX_HID_CLASS_EP_NUM; index++) 
+            {
+				if((value & 0x0F) == devicePtr->hid_endpoint_data.ep[index].endpoint)
+					usb_device_unstall_endpoint(devicePtr->handle,value & 0x0F, (value & 0x80) >> 7);
+            }
+        }
+      
+    }
+	else if(event == USB_DEV_EVENT_TYPE_CLR_EP_HALT)
+    {
+        uint8_t value;
+        value = *((uint8_t *)val);
+        if (devicePtr->hid_endpoint_data.ep != NULL)
+		{
+            for (index = 0; index < MAX_HID_CLASS_EP_NUM; index++) 
+            {
+				if((value & 0x0F) == devicePtr->hid_endpoint_data.ep[index].endpoint)
+					usb_device_unstall_endpoint(devicePtr->handle,value & 0x0F, (value & 0x80) >> 7);
+            }
+        }
+      
     }
     if (devicePtr->hid_application_callback.callback != NULL)
     {
@@ -410,19 +574,23 @@ usb_status USB_Class_HID_Init
     {
         return USBERR_ERROR;
     }
-    devicePtr = &g_hid_class;/*(hid_device_struct_t*)OS_Mem_alloc_zero(sizeof(hid_device_struct_t));*/
+    error = USB_Hid_Allocate_Handle(&devicePtr);/*(hid_device_struct_t*)OS_Mem_alloc_zero(sizeof(hid_device_struct_t));*/
+    if (USB_OK != error)
+    {
+        return error;
+    }
     /*if (NULL == devicePtr)
     {
         #if _DEBUG
-            printf("USB_Class_HID_Init: Memalloc failed\n");
+            USB_PRINTF("USB_Class_HID_Init: Memalloc failed\n");
         #endif  
         return USBERR_ALLOC;
     }
     devicePtr->desc_callback_ptr = (usb_desc_request_notify_struct_t*)OS_Mem_alloc_zero(sizeof(usb_desc_request_notify_struct_t));
     if (NULL == devicePtr->desc_callback_ptr)
     {
-        #ifdef _DEV_DEBUG
-            printf("USB_Class_Audio_Init: desc_callback_ptr Memalloc failed\n");
+        #ifdef _DEBUG
+            USB_PRINTF("USB_Class_Audio_Init: desc_callback_ptr Memalloc failed\n");
         #endif
         OS_Mem_free(devicePtr);
         return USBERR_ALLOC;
@@ -538,6 +706,7 @@ usb_status USB_Class_HID_Deinit
         OS_Mem_free(devicePtr);
     }
     */
+    USB_Hid_Free_Handle(devicePtr);
     devicePtr = NULL;
 
     return error;
@@ -666,5 +835,86 @@ usb_status USB_Class_HID_Send_Data
 #endif
     return error;
 }
+
+/**************************************************************************//*!
+ *
+ * @name  USB_Class_HID_Recv_Data
+ *
+ * @brief 
+ *
+ * @param handle          :   handle returned by USB_Class_HID_Init
+ * @param ep_num          :   endpoint num 
+ * @param app_buff        :   buffer to send
+ * @param size            :   length of the transfer   
+ *
+ * @return status       
+ *         USB_OK           : When Successfull 
+ *         Others           : Errors
+ *****************************************************************************/
+usb_status USB_Class_HID_Recv_Data
+(
+    hid_handle_t handle,/*[IN]*/
+    uint8_t ep_num,/*[IN]*/
+    uint8_t * app_buff,/*[IN]*/
+    uint32_t size /*[IN]*/
+) 
+{
+#if HID_IMPLEMENT_QUEUING
+    uint8_t index;
+    uint8_t producer;
+    uint8_t consumer;
+#endif 
+    usb_status error = USB_OK;
+    hid_device_struct_t*  devicePtr;
+    //usb_endpoints_t *ep_desc_data;    
+       
+    if (handle == 0)
+    {
+        return USBERR_ERROR;
+    }
+
+    devicePtr = USB_Hid_Get_Device_Ptr(handle);
+    if (NULL == devicePtr)
+    {
+        return USBERR_NO_DEVICE_CLASS;
+    }
+    //ep_desc_data = devicePtr->ep_desc_data; 
+#if HID_IMPLEMENT_QUEUING    
+     /* map the endpoint num to the index of the endpoint structure */
+    index = HID_USB_Map_Ep_To_Struct_Index(devicePtr, ep_num); 
+   
+    producer = devicePtr->hid_endpoint_data.ep[index].bin_producer;
+    consumer = devicePtr->hid_endpoint_data.ep[index].bin_consumer;
+
+    if((uint8_t)(producer - consumer) != (uint8_t)(HID_MAX_QUEUE_ELEMS))  
+    {/* the bin is not full*/
+    
+        uint8_t queue_num = (uint8_t)(producer % HID_MAX_QUEUE_ELEMS);
+        /* put all send request parameters in the endpoint data structure */
+        devicePtr->hid_endpoint_data.ep[index].queue[queue_num].channel = ep_num;
+        devicePtr->hid_endpoint_data.ep[index].queue[queue_num].app_buff = app_buff;
+        devicePtr->hid_endpoint_data.ep[index].queue[queue_num].size = size; 
+        devicePtr->hid_endpoint_data.ep[index].queue[queue_num].handle = devicePtr->handle;
+   
+        /* increment producer bin by 1*/       
+        devicePtr->hid_endpoint_data.ep[index].bin_producer++;
+        producer++;
+             
+        if((uint8_t)(producer - consumer) == (uint8_t)1)         
+        {
+#endif
+            /*send the IO if there is only one element in the queue */          
+            error = usb_device_recv_data(devicePtr->handle, ep_num, app_buff,size);
+#if HID_IMPLEMENT_QUEUING
+        }
+    }
+    else /* bin is full */
+    {
+        error = USBERR_DEVICE_BUSY; 
+    }
+#endif
+    return error;
+}
+
 #endif /*HID_CONFIG*/
 /* EOF */

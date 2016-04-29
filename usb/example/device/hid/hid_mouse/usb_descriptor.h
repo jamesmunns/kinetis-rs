@@ -39,7 +39,7 @@
  * Includes
  *****************************************************************************/
 
-#include "usb_class_hid.h"
+
 /******************************************************************************
  * Constants - None
  *****************************************************************************/
@@ -58,7 +58,7 @@
 #define HID_ONLY_DESC_SIZE                  (9)
 #define ENDP_ONLY_DESC_SIZE                 (7)
 
-#if HIGH_SPEED_DEVICE
+#if HIGH_SPEED
     #define DEVICE_QUALIFIER_DESCRIPTOR_SIZE    (10)
     #define OTHER_SPEED_CONFIG_DESCRIPTOR_SIZE  (CONFIG_DESC_SIZE)  
 #endif
@@ -96,7 +96,7 @@
 #define USB_IFACE_DESCRIPTOR                    (4)
 #define USB_ENDPOINT_DESCRIPTOR                 (5)
 
-#if HIGH_SPEED_DEVICE
+#if HIGH_SPEED
     #define USB_DEVQUAL_DESCRIPTOR              (6)
     #define USB_OTHER_SPEED_DESCRIPTOR          (7)
 #endif

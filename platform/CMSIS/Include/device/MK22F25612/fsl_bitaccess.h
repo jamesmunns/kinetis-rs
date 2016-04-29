@@ -1,7 +1,7 @@
 /*
 ** ###################################################################
-**     Version:             rev. 1.5, 2014-04-30
-**     Build:               b140604
+**     Version:             rev. 1.7, 2014-10-14
+**     Build:               b141016
 **
 **     Abstract:
 **         Register bit field access macros.
@@ -52,10 +52,14 @@
 **         Update of MCM and USB modules according to the RM rev. 1.
 **         Update of system and startup files.
 **         Module access macro module_BASES replaced by module_BASE_PTRS.
+**     - rev. 1.6 (2014-08-28)
+**         Update of system files - default clock configuration changed.
+**         Update of startup files - possibility to override DefaultISR added.
+**     - rev. 1.7 (2014-10-14)
+**         Interrupt INT_LPTimer renamed to INT_LPTMR0, interrupt INT_Watchdog renamed to INT_WDOG_EWM.
 **
 ** ###################################################################
 */
-
 
 #ifndef _FSL_BITACCESS_H
 #define _FSL_BITACCESS_H  1

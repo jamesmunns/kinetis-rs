@@ -38,7 +38,9 @@
 #include "usb_device_config.h"
 #include "usb.h"
 #include "usb_device_stack_interface.h"
+#include "usb_class_hid.h"
 #include "mouse.h"
+#include "usb_descriptor.h"
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
 #include "user_config.h"
@@ -47,7 +49,7 @@
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
-//#include "board.h"
+#include "board.h"
 #include "fsl_debug_console.h"
 
 #include <stdio.h>
@@ -92,8 +94,8 @@ static mouse_global_variable_struct_t       g_mouse;
 /*****************************************************************************
  * Local Functions Prototypes
  *****************************************************************************/
-void USB_App_Callback(uint8_t event_type, void* val,void* arg); 
-uint8_t USB_App_Param_Callback(uint8_t request, uint16_t value, uint8_t ** data, 
+void USB_App_Device_Callback(uint8_t event_type, void* val,void* arg); 
+uint8_t USB_App_Class_Callback(uint8_t request, uint16_t value, uint8_t ** data, 
     uint32_t* size,void* arg); 
 /*****************************************************************************
  * Local Variables 
@@ -166,7 +168,7 @@ static void move_mouse(void)
    
 /******************************************************************************
  * 
- *    @name        USB_App_Callback
+ *    @name        USB_App_Device_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -177,7 +179,7 @@ static void move_mouse(void)
  *    @return      None
  *
  *****************************************************************************/
-void USB_App_Callback(uint8_t event_type, void* val,void* arg) 
+void USB_App_Device_Callback(uint8_t event_type, void* val,void* arg) 
 {    
     UNUSED_ARGUMENT (arg)
     UNUSED_ARGUMENT (val)
@@ -203,7 +205,7 @@ void USB_App_Callback(uint8_t event_type, void* val,void* arg)
 
 /******************************************************************************
  * 
- *    @name        USB_App_Param_Callback
+ *    @name        USB_App_Class_Callback
  *    
  *    @brief       This function handles the callback for Get/Set report req  
  *                  
@@ -217,7 +219,7 @@ void USB_App_Callback(uint8_t event_type, void* val,void* arg)
  *                  else return error
  *
  *****************************************************************************/
-uint8_t USB_App_Param_Callback
+uint8_t USB_App_Class_Callback
 (
     uint8_t request, 
     uint16_t value, 
@@ -311,16 +313,16 @@ void APP_init(void)
     g_mouse.rpt_buf = (uint8_t*)OS_Mem_alloc_uncached_align(MOUSE_BUFF_SIZE, 32);
     if(NULL == g_mouse.rpt_buf)
     {
-        printf("\nMalloc error in APP_init\n");
+        USB_PRINTF("\nMalloc error in APP_init\n");
         return;
     }
     OS_Mem_zero(g_mouse.rpt_buf,MOUSE_BUFF_SIZE);
 #endif
     /* Initialize the USB interface */
-    printf("begin to test mouse\r\n");
-    config_struct.hid_application_callback.callback = USB_App_Callback;
+    USB_PRINTF("begin to test mouse\r\n");
+    config_struct.hid_application_callback.callback = USB_App_Device_Callback;
     config_struct.hid_application_callback.arg = &g_mouse.app_handle;
-    config_struct.class_specific_callback.callback = USB_App_Param_Callback;
+    config_struct.class_specific_callback.callback = USB_App_Class_Callback;
     config_struct.class_specific_callback.arg = &g_mouse.app_handle;
     config_struct.desc_callback_ptr = &g_desc_callback;
 
@@ -365,7 +367,13 @@ TASK_TEMPLATE_STRUCT  MQX_template_list[] =
 #if defined(FSL_RTOS_MQX)
 void Main_Task(uint32_t param)
 #else
+
+#if defined(__CC_ARM) || defined(__GNUC__)
+int main(void)
+#else
 void main(void)
+#endif
+
 #endif
 {
     OSA_Init();
@@ -375,6 +383,9 @@ void main(void)
     APP_init();
 
     OSA_Start();
+#if (!defined(FSL_RTOS_MQX))&(defined(__CC_ARM) || defined(__GNUC__))
+    return 1;
+#endif
 }
 #endif
 /* EOF */

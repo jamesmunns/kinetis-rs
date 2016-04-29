@@ -52,7 +52,13 @@
 /*
 ** MGCT: <option type="number"/>
 */
-#define USBCFG_HOST_CTRL_RETRY                       (3)
+#define USBCFG_HOST_CTRL_FAILED_RETRY                 (3)
+
+/*
+** MGCT: <option type="number"/>
+*/
+#define USBCFG_HOST_CTRL_STALL_RETRY                 (1)
+
 
 /*
 ** Maximum power of host.
@@ -221,5 +227,8 @@
 * 0 uncacheable, buffer cache maintenance is not needed
 */
 #define	USBCFG_BUFF_PROPERTY_CACHEABLE       0
+
+#define _DEBUG                               0
+
 
 #endif

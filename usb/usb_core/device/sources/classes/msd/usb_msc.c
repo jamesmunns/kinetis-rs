@@ -51,7 +51,7 @@
 /****************************************************************************
  * Global Variables
  ****************************************************************************/
-msc_device_struct_t g_msc_class = {0};
+msc_device_struct_t g_msc_class[MAX_MSC_DEVICE];
 
 #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)))
 cbw_t               g_msc_class_cbw;
@@ -76,6 +76,55 @@ usb_status process_mass_storage_command (msc_device_struct_t * mscDevicePtr,
  /*****************************************************************************
  * Local Functions
  *****************************************************************************/
+
+
+  /*************************************************************************//*!
+ *
+ * @name  USB_Msd_Allocate_Handle
+ *
+ * @brief The funtion reserves entry in device array and returns the index.
+ *
+ * @param none.
+ * @return returns the reserved handle or if no entry found device busy.      
+ *
+ *****************************************************************************/
+static usb_status USB_Msd_Allocate_Handle(msc_device_struct_t** handle)
+{
+    uint32_t cnt = 0;
+    for (;cnt< MAX_MSC_DEVICE;cnt++)
+    {
+        if (g_msc_class[cnt].controller_handle == NULL)
+        {
+            *handle = (msc_device_struct_t*)&g_msc_class[cnt];
+            return USB_OK;
+        }
+    }
+    return USBERR_DEVICE_BUSY;
+}
+ /*************************************************************************//*!
+ *
+ * @name  USB_Msd_Free_Handle
+ *
+ * @brief The funtion releases entry in device array .
+ *
+ * @param handle  index in device array to be released..
+ * @return returns and error code or USB_OK.      
+ *
+ *****************************************************************************/
+
+static usb_status USB_Msd_Free_Handle(msc_device_struct_t* handle)
+{
+    int32_t cnt = 0;
+    for (;cnt< MAX_MSC_DEVICE;cnt++)
+    {
+        if ((&g_msc_class[cnt]) == handle)
+        {
+            OS_Mem_zero((void*)handle, sizeof(msc_device_struct_t));
+            return USB_OK;
+        }
+    }
+    return USBERR_INVALID_PARAM;
+}
 
 
 /*************************************************************************//*!
@@ -107,7 +156,9 @@ static msc_device_struct_t * USB_Msd_Get_Device_Ptr(msd_handle_t handle)
  *****************************************************************************/
  static usb_status USB_Msd_Get_Desc_Info(msc_device_struct_t * msc_dev_ptr,USB_MSD_DESC_INFO_T type, uint32_t * object)
    {
-       
+#if USBCFG_DEV_COMPOSITE
+      uint32_t                     interface_index = 0xFF;
+#endif
        /* Get class info */
        
        switch(type)
@@ -123,20 +174,22 @@ static msc_device_struct_t * USB_Msd_Get_Device_Ptr(msd_handle_t handle)
            case USB_MSD_CLASS_INFO:
            {
                uint32_t class_i;
-               usb_class_struct_t* usbclassPtr;
                usb_composite_info_struct_t* usbcompinfoPtr;
                /* Get class info */
                msc_dev_ptr->desc_callback.get_desc_entity((uint32_t)msc_dev_ptr->controller_handle,
                    USB_COMPOSITE_INFO,
                    (uint32_t *)&usbcompinfoPtr);
-               usbclassPtr = usbcompinfoPtr->class;
-               for(class_i = 0; usbclassPtr[class_i].type != USB_CLASS_INVALID; class_i++)
+               msc_dev_ptr->desc_callback.get_desc_entity((uint32_t)msc_dev_ptr,
+                   USB_CLASS_INTERFACE_INDEX_INFO,
+                   (uint32_t *)&interface_index);
+               *object = 0;
+               for (class_i = 0; class_i < usbcompinfoPtr->count; class_i++)
                {
-                       if(USB_CLASS_MSC == usbclassPtr[class_i].type)
-                       {
-                               *object = (uint32_t)&usbclassPtr[class_i];
-                               break;
-                       }
+                   if ((USB_CLASS_MSC == usbcompinfoPtr->class[class_i].type) && (class_i == interface_index))
+                   {
+                       *object = (uint32_t)&(usbcompinfoPtr->class[class_i]);
+                       break;
+                   }
                }
            }
            break;
@@ -207,6 +260,7 @@ usb_status process_mass_storage_command
                 csw_status_ptr);
             break;
         case READ_CAPACITY_10_COMMAND : /*opcode : 0x25*/
+        case READ_CAPACITY_16_COMMAND : /*opcode : 0x9E*/
            error = msc_read_capacity_command(msc_obj_ptr, cbw_ptr,csw_residue_ptr,
                 csw_status_ptr);
             break;       
@@ -243,6 +297,8 @@ usb_status process_mass_storage_command
             msc_obj_ptr->in_flag = FALSE;
             msc_obj_ptr->out_stall_flag = FALSE;
             msc_obj_ptr->in_stall_flag = FALSE;
+            msc_obj_ptr->need_out_stall_flag = FALSE;
+            msc_obj_ptr->need_in_stall_flag = FALSE;
             break;
     }
     return error;
@@ -278,8 +334,25 @@ void USB_Service_Bulk_In(usb_event_struct_t* event, void* arg)
     if (NULL == msc_obj_ptr)
     {
         #if _DEBUG
-            printf("USB_Service_Bulk_In: msc_obj_ptr is NULL\n");
+            USB_PRINTF("USB_Service_Bulk_In: msc_obj_ptr is NULL\n");
         #endif  
+        return;
+    }
+    
+    if (event->len == 0xFFFFFFFF)
+    {
+        if(msc_obj_ptr->in_flag && msc_obj_ptr->class_specific_callback.callback != NULL
+           && ((READ_10_COMMAND == msc_obj_ptr->cbw_ptr->command_block[0])
+               || (READ_12_COMMAND == msc_obj_ptr->cbw_ptr->command_block[0])))
+        {
+            lba_app_struct_t lba_data;
+            
+            lba_data.size = 0;
+            lba_data.buff_ptr = event->buffer_ptr;
+            lba_data.offset = 0;
+            msc_obj_ptr->class_specific_callback.callback(USB_DEV_EVENT_SEND_COMPLETE,
+                USB_REQ_VAL_INVALID, NULL, (uint32_t *)&lba_data, msc_obj_ptr->class_specific_callback.arg);
+        }
         return;
     }
     
@@ -311,15 +384,16 @@ void USB_Service_Bulk_In(usb_event_struct_t* event, void* arg)
 
     if(msc_obj_ptr->transfer_remaining >= event->len)
     {   /* decrement the global count */
-        msc_obj_ptr->transfer_remaining -= event->len;          
+        msc_obj_ptr->transfer_remaining -= event->len;
     }
         
     /* check if there is need to stall BULK IN ENDPOINT And
        there isn't any transfer in progress*/
-    if( (msc_obj_ptr->in_stall_flag == TRUE)&&
+    if( (msc_obj_ptr->need_in_stall_flag == TRUE)&&
         (!msc_obj_ptr->transfer_remaining))
     {
-        msc_obj_ptr->in_stall_flag = FALSE; /* clear the flag */
+        msc_obj_ptr->need_in_stall_flag = FALSE; /* clear the flag */
+        msc_obj_ptr->in_stall_flag = TRUE;
         msc_obj_ptr->in_flag = FALSE; /* clear send flag */
         usb_device_stall_endpoint(msc_obj_ptr->controller_handle,event->ep_num,USB_SEND);
         return;                 
@@ -350,7 +424,7 @@ void USB_Service_Bulk_In(usb_event_struct_t* event, void* arg)
             }
 
             if(msc_obj_ptr->transfer_remaining)
-            {    
+            {
                 msc_obj_ptr->current_offset += event->len;
                 lba_data.offset = msc_obj_ptr->current_offset;
                 lba_data.size = (msc_obj_ptr->msd_buff.msc_bulk_in_size > MSD_SEND_MAX_TRANS_LENGTH ? 
@@ -366,29 +440,49 @@ void USB_Service_Bulk_In(usb_event_struct_t* event, void* arg)
 
                 lba_data.buff_ptr = msc_obj_ptr->msd_buff.msc_bulk_in_ptr;//msc_obj_ptr->msd_buff.msc_disk_buff_ptr + msc_obj_ptr->current_offset;
                 
-                /* Send data on USB Bus */
-                (void)USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle, 
-                    (uint8_t *)lba_data.buff_ptr,lba_data.size);    
+                if(msc_obj_ptr->current_offset < (msc_obj_ptr->device_info.total_lba_device_supports * msc_obj_ptr->device_info.length_of_each_lab_of_device))
+                {
+                    /* Send data on USB Bus */
+                    (void)USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle, 
+                        (uint8_t *)lba_data.buff_ptr,lba_data.size);
+                }
+                else
+                {
+                    msc_obj_ptr->need_in_stall_flag = FALSE; /* clear the flag */
+                    msc_obj_ptr->in_stall_flag = TRUE;
+                    msc_obj_ptr->in_flag = FALSE; /* clear send flag */
+                    msc_obj_ptr->stall_status = (uint8_t)STALL_IN_DATA_PHASE;
+                    usb_device_stall_endpoint(msc_obj_ptr->controller_handle,msc_obj_ptr->bulk_in_endpoint,USB_SEND);
+                }
             }
         }        
         
         if(!msc_obj_ptr->transfer_remaining)
         {   /* marks the end of data phase */
             msc_obj_ptr->in_flag = FALSE; /* clear the flag for next CBW */         
-            /* Send the command status information */
-            (void)USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle, 
-                (uint8_t *)msc_obj_ptr->csw_ptr, MSC_CSW_LENGTH);                  
+            //if(msc_obj_ptr->csw_prime_flag == FALSE)
+            {
+                /* Send the command status information */
+                (void)USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle, 
+                    (uint8_t *)msc_obj_ptr->csw_ptr, MSC_CSW_LENGTH);
+                msc_obj_ptr->csw_prime_flag = TRUE;
+            }
         }
     } 
     else if ((event->len == MSC_CSW_LENGTH) /* CSW is 13 bytes in length */
         && (csw_ptr->signature == USB_DCSWSIGNATURE)) /*valid CSW signature*/                 
     {
         /* this flag will now be set on reset or after CSW being sent */
-        msc_obj_ptr->cbw_valid_flag = TRUE;        
-        /* prepare for next CBW */  
-        (void)USB_MSC_Bulk_Recv_Data(msc_obj_ptr->controller_handle,
-            (uint8_t*)msc_obj_ptr->cbw_ptr, MSC_CBW_LENGTH);
-    }     
+        msc_obj_ptr->cbw_valid_flag = TRUE; 
+        msc_obj_ptr->csw_prime_flag = FALSE;
+        /* prepare for next CBW */
+        //if (msc_obj_ptr->cbw_prime_flag == FALSE)
+        {
+            (void)USB_MSC_Bulk_Recv_Data(msc_obj_ptr->controller_handle,
+                (uint8_t*)msc_obj_ptr->cbw_ptr, MSC_CBW_LENGTH);
+            msc_obj_ptr->cbw_prime_flag = TRUE;
+        }
+    }
 }
 
 /**************************************************************************//*!
@@ -409,7 +503,10 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
     uint8_t error;
     msc_device_struct_t * msc_obj_ptr;
     //uint32_t signature = USB_DCBWSIGNATURE;
-    //printf("\nsignautre is :%x",signature);
+    //USB_PRINTF("\nsignautre is :%x",signature);
+#if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && (!USE_RTOS)) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
+    uint8_t have_transfer = 0;
+#endif
     
     
     msc_obj_ptr = (msc_device_struct_t *)arg;  
@@ -417,20 +514,43 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
     if (NULL == msc_obj_ptr)
     {
         #if _DEBUG
-            printf("USB_Service_Bulk_Out: msc_dev_ptr is NULL\n");
+            USB_PRINTF("USB_Service_Bulk_Out: msc_dev_ptr is NULL\n");
         #endif  
         return;
     }
+
+    if (event->len == 0xFFFFFFFF)
+    {
+        /* need to notify app that recvies data successfully and size is 0, app can release buffer */
+        if (msc_obj_ptr->out_flag && msc_obj_ptr->class_specific_callback.callback != NULL
+            && ((WRITE_10_COMMAND == msc_obj_ptr->cbw_ptr->command_block[0])
+            || (WRITE_12_COMMAND == msc_obj_ptr->cbw_ptr->command_block[0])))
+        {
+            lba_app_struct_t lba_data1;
+            lba_data1.offset = 0;
+            lba_data1.size = 0;
+            lba_data1.buff_ptr = msc_obj_ptr->msd_buff.msc_bulk_out_ptr;
+            msc_obj_ptr->class_specific_callback.callback(USB_DEV_EVENT_DATA_RECEIVED,
+                USB_REQ_VAL_INVALID,NULL,(uint32_t *)&lba_data1, msc_obj_ptr->class_specific_callback.arg);
+        }
+        return;
+    }
+    if(msc_obj_ptr->transfer_remaining >= event->len)
+    {   /* decrement the global count */
+        msc_obj_ptr->transfer_remaining -= event->len;          
+    }
          
      /* check if there is need to stall BULK IN ENDPOINT */
-    if( (msc_obj_ptr->out_stall_flag == TRUE)&&
+    if( (msc_obj_ptr->need_out_stall_flag == TRUE)&&
         (!msc_obj_ptr->transfer_remaining))
     {
         //uint8_t component = (uint8_t)(event->ep_num | 
         //    (USB_RECV<<COMPONENT_PREPARE_SHIFT));
-        msc_obj_ptr->out_stall_flag = FALSE; /* clear the flag */
+        msc_obj_ptr->need_out_stall_flag = FALSE; /* clear the flag */
+        msc_obj_ptr->out_stall_flag = TRUE; /* clear the flag */
         msc_obj_ptr->out_flag = FALSE; /* clear send flag */
-        usb_device_stall_endpoint(msc_obj_ptr->controller_handle,event->ep_num,USB_SEND);
+        msc_obj_ptr->cbw_prime_flag = FALSE;
+        usb_device_stall_endpoint(msc_obj_ptr->controller_handle,event->ep_num,USB_RECV);
         return;                 
     }
     
@@ -442,10 +562,10 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
 
     if(msc_obj_ptr->out_flag) /* bulk out transaction has occured after CBW */
     {
-        if(msc_obj_ptr->transfer_remaining >= event->len)
-        {   /* decrement the global count */
-            msc_obj_ptr->transfer_remaining -= event->len;
-        }
+//        if(msc_obj_ptr->transfer_remaining >= event->len)
+//        {   /* decrement the global count */
+//            msc_obj_ptr->transfer_remaining -= event->len;
+//        }
         
         if(msc_obj_ptr->class_specific_callback.callback != NULL) 
         {
@@ -459,12 +579,50 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
             || (WRITE_12_COMMAND == msc_obj_ptr->cbw_ptr->command_block[0]) 
               )       
             {
+//#ifdef MUTILE_BUFFER
+#if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && (!USE_RTOS)) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
+                lba_app_struct_t lba_data2;
+                if (msc_obj_ptr->transfer_remaining)
+                {
+                    msc_obj_ptr->class_specific_callback.callback(USB_MSC_DEVICE_WRITE_REQUEST,
+                        USB_REQ_VAL_INVALID,&msc_obj_ptr->msd_buff.msc_bulk_out_ptr, NULL, msc_obj_ptr->class_specific_callback.arg);
+                    if (msc_obj_ptr->msd_buff.msc_bulk_out_ptr != NULL)
+                    {
+                        have_transfer = 1;
+                        msc_obj_ptr->current_offset += event->len;                
+                        lba_data2.offset = msc_obj_ptr->current_offset;
+                        lba_data2.size = (msc_obj_ptr->msd_buff.msc_bulk_out_size > MSD_RECV_MAX_TRANS_LENGTH) ? 
+                            MSD_RECV_MAX_TRANS_LENGTH : msc_obj_ptr->msd_buff.msc_bulk_out_size; /* whichever is smaller */
+                        lba_data2.size = (msc_obj_ptr->transfer_remaining > lba_data2.size) ? 
+                            lba_data2.size : msc_obj_ptr->transfer_remaining; /* whichever is smaller */
+                        
+                        lba_data2.buff_ptr = msc_obj_ptr->msd_buff.msc_bulk_out_ptr;
+                        if(msc_obj_ptr->current_offset < (msc_obj_ptr->device_info.total_lba_device_supports * msc_obj_ptr->device_info.length_of_each_lab_of_device))
+                        {
+                            (void)USB_MSC_Bulk_Recv_Data(msc_obj_ptr->controller_handle,
+                                                         lba_data2.buff_ptr,lba_data2.size);
+                        }
+                        else
+                        {
+                            msc_obj_ptr->need_out_stall_flag = FALSE; /* clear the flag */
+                            msc_obj_ptr->out_stall_flag = TRUE; /* clear the flag */
+                            msc_obj_ptr->out_flag = FALSE; /* clear send flag */
+                            msc_obj_ptr->stall_status = (uint8_t)STALL_IN_DATA_PHASE;
+                            usb_device_stall_endpoint(msc_obj_ptr->controller_handle,msc_obj_ptr->bulk_out_endpoint,USB_RECV);
+                        }
+                    }
+                }
+#endif
                 msc_obj_ptr->class_specific_callback.callback(USB_DEV_EVENT_DATA_RECEIVED,
                     USB_REQ_VAL_INVALID,NULL,(uint32_t *)&lba_data1, msc_obj_ptr->class_specific_callback.arg);
             }
-            
+#if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) && (!USE_RTOS)) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
+            if(msc_obj_ptr->transfer_remaining && have_transfer == 0)
+#else
             if(msc_obj_ptr->transfer_remaining)
+#endif
             {
+                
                 msc_obj_ptr->current_offset += event->len;                
                 lba_data1.offset = msc_obj_ptr->current_offset;
                 lba_data1.size = (msc_obj_ptr->msd_buff.msc_bulk_out_size > MSD_RECV_MAX_TRANS_LENGTH) ? 
@@ -479,27 +637,42 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
                     USB_REQ_VAL_INVALID,&msc_obj_ptr->msd_buff.msc_bulk_out_ptr,(uint32_t *)&lba_data1, msc_obj_ptr->class_specific_callback.arg);
 
                 lba_data1.buff_ptr = msc_obj_ptr->msd_buff.msc_bulk_out_ptr;
-
-                (void)USB_MSC_Bulk_Recv_Data(msc_obj_ptr->controller_handle,
-                    lba_data1.buff_ptr,lba_data1.size);
+                if(msc_obj_ptr->current_offset < (msc_obj_ptr->device_info.total_lba_device_supports * msc_obj_ptr->device_info.length_of_each_lab_of_device))
+                {
+                    (void)USB_MSC_Bulk_Recv_Data(msc_obj_ptr->controller_handle,
+                        lba_data1.buff_ptr,lba_data1.size);
+                }
+                else
+                {
+                    msc_obj_ptr->need_out_stall_flag = FALSE; /* clear the flag */
+                    msc_obj_ptr->out_stall_flag = TRUE; /* clear the flag */
+                    msc_obj_ptr->out_flag = FALSE; /* clear send flag */
+                    msc_obj_ptr->stall_status = (uint8_t)STALL_IN_DATA_PHASE;
+                    usb_device_stall_endpoint(msc_obj_ptr->controller_handle,msc_obj_ptr->bulk_out_endpoint,USB_RECV);
+                }
             }            
         }
         
-        if((msc_obj_ptr->out_stall_flag == TRUE)&&
-           (!msc_obj_ptr->transfer_remaining))
-        {
-            msc_obj_ptr->out_stall_flag = FALSE; /* clear the flag */
-            msc_obj_ptr->out_flag = FALSE; /* clear send flag */
-            usb_device_stall_endpoint(msc_obj_ptr->controller_handle,event->ep_num,USB_SEND);
-            return;                 
-        }
+//        if((msc_obj_ptr->need_out_stall_flag == TRUE)&&
+//           (!msc_obj_ptr->transfer_remaining))
+//        {
+//            msc_obj_ptr->need_out_stall_flag = FALSE; /* clear the flag */
+//            msc_obj_ptr->out_stall_flag = TRUE; /* clear the flag */
+//            msc_obj_ptr->out_flag = FALSE; /* clear send flag */
+//            usb_device_stall_endpoint(msc_obj_ptr->controller_handle,event->ep_num,USB_SEND);
+//            return;                 
+//        }
     
         if(!msc_obj_ptr->transfer_remaining)
         {   /* marks the end of data phase */
             msc_obj_ptr->out_flag = FALSE; /* clear the flag for next CBW */
             /* Send the command status information */
-            (void)USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle, 
-                (uint8_t *)msc_obj_ptr->csw_ptr, MSC_CSW_LENGTH); 
+            //if(msc_obj_ptr->csw_prime_flag == FALSE)
+            {
+                (void)USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle, 
+                    (uint8_t *)msc_obj_ptr->csw_ptr, MSC_CSW_LENGTH);
+                 msc_obj_ptr->csw_prime_flag = TRUE;
+            }
         }
     } 
     else if(/* check for valid and meaningful CBW */
@@ -518,8 +691,11 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
           )
     {
         msc_obj_ptr->re_stall_flag = TRUE;
+        msc_obj_ptr->cbw_prime_flag = FALSE;
+        msc_obj_ptr->transfer_remaining = 0;
         /* A valid CBW was received */
         msc_obj_ptr->csw_ptr->signature = USB_DCSWSIGNATURE;
+        msc_obj_ptr->csw_ptr->residue = 0;
         msc_obj_ptr->csw_ptr->tag = cbw_ptr->tag;
         /*this flag will now be set on reset or after CSW being sent */
         msc_obj_ptr->cbw_valid_flag = FALSE;
@@ -536,24 +712,35 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
         error = process_mass_storage_command(msc_obj_ptr, cbw_ptr, 
             &(msc_obj_ptr->csw_ptr->residue), &(msc_obj_ptr->csw_ptr->csw_status));
         
-        if(error == USBERR_ENDPOINT_STALLED)
+        if (error == USBERR_ENDPOINT_STALLED)
         {
-            if(msc_obj_ptr->out_flag==TRUE)
+            if (msc_obj_ptr->out_flag==TRUE)
             {
-                msc_obj_ptr->out_stall_flag = TRUE; 
+                if (msc_obj_ptr->out_stall_flag == FALSE)
+                {
+                    msc_obj_ptr->need_out_stall_flag = TRUE; 
+                }
                 msc_obj_ptr->out_flag = FALSE; /* so as to send status phase */
             }
-            else if(msc_obj_ptr->in_flag==TRUE)
+            else if (msc_obj_ptr->in_flag==TRUE)
             {
-                msc_obj_ptr->in_stall_flag = TRUE;  
-            }           
+                if (msc_obj_ptr->in_stall_flag == FALSE)
+                {
+                    msc_obj_ptr->need_in_stall_flag = TRUE;
+                }
+                msc_obj_ptr->in_flag = FALSE;
+            }
+            msc_obj_ptr->stall_status = (uint8_t)STALL_IN_DATA_PHASE;
         }
         
         /* if there is no data phase on bulk endpoints*/
-        if(!(msc_obj_ptr->out_flag || msc_obj_ptr->in_flag)) 
-        {   /* Send the command status information */
+        /* even if need_out_stall_flag or need_in_stall_flag */
+        if(!(msc_obj_ptr->out_flag || (msc_obj_ptr->in_flag  || msc_obj_ptr->need_in_stall_flag))) 
+        {
+            /* Send the command status information */
             (void)USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle, 
-                (uint8_t *)msc_obj_ptr->csw_ptr, MSC_CSW_LENGTH);         
+                (uint8_t *)msc_obj_ptr->csw_ptr, MSC_CSW_LENGTH);
+             msc_obj_ptr->csw_prime_flag = TRUE;
         }
     } 
     else /* Invalid/NMreceived */
@@ -570,7 +757,11 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
         usb_device_stall_endpoint(msc_obj_ptr->controller_handle,msc_obj_ptr->bulk_out_endpoint,USB_RECV);
         usb_device_stall_endpoint(msc_obj_ptr->controller_handle,msc_obj_ptr->bulk_in_endpoint,USB_SEND);
         msc_obj_ptr->cbw_valid_flag = FALSE;
-    }    
+        msc_obj_ptr->out_stall_flag = TRUE;
+        msc_obj_ptr->in_stall_flag = TRUE;
+        msc_obj_ptr->stall_status = (uint8_t)STALL_IN_CBW;
+        msc_obj_ptr->wait_for_reset_recovery = TRUE;
+    }
 }
 
 
@@ -589,8 +780,8 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
  *****************************************************************************/
  void USB_Class_MSC_Event(uint8_t event, void* val,void* arg) 
 {   
-    usb_class_struct_t* usbclassPtr;
-    msc_device_struct_t * msc_dev_ptr;
+    usb_class_struct_t*          usbclassPtr;
+    msc_device_struct_t *        msc_dev_ptr;
     
     #if IMPLEMENT_QUEUING    
         uint8_t index;
@@ -598,13 +789,13 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
     usb_endpoints_t *usb_ep_data;
     //uint8_t error;
     
-    //printf("\n USB_Class_MSD_Event: event: 0x%x", event);
+    //USB_PRINTF("\n USB_Class_MSD_Event: event: 0x%x", event);
     msc_dev_ptr = (msc_device_struct_t *)arg;
     
     if (NULL == msc_dev_ptr)
     {
         #if _DEBUG
-            printf("USB_Class_MSC_Event: msc_dev_ptr is NULL\n");
+            USB_PRINTF("USB_Class_MSC_Event: msc_dev_ptr is NULL\n");
         #endif  
         return;
     }
@@ -615,10 +806,16 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
     {
         uint8_t count = 0;
         
-        //printf("\n 000, count: 0x%x", count);
-        //printf("\nUSB_DEV_EVENT_CONFIG_CHANGED");
+        //USB_PRINTF("\n 000, count: 0x%x", count);
+        //USB_PRINTF("\nUSB_DEV_EVENT_CONFIG_CHANGED");
         
-
+		if (*(uint16_t*)val == 0)
+		{
+		#if _DEBUG
+			USB_PRINTF("only config change!\n");
+        #endif  
+			return;
+		}
 #if USBCFG_DEV_COMPOSITE
         /* Set configuration according to config number*/
         msc_dev_ptr->desc_callback.set_configuration((uint32_t)msc_dev_ptr->controller_handle, (uint8_t)(*(uint16_t *)val));
@@ -630,25 +827,39 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
                                 USB_CLASS_INFO, (uint32_t*)&usbclassPtr);
         USB_Msd_Get_Desc_Info(msc_dev_ptr, USB_MSD_INTERFACE_COUNT, &msc_dev_ptr->usb_max_suported_interfaces);
 #endif
-
+        if(usbclassPtr == NULL)
+        {
+            USB_PRINTF("not find msd interface\n");
+            return;
+        }
+        
         usb_ep_data = &(usbclassPtr[*(uint16_t*)val - 1].interfaces.interface[0].endpoints);
         msc_dev_ptr->ep_desc_data = usb_ep_data;
         msc_dev_ptr->msc_endpoint_data.count = usbclassPtr->interfaces.interface->endpoints.count;
         
         if (msc_dev_ptr->msc_endpoint_data.count > MAX_MSC_CLASS_EP_NUM)
         {
-            printf("too many msc endpoint for the class driver\n");
+            USB_PRINTF("too many msc endpoint for the class driver\n");
             return;
         }
         
-        msc_dev_ptr->bulk_in_endpoint = usbclassPtr->interfaces.interface->endpoints.ep[0].ep_num;
-        msc_dev_ptr->bulk_in_endpoint_packet_size = usbclassPtr->interfaces.interface->endpoints.ep[0].size;
-        msc_dev_ptr->bulk_out_endpoint = usbclassPtr->interfaces.interface->endpoints.ep[1].ep_num;
+        for (int epindex = 0; epindex < usbclassPtr->interfaces.interface->endpoints.count; ++epindex)
+        {
+            if (usbclassPtr->interfaces.interface->endpoints.ep[epindex].direction == USB_SEND)
+            {
+                msc_dev_ptr->bulk_in_endpoint = usbclassPtr->interfaces.interface->endpoints.ep[epindex].ep_num;
+                msc_dev_ptr->bulk_in_endpoint_packet_size = usbclassPtr->interfaces.interface->endpoints.ep[epindex].size;
+            }
+            else if (usbclassPtr->interfaces.interface->endpoints.ep[epindex].direction == USB_RECV)
+            {
+                msc_dev_ptr->bulk_out_endpoint = usbclassPtr->interfaces.interface->endpoints.ep[epindex].ep_num;
+            }
+        }
         
         
         #if IMPLEMENT_QUEUING
                  #if _DEBUG
-                     printf("\n 111, count: 0x%x", count);
+                     USB_PRINTF("\n 111, count: 0x%x", count);
                  #endif
                  for(index = 0; index < usb_ep_data->count; index++) 
                  {            
@@ -663,7 +874,7 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
         while(count < usb_ep_data->count) 
         {
             #if _DEBUG
-                printf("\n 222, count: 0x%x", count);
+                USB_PRINTF("\n 222, count: 0x%x", count);
             #endif
             usb_ep_struct_t* ep_struct_ptr= 
                 (usb_ep_struct_t*) (&usb_ep_data->ep[count]);
@@ -677,13 +888,13 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
                 if(ep_struct_ptr->direction == USB_RECV) 
                 {
                     (void)usb_device_register_service(msc_dev_ptr->controller_handle,
-                        (uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num),
+                        (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))),
                         USB_Service_Bulk_Out,(void *)msc_dev_ptr);
                 } 
                 else
                 {
                     (void)usb_device_register_service(msc_dev_ptr->controller_handle,
-                        (uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num),
+                        (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))),
                         USB_Service_Bulk_In,(void *)msc_dev_ptr);
                 }            
             }
@@ -695,24 +906,35 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
         msc_dev_ptr->in_flag = FALSE;
         msc_dev_ptr->out_stall_flag = FALSE;
         msc_dev_ptr->in_stall_flag = FALSE;
+        msc_dev_ptr->need_out_stall_flag = FALSE;
+        msc_dev_ptr->need_in_stall_flag = FALSE;
         msc_dev_ptr->cbw_valid_flag = TRUE; /*making the first CBW valid */ 
         msc_dev_ptr->transfer_remaining = 0; 
-                
+        msc_dev_ptr->wait_for_reset_recovery = FALSE;
+        msc_dev_ptr->need_to_prepare_next = FALSE;
+        msc_dev_ptr->stall_status = 0;
     }
     else if(event == USB_DEV_EVENT_ENUM_COMPLETE) 
     {
         /* To Do */
         if(NULL == msc_dev_ptr->cbw_ptr)
         {
-              printf("msc cbw buff error\n");
+              USB_PRINTF("msc cbw buff error\n");
               return;
         }
         //msc_dev_ptr->cbw_ptr = (cbw_t *)OS_Mem_alloc_uncached(MSC_CBW_LENGTH);
 
+        if(msc_dev_ptr->cbw_prime_flag == TRUE)
+        {
+#if USBCFG_DEV_ADVANCED_CANCEL_ENABLE
+            usb_device_cancel_transfer(msc_dev_ptr->controller_handle, msc_dev_ptr->bulk_out_endpoint, USB_RECV);
+#endif
+        }
         usb_device_recv_data(msc_dev_ptr->controller_handle, 
             msc_dev_ptr->bulk_out_endpoint, (uint8_t*)msc_dev_ptr->cbw_ptr, MSC_CBW_LENGTH);
+        msc_dev_ptr->cbw_prime_flag = TRUE;
         #if _DEBUG
-            printf("\nUSB_MSC_Bulk_Recv_Data");
+            USB_PRINTF("\nUSB_MSC_Bulk_Recv_Data");
         #endif
         //msc_dev_ptr->csw_ptr = (csw_t *)OS_mem_alloc_uncached(MSC_CSW_LENGTH);
         //USB_Class_MSC_Send_Data(msc_dev_ptr->controller_handle,1,(uint8_t *)msc_dev_ptr->csw_ptr,MSC_CSW_LENGTH);
@@ -749,7 +971,72 @@ void USB_Service_Bulk_Out(usb_event_struct_t* event,void* arg)
         /* Code to be added here, 
            if there is some action needed at app level */           
     }
+    else if (event == USB_DEV_EVENT_TYPE_CLR_EP_HALT)
+    {
+        uint8_t value;
+        value = *((uint8_t *)val);
+        if (msc_dev_ptr->wait_for_reset_recovery != TRUE)
+        {
+            if (((value & 0x0F) == msc_dev_ptr->bulk_in_endpoint) && (msc_dev_ptr->in_stall_flag == TRUE))
+            {
+                usb_device_unstall_endpoint(msc_dev_ptr->controller_handle,value & 0x0F, (value & 0x80) >> 7);
+                msc_dev_ptr->in_stall_flag = FALSE;
+            }
+            if (((value & 0x0F) == msc_dev_ptr->bulk_out_endpoint) && (msc_dev_ptr->out_stall_flag == TRUE))
+            {
+                usb_device_unstall_endpoint(msc_dev_ptr->controller_handle,value & 0x0F, (value & 0x80) >> 7);
+                msc_dev_ptr->out_stall_flag = FALSE;
+            }
             
+            if ((msc_dev_ptr->need_to_prepare_next != TRUE) && ((msc_dev_ptr->stall_status == STALL_IN_DATA_PHASE) || msc_dev_ptr->stall_status == STALL_IN_CSW))
+            {
+                if (msc_dev_ptr->csw_prime_flag == TRUE)
+                {
+#if USBCFG_DEV_ADVANCED_CANCEL_ENABLE
+                    usb_device_cancel_transfer(msc_dev_ptr->controller_handle, msc_dev_ptr->bulk_in_endpoint, USB_SEND);
+#endif
+                }
+                /* Send the command status information */
+                usb_device_send_data(msc_dev_ptr->controller_handle, 
+                    msc_dev_ptr->bulk_in_endpoint, (uint8_t*)msc_dev_ptr->csw_ptr, MSC_CSW_LENGTH);
+                msc_dev_ptr->csw_prime_flag = TRUE;
+                msc_dev_ptr->stall_status = 0;
+            }
+            
+            if ((msc_dev_ptr->need_to_prepare_next == TRUE) && (msc_dev_ptr->out_stall_flag == FALSE) && (msc_dev_ptr->in_stall_flag == FALSE))
+            {
+                msc_dev_ptr->need_to_prepare_next = FALSE;
+                if (msc_dev_ptr->cbw_prime_flag == TRUE)
+                {
+#if USBCFG_DEV_ADVANCED_CANCEL_ENABLE
+                    usb_device_cancel_transfer(msc_dev_ptr->controller_handle, msc_dev_ptr->bulk_out_endpoint, USB_RECV);
+#endif
+                }
+                usb_device_recv_data(msc_dev_ptr->controller_handle, 
+                    msc_dev_ptr->bulk_out_endpoint, (uint8_t*)msc_dev_ptr->cbw_ptr, MSC_CBW_LENGTH);
+                msc_dev_ptr->cbw_prime_flag = TRUE;
+                msc_dev_ptr->stall_status = 0;
+            }
+        }         
+    }            
+    else if(event == USB_DEV_EVENT_TYPE_SET_EP_HALT)
+    {
+        /* Code to be added here, 
+           if there is some action needed at app level */       
+        uint8_t value;
+        value = *((uint8_t *)val);
+        if (((value & 0x0F) == msc_dev_ptr->bulk_in_endpoint))
+        {
+            //usb_device_stall_endpoint(msc_dev_ptr->controller_handle,value & 0x0F, (value & 0x80) >> 7);
+            msc_dev_ptr->in_stall_flag = TRUE;
+        }
+        if (((value & 0x0F) == msc_dev_ptr->bulk_out_endpoint))
+        {
+            //usb_device_stall_endpoint(msc_dev_ptr->controller_handle,value & 0x0F, (value & 0x80) >> 7);
+            msc_dev_ptr->out_stall_flag = TRUE;
+        }
+    }
+
     if(msc_dev_ptr->msc_application_callback.callback != NULL) 
     {
         msc_dev_ptr->msc_application_callback.callback(event,val,
@@ -786,12 +1073,12 @@ usb_status USB_MSC_Requests
     usb_status error = USBERR_INVALID_REQ_TYPE;  
      
     msc_dev_ptr = (msc_device_struct_t *)arg;
-    //printf("\nsetup_packet->request: 0x%x", setup_packet->request);
+    //USB_PRINTF("\nsetup_packet->request: 0x%x", setup_packet->request);
     
     if (NULL == msc_dev_ptr)
     {
         #if _DEBUG
-            printf("USB_MSC_Other_Requests: msc_dev_ptr is NULL\n");
+            USB_PRINTF("USB_MSC_Other_Requests: msc_dev_ptr is NULL\n");
         #endif  
         return USBERR_ERROR;
     }
@@ -809,13 +1096,13 @@ usb_status USB_MSC_Requests
         {
             case GET_MAX_LUN :
                 if((setup_packet->index < msc_dev_ptr->usb_max_suported_interfaces) &&
-                    (!setup_packet->value)&&(setup_packet->length == 0x0001) &&
+                    (!setup_packet->value) && (setup_packet->length <= 0x0001) &&
                     ((setup_packet->request_type & USB_DEV_REQ_STD_REQUEST_TYPE_DIR_POS) == USB_DEV_REQ_STD_REQUEST_TYPE_DIR_IN)
                   ) 
                 {
                     /* return the maximum number of logical units supported */
                     *data = &msc_dev_ptr->lun;
-                    *size=1;
+                    *size= (uint32_t)setup_packet->length;
                     msc_dev_ptr->re_stall_flag = TRUE;
                 }
                 else 
@@ -858,12 +1145,18 @@ usb_status USB_MSC_Requests
                     }
                     msc_dev_ptr->out_flag = FALSE;
                     msc_dev_ptr->in_flag = FALSE;
-                    msc_dev_ptr->out_stall_flag = FALSE;
-                    msc_dev_ptr->in_stall_flag = FALSE;
+                    msc_dev_ptr->need_out_stall_flag = FALSE;
+                    msc_dev_ptr->need_in_stall_flag = FALSE;
                     /*making the first CBW valid */
                     msc_dev_ptr->cbw_valid_flag = TRUE;                
                     msc_dev_ptr->re_stall_flag = FALSE;
                     msc_dev_ptr->transfer_remaining = 0;
+                    msc_dev_ptr->wait_for_reset_recovery = FALSE;
+                    msc_dev_ptr->cbw_prime_flag = FALSE;
+                    msc_dev_ptr->csw_prime_flag = FALSE;
+                    msc_dev_ptr->need_to_prepare_next = TRUE;
+//                    usb_device_recv_data(msc_dev_ptr->controller_handle, 
+//                        msc_dev_ptr->bulk_out_endpoint, (uint8_t*)msc_dev_ptr->cbw_ptr, MSC_CBW_LENGTH);
                 }
                 else 
                 {   /* for Get Max LUN request with invalid wIndex parameter, 
@@ -921,7 +1214,7 @@ usb_status USB_Class_MSC_Init
     #endif
         
     #if _DEBUG
-        printf("Eneter USB_Class_MSC_Init\n");
+        USB_PRINTF("Eneter USB_Class_MSC_Init\n");
     #endif
     usb_status error = USBERR_ERROR;
     uint32_t implementing_disk_drive = IMPLEMENTING_DISK_DRIVE;
@@ -935,7 +1228,11 @@ usb_status USB_Class_MSC_Init
         return USBERR_ERROR;    
     }
     
-    devicePtr = &g_msc_class;
+    error = USB_Msd_Allocate_Handle(&devicePtr);
+    if (USB_OK != error)
+    {
+        return error;
+    }
     
 #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)))
     devicePtr->cbw_ptr = &g_msc_class_cbw; /* Initializing */
@@ -945,7 +1242,7 @@ usb_status USB_Class_MSC_Init
     if (NULL == devicePtr->cbw_ptr)
     {
         #if _DEBUG
-            printf("6: USB_Class_MSC_Init: Memalloc failed\n");
+            USB_PRINTF("6: USB_Class_MSC_Init: Memalloc failed\n");
         #endif
         error = USBERR_ALLOC;
         goto error1;
@@ -954,7 +1251,7 @@ usb_status USB_Class_MSC_Init
     if (NULL == devicePtr->csw_ptr)
     {
         #if _DEBUG
-            printf("7: USB_Class_MSC_Init: Memalloc failed\n");
+            USB_PRINTF("7: USB_Class_MSC_Init: Memalloc failed\n");
         #endif  
         error = USBERR_ALLOC;
         goto error1;
@@ -990,7 +1287,7 @@ usb_status USB_Class_MSC_Init
     if(NULL == devicePtr->controller_handle)
     {
         #if _DEBUG
-            printf("4: USB_Class_MSC_Init: call USB_Class_Get_Ctrler_Handle failed\n");
+            USB_PRINTF("4: USB_Class_MSC_Init: call USB_Class_Get_Ctrler_Handle failed\n");
         #endif
         goto error1;
     }
@@ -1001,7 +1298,7 @@ usb_status USB_Class_MSC_Init
     if(error != USB_OK)
     {
       #if _DEBUG
-          printf("4: USB_Class_MSC_Init: call usb_device_init failed\n");
+          USB_PRINTF("4: USB_Class_MSC_Init: call usb_device_init failed\n");
       #endif
           goto error1;  
     }
@@ -1010,11 +1307,11 @@ usb_status USB_Class_MSC_Init
         USB_MSC_Requests,(void *)devicePtr,msd_config_ptr->desc_callback_ptr);
 #endif
 
-    devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr->controller_handle,USB_MSC_LBA_INFO, (uint32_t *)&usb_msd_lba_info_ptr);
+    devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr,USB_MSC_LBA_INFO, (uint32_t *)&usb_msd_lba_info_ptr);
     if(NULL == usb_msd_lba_info_ptr)
     {
         #if _DEBUG
-            printf("9: USB_Class_MSC_Init: get msd lba info failed\n");
+            USB_PRINTF("9: USB_Class_MSC_Init: get msd lba info failed\n");
         #endif
         goto error2;
     }
@@ -1032,11 +1329,14 @@ usb_status USB_Class_MSC_Init
     if(error != USB_OK)
     {
         #if _DEBUG
-            printf("10: USB_Class_MSC_Init: call USB_MSC_SCSI_Init failed\n");
+            USB_PRINTF("10: USB_Class_MSC_Init: call USB_MSC_SCSI_Init failed\n");
         #endif
         goto error2;  
     }    
-            
+
+    devicePtr->cbw_prime_flag = FALSE;
+    devicePtr->csw_prime_flag = FALSE;
+    
     *msd_handle = (unsigned long)devicePtr;
     devicePtr->msc_handle = *msd_handle;
     usb_device_postinit(controller_id,devicePtr->controller_handle);
@@ -1117,6 +1417,7 @@ usb_status USB_Class_MSC_Deinit
             devicePtr->cbw_ptr = NULL;
         }
 #endif
+        USB_Msd_Free_Handle(devicePtr);
     }
     return error;    
 }
@@ -1184,7 +1485,7 @@ usb_status USB_Class_MSC_Send_Data
             
             /* increment producer bin by 1*/       
             devicePtr->ep[index].bin_producer = ++producer;
-                    
+
             if((uint8_t)(producer - consumer) == (uint8_t)1)         
             {          
     #endif            
@@ -1226,14 +1527,14 @@ usb_status USB_MSC_LBA_Transfer
     usb_status error;
     lba_app_struct_t lba_data;    
     
-    if((!((lba_info_ptr->starting_lba<msc_obj_ptr->device_info.total_lba_device_supports)&&
-        (lba_info_ptr->lba_transfer_num <= (msc_obj_ptr->device_info.total_lba_device_supports - 
-        lba_info_ptr->starting_lba)))) || (msc_obj_ptr->class_specific_callback.callback == NULL))
-    {
-        /* host trying to access region beyond MASS STORAGE SPACE 
-           Or no class_specific_callback is registered */
-        return(uint8_t)((direction?USBERR_TX_FAILED:USBERR_RX_FAILED));
-    }
+//    if((!((lba_info_ptr->starting_lba<msc_obj_ptr->device_info.total_lba_device_supports)&&
+//        (lba_info_ptr->lba_transfer_num <= (msc_obj_ptr->device_info.total_lba_device_supports - 
+//        lba_info_ptr->starting_lba)))) || (msc_obj_ptr->class_specific_callback.callback == NULL))
+//    {
+//        /* host trying to access region beyond MASS STORAGE SPACE 
+//           Or no class_specific_callback is registered */
+//        //return(uint8_t)((direction?USBERR_TX_FAILED:USBERR_RX_FAILED));
+//    }
 
     msc_obj_ptr->transfer_remaining = lba_info_ptr->lba_transfer_num * 
         msc_obj_ptr->device_info.length_of_each_lab_of_device;              
@@ -1255,7 +1556,18 @@ usb_status USB_MSC_LBA_Transfer
 
         lba_data.buff_ptr = msc_obj_ptr->msd_buff.msc_bulk_in_ptr;
 
-        error = USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle,lba_data.buff_ptr,lba_data.size);
+        if(lba_info_ptr->starting_lba < msc_obj_ptr->device_info.total_lba_device_supports)
+        {
+            error = USB_MSC_Bulk_Send_Data(msc_obj_ptr->msc_handle,lba_data.buff_ptr,lba_data.size);
+        }
+        else
+        {
+            msc_obj_ptr->need_in_stall_flag = FALSE; /* clear the flag */
+            msc_obj_ptr->in_stall_flag = TRUE; /* clear the flag */
+            msc_obj_ptr->in_flag = FALSE; /* clear send flag */
+            msc_obj_ptr->stall_status = (uint8_t)STALL_IN_DATA_PHASE;
+            error = usb_device_stall_endpoint(msc_obj_ptr->controller_handle,msc_obj_ptr->bulk_in_endpoint,USB_SEND);
+        }
     }
     else
     {
@@ -1270,8 +1582,19 @@ usb_status USB_MSC_LBA_Transfer
         
         lba_data.buff_ptr = msc_obj_ptr->msd_buff.msc_bulk_out_ptr;
 
-        error = USB_MSC_Bulk_Recv_Data(msc_obj_ptr->controller_handle,lba_data.buff_ptr,lba_data.size);
-    }               
+        if(lba_info_ptr->starting_lba < msc_obj_ptr->device_info.total_lba_device_supports)
+        {
+            error = USB_MSC_Bulk_Recv_Data(msc_obj_ptr->controller_handle,lba_data.buff_ptr,lba_data.size);
+        }
+        else
+        {
+            msc_obj_ptr->need_out_stall_flag = FALSE; /* clear the flag */
+            msc_obj_ptr->out_stall_flag = TRUE; /* clear the flag */
+            msc_obj_ptr->out_flag = FALSE; /* clear send flag */
+            msc_obj_ptr->stall_status = (uint8_t)STALL_IN_DATA_PHASE;
+            error = usb_device_stall_endpoint(msc_obj_ptr->controller_handle,msc_obj_ptr->bulk_out_endpoint,USB_RECV);
+        }
+    }    
     return error;
 }
 

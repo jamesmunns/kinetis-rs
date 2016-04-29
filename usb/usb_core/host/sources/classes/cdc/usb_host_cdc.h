@@ -54,24 +54,23 @@ typedef struct file_struct
 	struct cdc_io_device_struct * dev_ptr;
 
 	/* Device Driver specific information */
-	void *		 dev_data_ptr;
+    void *       dev_data_ptr;
 
 	/* General control flags for this stream */
-	uint32_t	 flags;
+    uint32_t     flags;
 	
 	/* The current error for this stream */
-	uint32_t	 error;
+    uint32_t     error;
 
 	/* The current position in the stream */
-	uint32_t	location;
+    uint32_t     location;
 
 	/* The current size of the file */
-	uint32_t	size;
+    uint32_t     size;
 
 	/* The following 2 implement undelete */
-	bool	   have_ungot_character;
-	uint32_t	  ungot_character;
-
+    uint32_t     ungot_character;
+    bool         have_ungot_character;
 } file_cdc_t;  
 
 typedef struct cdc_queue_element_struct
@@ -151,7 +150,7 @@ typedef struct {
     uint8_t       databits;
 } usb_cdc_uart_coding_t;
 
-/* set ouput pin state */
+/* set output pin state */
 #define USB_CDC_SET_CTRL_LINE_STATE          0x22
 typedef struct {
 #define USB_ACM_LINE_STATE_DTR               0x01
@@ -336,7 +335,7 @@ typedef struct cdc_serial_init {
 #define USB_UART_BLOCKING          (0x0000)
 #define USB_UART_NO_BLOCKING       (0x0001)
 /* NOTE!!!
-** HW control flow has one weakness: we dont know exactly when DCD signal got log. 0 or
+** HW control flow has one weakness: we don't know exactly when DCD signal got log. 0 or
 ** log.1. This is because interrupts pipe is polled in time intervals in some milliseconds.
 ** HW flow control is here only just for compatibility purposes.
 ** As for output pins, we set always DTR and RTS signal for HW flow control. The user can

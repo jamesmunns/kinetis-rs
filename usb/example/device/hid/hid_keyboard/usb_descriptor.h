@@ -40,7 +40,6 @@
 /******************************************************************************
  * Includes
  *****************************************************************************/
-#include "usb_class_hid.h"
 
 /******************************************************************************
  * Constants - None
@@ -58,12 +57,16 @@
 /* Various descriptor sizes */
 #define DEVICE_DESCRIPTOR_SIZE            (18)
 #define CONFIG_DESC_SIZE                  (34)
-#define DEVICE_QUALIFIER_DESCRIPTOR_SIZE  (10)
 #define REPORT_DESC_SIZE                  (63)
 #define CONFIG_ONLY_DESC_SIZE             (9)
 #define IFACE_ONLY_DESC_SIZE              (9)
 #define HID_ONLY_DESC_SIZE                (9)
 #define ENDP_ONLY_DESC_SIZE               (7)
+
+#if HIGH_SPEED
+    #define DEVICE_QUALIFIER_DESCRIPTOR_SIZE    (10)
+    #define OTHER_SPEED_CONFIG_DESCRIPTOR_SIZE  (CONFIG_DESC_SIZE)  
+#endif
 
 /* HID buffer size */
 #define HID_BUFFER_SIZE                         (8)
@@ -98,9 +101,13 @@
 #define USB_STRING_DESCRIPTOR                   (3)
 #define USB_IFACE_DESCRIPTOR                    (4)
 #define USB_ENDPOINT_DESCRIPTOR                 (5)
-#define USB_DEVQUAL_DESCRIPTOR                  (6)
 #define USB_HID_DESCRIPTOR                      (0x21)
 #define USB_REPORT_DESCRIPTOR                   (0x22)
+
+#if HIGH_SPEED
+    #define USB_DEVQUAL_DESCRIPTOR              (6)
+    #define USB_OTHER_SPEED_DESCRIPTOR          (7)
+#endif
 
 #define USB_MAX_SUPPORTED_INTERFACES            (1)
 

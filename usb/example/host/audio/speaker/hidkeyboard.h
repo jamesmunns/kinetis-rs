@@ -50,6 +50,7 @@
 
 #define USB_Keyboard_Event_CTRL 0x01
 #define USB_Keyboard_Event_DATA 0x02
+
 /*
 ** Following structs contain all states and pointers
 ** used by the application to control/operate devices.

@@ -30,7 +30,7 @@
 *END************************************************************************/
 
 /*-----------------------------------------------------------------------
-/  Low level disk interface modlue include file   (C)ChaN, 2013
+/  Low level disk interface module include file   (C)ChaN, 2013
 /-----------------------------------------------------------------------*/
 
 #ifndef _DISKIO_DEFINED
@@ -46,7 +46,7 @@ extern "C" {
 
 
 #define _USE_WRITE	1	/* 1: Enable disk_write function */
-#define _USE_IOCTL	1	/* 1: Enable disk_ioctl fucntion */
+#define _USE_IOCTL	1	/* 1: Enable disk_ioctl function */
 
 
 /* Status of Disk Functions */
@@ -79,7 +79,7 @@ DRESULT disk_ioctl (uint8_t pdrv, uint8_t cmd, void* buff);
 #define STA_PROTECT		0x04	/* Write protected */
 
 
-/* Command code for disk_ioctrl fucntion */
+/* Command code for disk_ioctrl function */
 
 /* Generic command (used by FatFs) */
 #define CTRL_SYNC			0	/* Flush disk cache (for write functions) */

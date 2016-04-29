@@ -55,18 +55,6 @@
 #define ODD_BUFF                        (1)
 #define EVEN_BUFF                       (0)
 
-#if 0
-#define BDT_BASE                ((uint32_t*)(bdt))
-#define BD_PTR(ep, rxtx, odd)   (((uint32_t)BDT_BASE) & 0xfffffe00 | ((ep & 0x0f) << 5) | ((rxtx & 1) << 4) | ((odd & 1) << 3))
-
-#define BD_CTRL(ep,rxtx,odd)    (*((uint32_t*)BD_PTR(ep, rxtx, odd)))
-#define BD_CTRL_RX(ep, odd)     (*((uint32_t*)BD_PTR(ep, 0, odd)))
-#define BD_CTRL_TX(ep, odd)     (*((uint32_t*)BD_PTR(ep, 1, odd)))
-
-#define BD_ADDR(ep,rxtx,odd)    (*((uint32_t*)BD_PTR(ep, rxtx, odd) + 1))
-#define BD_ADDR_RX(ep, odd)     (*((uint32_t*)BD_PTR(ep, 0, odd) + 1))
-#define BD_ADDR_TX(ep, odd)     (*((uint32_t*)BD_PTR(ep, 1, odd) + 1))
-#endif
 /* Define USB buffer descriptor definitions in case of their lack */
 #ifndef USB_BD_BC
 #   define USB_BD_BC(n)                 ((n & 0x3ff) << 16)

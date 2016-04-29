@@ -27,7 +27,7 @@
 * $Date    : 
 *
 *
-* @brief The file contains CDC layer implimentation.
+* @brief The file contains CDC layer implementation.
 *
 *****************************************************************************/
 
@@ -71,7 +71,7 @@ static usb_status USB_Cdc_Free_Handle(cdc_handle_t handle);
  *
  * @name  USB_Cdc_Allocate_Handle
  *
- * @brief The funtion reserves entry in device array and returns the index.
+ * @brief The function reserves entry in device array and returns the index.
  *
  * @param none.
  * @return returns the reserved handle or if no entry found device busy.      
@@ -94,7 +94,7 @@ static usb_status USB_Cdc_Allocate_Handle(cdc_handle_t* handle)
  *
  * @name  USB_Cdc_Free_Handle
  *
- * @brief The funtion releases entry in device array .
+ * @brief The function releases entry in device array .
  *
  * @param handle  index in device array to be released..
  * @return returns and error code or USB_OK.      
@@ -104,7 +104,7 @@ static usb_status USB_Cdc_Allocate_Handle(cdc_handle_t* handle)
 static usb_status USB_Cdc_Free_Handle(cdc_handle_t handle)
 {
     int32_t cnt = 0;
-    for (;cnt< USBCFG_DEV_MAX_CLASS_OBJECT;cnt++)
+    for (;cnt< MAX_CDC_DEVICE;cnt++)
     {
         if (((cdc_handle_t)&cdc_device_array[cnt]) == handle)
         {
@@ -124,7 +124,7 @@ static usb_status USB_Cdc_Free_Handle(cdc_handle_t handle)
  *
  * @name  USB_Cdc_Get_Desc_Info
  *
- * @brief The funtion gets the info of the descriptors. .
+ * @brief The function gets the info of the descriptors. .
  *
  * @param handle  index in device array.
  * @param type     descriptor type.
@@ -134,77 +134,76 @@ static usb_status USB_Cdc_Free_Handle(cdc_handle_t handle)
  *****************************************************************************/
  static usb_status USB_Cdc_Get_Desc_Info(cdc_device_struct_t * cdc_obj_ptr,USB_DESC_INFO_T type, uint32_t * object)
  {
-	 usb_class_struct_t* usbclassPtr;
-	 /* Get class info */
+    usb_class_struct_t*          usbclassPtr;
+    usb_interfaces_struct_t *    ifs_ptr;
+    /* Get class info */
 #if USBCFG_DEV_COMPOSITE
-	 usb_composite_info_struct_t* usbcompinfoPtr;
-	 cdc_obj_ptr->desc_callback.get_desc_entity((uint32_t)cdc_obj_ptr->controller_handle,
-													USB_COMPOSITE_INFO,
-													(uint32_t *)&usbcompinfoPtr);
-	 usbclassPtr = usbcompinfoPtr->class;
+    usb_composite_info_struct_t* usbcompinfoPtr;
+    uint32_t                     interface_index;
+    cdc_obj_ptr->desc_callback.get_desc_entity((uint32_t)cdc_obj_ptr->controller_handle,
+                                                    USB_COMPOSITE_INFO,
+                                                    (uint32_t *)&usbcompinfoPtr);
+    cdc_obj_ptr->desc_callback.get_desc_entity((uint32_t)cdc_obj_ptr,
+                                                    USB_CLASS_INTERFACE_INDEX_INFO,
+                                                    (uint32_t *)&interface_index);
 #else
-     cdc_obj_ptr->desc_callback.get_desc_entity((uint32_t)cdc_obj_ptr->controller_handle,
-													USB_CLASS_INFO,
-													(uint32_t *)&usbclassPtr);
+    cdc_obj_ptr->desc_callback.get_desc_entity((uint32_t)cdc_obj_ptr->controller_handle,
+                                                    USB_CLASS_INFO,
+                                                    (uint32_t *)&usbclassPtr);
 #endif
-	 switch(type)
-	 {
-	     case USB_EP_COUNT:
-	     {
-	         usb_if_struct_t *if_ptr;
-	         uint32_t ep_cnt = 0;
-	         for_each_if_in_class(if_ptr, usbclassPtr, USB_CLASS_ALL)
-	         {
-	             ep_cnt += if_ptr->endpoints.count;
-	         }
-	         *object = ep_cnt;
-	         break;
-	     }
-	     case USB_CDC_EP_COUNT:
-	     {
-	         usb_if_struct_t *if_ptr;
-	         uint32_t ep_cnt = 0;
-	         for_each_if_in_class(if_ptr, usbclassPtr, USB_CLASS_CDC)
-	         {
-	             ep_cnt += if_ptr->endpoints.count;
-	         }
-	         *object = ep_cnt;
-	         break;
-	     }
-	     case USB_INTERFACE_COUNT:
-	     {
-	         usb_if_struct_t *if_ptr = NULL;
-	         uint32_t if_cnt = 0;
-             if_ptr = if_ptr;
-	         for_each_if_in_class(if_ptr, usbclassPtr, USB_CLASS_ALL)
-	         {
-	             if_cnt++;
-	         }
-	         *object = if_cnt;
-	         break;
-	     }
-	     case USB_CDC_INTERFACE_COUNT:
-	     {
-	         usb_if_struct_t *if_ptr = NULL;
-	         uint32_t if_cnt = 0;
-             if_ptr = if_ptr;
-	         for_each_if_in_class(if_ptr, usbclassPtr, USB_CLASS_CDC)
-	         {
-	             if_cnt++;
-	         }
-	         *object = if_cnt;
-	         break;
-	     }
-	     default :
-	         break;
-	 } 
-     return USB_OK;
+    switch(type)
+    {
+        case USB_EP_COUNT:
+        case USB_CDC_EP_COUNT:
+        {
+            uint32_t ep_cnt = 0;
+#if USBCFG_DEV_COMPOSITE
+            if ((interface_index < usbcompinfoPtr->count) && (usbcompinfoPtr->class[interface_index].type == USB_CLASS_CDC))
+            {
+                usbclassPtr = &(usbcompinfoPtr->class[interface_index]);
+            }
+            else
+            {
+                *object = 0;
+                break;
+            }
+#endif
+            ifs_ptr = &usbclassPtr->interfaces;
+            for(uint8_t if_index = 0; if_index < ifs_ptr->count; if_index++)
+            {
+                ep_cnt += ifs_ptr->interface[if_index].endpoints.count;
+            }
+            *object = ep_cnt;
+            break;
+        }
+        case USB_INTERFACE_COUNT:
+        case USB_CDC_INTERFACE_COUNT:
+        {
+#if USBCFG_DEV_COMPOSITE
+            if ((interface_index < usbcompinfoPtr->count) && (usbcompinfoPtr->class[interface_index].type == USB_CLASS_CDC))
+            {
+                usbclassPtr = &(usbcompinfoPtr->class[interface_index]);
+            }
+            else
+            {
+                *object = 0;
+                break;
+            }
+#endif
+            ifs_ptr = &usbclassPtr->interfaces;
+            *object = ifs_ptr->count;
+            break;
+        }
+        default :
+            break;
+    } 
+    return USB_OK;
 }
 /**************************************************************************//*!
  *
  * @name  USB_Map_Ep_To_Struct_Index
  *
- * @brief The funtion maps the endpoint num to the index of the ep data 
+ * @brief The function maps the endpoint num to the index of the ep data 
  *           structure
  *
  * @param handle          handle to identify the controller
@@ -218,7 +217,7 @@ uint8_t USB_Map_Ep_To_Struct_Index(cdc_device_struct_t * cdc_obj_ptr,uint8_t ep_
     uint8_t index = 0;
     uint32_t ep_count;
     
-	USB_Cdc_Get_Desc_Info(cdc_obj_ptr, USB_EP_COUNT, &ep_count);
+    USB_Cdc_Get_Desc_Info(cdc_obj_ptr, USB_EP_COUNT, &ep_count);
     /* map the endpoint num to the index of the endpoint structure */
     for(index = 0; index < ep_count; index++)
     {
@@ -232,7 +231,7 @@ uint8_t USB_Map_Ep_To_Struct_Index(cdc_device_struct_t * cdc_obj_ptr,uint8_t ep_
  *
  * @name  USB_Service_Cdc_Notif
  *
- * @brief The funtion ic callback function of CIC Notification endpoint 
+ * @brief The function ic callback function of CIC Notification endpoint 
  *
   * @param event
  *
@@ -271,15 +270,15 @@ void USB_Service_Cdc_Notif(usb_event_struct_t* event,void* arg)
         }        
     #endif
     
-	cdc_obj_ptr->has_sent_state = FALSE;
+    cdc_obj_ptr->has_sent_state = FALSE;
     if(cdc_obj_ptr->class_specific_callback.callback != NULL) 
     {
         uint8_t event_type = USB_DEV_EVENT_SEND_COMPLETE;
-		cdc_obj_ptr->class_specific_callback.callback(event_type,
-				USB_REQ_VAL_INVALID,
-				NULL,
-				NULL,
-				cdc_obj_ptr->class_specific_callback.arg);
+        cdc_obj_ptr->class_specific_callback.callback(event_type,
+                USB_REQ_VAL_INVALID,
+                NULL,
+                NULL,
+                cdc_obj_ptr->class_specific_callback.arg);
     }   
 }
 
@@ -287,7 +286,7 @@ void USB_Service_Cdc_Notif(usb_event_struct_t* event,void* arg)
  *
  * @name  USB_Service_Dic_Bulk_In
  *
- * @brief The funtion ic callback function of DIC Bulk In Endpoint 
+ * @brief The function ic callback function of DIC Bulk In Endpoint 
  *
  * @param event
  *
@@ -328,11 +327,11 @@ void USB_Service_Dic_Bulk_In(usb_event_struct_t* event,void* arg)
     if(cdc_obj_ptr->class_specific_callback.callback != NULL) 
     {
         event_type = USB_DEV_EVENT_SEND_COMPLETE;
-		cdc_obj_ptr->class_specific_callback.callback(event_type,
-				USB_REQ_VAL_INVALID,
-				&(event->buffer_ptr),
-				&(event->len),
-				cdc_obj_ptr->class_specific_callback.arg);
+        cdc_obj_ptr->class_specific_callback.callback(event_type,
+                USB_REQ_VAL_INVALID,
+                &(event->buffer_ptr),
+                &(event->len),
+                cdc_obj_ptr->class_specific_callback.arg);
     }
 }
 
@@ -340,7 +339,7 @@ void USB_Service_Dic_Bulk_In(usb_event_struct_t* event,void* arg)
  *
  * @name  USB_Service_Dic_Bulk_Out
  *
- * @brief The funtion ic callback function of DIC Bulk Out Endpoint 
+ * @brief The function ic callback function of DIC Bulk Out Endpoint 
  *
  * @param event
  *
@@ -356,11 +355,11 @@ void USB_Service_Dic_Bulk_Out(usb_event_struct_t* event,void* arg)
     event_type = USB_DEV_EVENT_DATA_RECEIVED;
     if(cdc_obj_ptr->class_specific_callback.callback != NULL) 
     {
-	  cdc_obj_ptr->class_specific_callback.callback(event_type,
-			  USB_REQ_VAL_INVALID,
-			  &(event->buffer_ptr),
-			  &(event->len),
-			  cdc_obj_ptr->class_specific_callback.arg);
+      cdc_obj_ptr->class_specific_callback.callback(event_type,
+              USB_REQ_VAL_INVALID,
+              &(event->buffer_ptr),
+              &(event->len),
+              cdc_obj_ptr->class_specific_callback.arg);
     }
  }
 
@@ -368,7 +367,7 @@ void USB_Service_Dic_Bulk_Out(usb_event_struct_t* event,void* arg)
  *
  * @name  USB_Class_CDC_Event
  *
- * @brief The funtion initializes CDC endpoints 
+ * @brief The function initializes CDC endpoints 
  *
  * @param handle   handle to Identify the controller
  * @param event           pointer to event structure
@@ -379,9 +378,11 @@ void USB_Service_Dic_Bulk_Out(usb_event_struct_t* event,void* arg)
  *****************************************************************************/
  void USB_Class_CDC_Event(uint8_t event, void* val,void* arg) 
 {  
-    usb_class_struct_t* usbclassPtr;
 #if USBCFG_DEV_COMPOSITE
-	usb_composite_info_struct_t* usbcompinfoPtr;
+    usb_composite_info_struct_t* usbcompinfoPtr;
+    uint32_t                     interface_index = 0xFF;
+#else
+    usb_class_struct_t*          usbclassPtr;
 #endif
     cdc_device_struct_t * cdc_obj_ptr = NULL;
     cdc_obj_ptr = (cdc_device_struct_t *)arg;
@@ -394,77 +395,105 @@ void USB_Service_Dic_Bulk_Out(usb_event_struct_t* event,void* arg)
         cdc_obj_ptr->desc_callback.set_configuration((uint32_t)cdc_obj_ptr->controller_handle, (uint8_t)(*(uint16_t*)val));
         /* Get class info */
 #if USBCFG_DEV_COMPOSITE
-		cdc_obj_ptr->desc_callback.get_desc_entity((uint32_t)cdc_obj_ptr->controller_handle,
-													USB_COMPOSITE_INFO,
-													(uint32_t*)&usbcompinfoPtr);
-		usbclassPtr = usbcompinfoPtr->class;
+        cdc_obj_ptr->desc_callback.get_desc_entity((uint32_t)cdc_obj_ptr->controller_handle,
+                                                    USB_COMPOSITE_INFO,
+                                                    (uint32_t*)&usbcompinfoPtr);
+        cdc_obj_ptr->desc_callback.get_desc_entity((uint32_t)cdc_obj_ptr,
+            USB_CLASS_INTERFACE_INDEX_INFO, (uint32_t *)&interface_index);
 #else
         cdc_obj_ptr->desc_callback.get_desc_entity((uint32_t)cdc_obj_ptr->controller_handle,
-													USB_CLASS_INFO,
-													(uint32_t*)&usbclassPtr);
+                                                    USB_CLASS_INFO,
+                                                    (uint32_t*)&usbclassPtr);
 #endif
         /* Get count of endpoints for a specific configuration */
-		USB_Cdc_Get_Desc_Info(cdc_obj_ptr, USB_CDC_EP_COUNT, &ep_count);
+        USB_Cdc_Get_Desc_Info(cdc_obj_ptr, USB_CDC_EP_COUNT, &ep_count);
         /* Get count of interfaces for a specific configuration */
-		USB_Cdc_Get_Desc_Info(cdc_obj_ptr, USB_CDC_INTERFACE_COUNT, &max_if_count);
+        USB_Cdc_Get_Desc_Info(cdc_obj_ptr, USB_CDC_INTERFACE_COUNT, &max_if_count);
         cdc_obj_ptr->max_supported_interfaces = max_if_count;
         if(NULL == cdc_obj_ptr->ep)
         {
             index = 0;
-             
-            for_each_ep_in_class(ep_struct_ptr, usbclassPtr, USB_CLASS_CDC)
+#if USBCFG_DEV_COMPOSITE
+            if ((interface_index < usbcompinfoPtr->count) && (usbcompinfoPtr->class[interface_index].type == USB_CLASS_CDC))
             {
-                cdc_obj_ptr->ep[index].endpoint = ep_struct_ptr->ep_num;
-                cdc_obj_ptr->ep[index].type = ep_struct_ptr->type;
-#if CDC_IMPLEMENT_QUEUING
-                cdc_obj_ptr->ep[index].bin_consumer = 0x00;
-                cdc_obj_ptr->ep[index].bin_producer = 0x00;
+                for (int inter_index =0 ;inter_index < usbcompinfoPtr->class[interface_index].interfaces.count;inter_index++)
+                {
+                    for (int ep_index = 0; ep_index < usbcompinfoPtr->class[interface_index].interfaces.interface[inter_index].endpoints.count;ep_index++)
+                    {
+                        ep_struct_ptr = &usbcompinfoPtr->class[interface_index].interfaces.interface[inter_index].endpoints.ep[ep_index];
+                        
+#else
+                    for_each_ep_in_class(ep_struct_ptr, usbclassPtr, USB_CLASS_CDC)
+                    {
 #endif
-                index++;
-            }
-
-        }
-        /* intialize all non control endpoints */            
-        for_each_ep_in_class(ep_struct_ptr, usbclassPtr, USB_CLASS_CDC)
-        {
-            (void)usb_device_init_endpoint(cdc_obj_ptr->controller_handle,
-             ep_struct_ptr,TRUE);
-  
-            /* register callback service for Non Control EndPoints */
-            switch(ep_struct_ptr->type) 
-            {
-                case USB_INTERRUPT_PIPE :
-                    (void)usb_device_register_service(cdc_obj_ptr->controller_handle,
-                        (uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num),
-                        USB_Service_Cdc_Notif,(void *)cdc_obj_ptr);
-                    cdc_obj_ptr->cic_recv_endpoint = USB_CONTROL_ENDPOINT;
-                    cdc_obj_ptr->cic_send_endpoint = ep_struct_ptr->ep_num;
-                    cdc_obj_ptr->cic_send_pkt_size = ep_struct_ptr->size;
-                    break;                              
-                case USB_BULK_PIPE :
-                    if(ep_struct_ptr->direction == USB_RECV) 
-                    {
-                        (void)usb_device_register_service(cdc_obj_ptr->controller_handle,
-                            (uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num),
-                            USB_Service_Dic_Bulk_Out,(void *)cdc_obj_ptr);
-                        cdc_obj_ptr->dic_recv_endpoint = ep_struct_ptr->ep_num;
-                        cdc_obj_ptr->dic_recv_pkt_size = ep_struct_ptr->size;
-                    } 
-                    else
-                    {
-                        (void)usb_device_register_service(cdc_obj_ptr->controller_handle,
-                            (uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num),
-                            USB_Service_Dic_Bulk_In,(void *)cdc_obj_ptr);
-                        cdc_obj_ptr->dic_send_endpoint = ep_struct_ptr->ep_num;
-                        cdc_obj_ptr->dic_send_pkt_size = ep_struct_ptr->size;
+                        cdc_obj_ptr->ep[index].endpoint = ep_struct_ptr->ep_num;
+                        cdc_obj_ptr->ep[index].type = ep_struct_ptr->type;
+#if CDC_IMPLEMENT_QUEUING
+                        cdc_obj_ptr->ep[index].bin_consumer = 0x00;
+                        cdc_obj_ptr->ep[index].bin_producer = 0x00;
+#endif
+                        index++;
                     }
-                    break;
-                default : break;        
+#if USBCFG_DEV_COMPOSITE
+                }
             }
-            
+#endif
         }
-	}
-	else if(event == USB_DEV_EVENT_ENUM_COMPLETE)
+        /* Initialize all non control endpoints */
+#if USBCFG_DEV_COMPOSITE
+        if ((interface_index < usbcompinfoPtr->count) && (usbcompinfoPtr->class[interface_index].type == USB_CLASS_CDC))
+        {
+            for (int inter_index =0 ;inter_index < usbcompinfoPtr->class[interface_index].interfaces.count;inter_index++)
+            {
+                for (int ep_index = 0; ep_index < usbcompinfoPtr->class[interface_index].interfaces.interface[inter_index].endpoints.count;ep_index++)
+                {
+                    ep_struct_ptr = &usbcompinfoPtr->class[interface_index].interfaces.interface[inter_index].endpoints.ep[ep_index];
+#else
+                for_each_ep_in_class(ep_struct_ptr, usbclassPtr, USB_CLASS_CDC)
+                {
+#endif
+                    (void)usb_device_init_endpoint(cdc_obj_ptr->controller_handle,
+                     ep_struct_ptr,TRUE);
+          
+                    /* register callback service for Non Control EndPoints */
+                    switch(ep_struct_ptr->type) 
+                    {
+                        case USB_INTERRUPT_PIPE :
+                            (void)usb_device_register_service(cdc_obj_ptr->controller_handle,
+                                (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))),
+                                USB_Service_Cdc_Notif,(void *)cdc_obj_ptr);
+                            cdc_obj_ptr->cic_recv_endpoint = USB_CONTROL_ENDPOINT;
+                            cdc_obj_ptr->cic_send_endpoint = ep_struct_ptr->ep_num;
+                            cdc_obj_ptr->cic_send_pkt_size = ep_struct_ptr->size;
+                            break;                              
+                        case USB_BULK_PIPE :
+                            if(ep_struct_ptr->direction == USB_RECV) 
+                            {
+                                (void)usb_device_register_service(cdc_obj_ptr->controller_handle,
+                                    (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))),
+                                    USB_Service_Dic_Bulk_Out,(void *)cdc_obj_ptr);
+                                cdc_obj_ptr->dic_recv_endpoint = ep_struct_ptr->ep_num;
+                                cdc_obj_ptr->dic_recv_pkt_size = ep_struct_ptr->size;
+                            } 
+                            else
+                            {
+                                (void)usb_device_register_service(cdc_obj_ptr->controller_handle,
+                                    (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))),
+                                    USB_Service_Dic_Bulk_In,(void *)cdc_obj_ptr);
+                                cdc_obj_ptr->dic_send_endpoint = ep_struct_ptr->ep_num;
+                                cdc_obj_ptr->dic_send_pkt_size = ep_struct_ptr->size;
+                            }
+                            break;
+                        default : break;
+                    }
+                    
+                }
+#if USBCFG_DEV_COMPOSITE
+            }
+        }
+#endif
+    }
+    else if(event == USB_DEV_EVENT_ENUM_COMPLETE)
     {
         /* To Do */
     }
@@ -487,16 +516,16 @@ void USB_Service_Dic_Bulk_Out(usb_event_struct_t* event,void* arg)
  *
  * @name  USB_CDC_Other_Requests
  *
- * @brief The funtion provides flexibilty to add class and vendor specific
+ * @brief The function provides flexibility to add class and vendor specific
  *        requests 
  *
  * @param handle
- * @param setup_packet:     setup packet recieved      
+ * @param setup_packet:     setup packet received      
  * @param data:             data to be send back
  * @param size:             size to be returned    
  *
  * @return status:       
- *                        USB_OK : When Successfull       
+ *                        USB_OK : When Successful       
  *                        Others : When Error
  *
  *****************************************************************************/
@@ -521,7 +550,7 @@ usb_status USB_CDC_Other_Requests
         {
             case SEND_ENCAPSULATED_COMMAND :
                 #if USBCFG_DEV_RNDIS_SUPPORT               
-                    /* Pass the Remote NDIS Control Message supoported by 
+                    /* Pass the Remote NDIS Control Message supported by 
                        802.3 connectionless device to PSTN Layer */
                     status = PSTN_Rndis_Message_Set(cdc_obj_ptr,setup_packet,data,size); 
                 #endif
@@ -529,7 +558,7 @@ usb_status USB_CDC_Other_Requests
                 break;
             case GET_ENCAPSULATED_RESPONSE :
                 #if USBCFG_DEV_RNDIS_SUPPORT               
-                    /* Get the Remote NDIS Control Message supoported by 
+                    /* Get the Remote NDIS Control Message supported by 
                        802.3 connectionless device from  PSTN Layer */
                     status = PSTN_Rndis_Message_Get(cdc_obj_ptr,setup_packet,data,size); 
                 #else
@@ -591,17 +620,17 @@ usb_status USB_CDC_Other_Requests
  *
  * @name  USB_Class_CDC_Init
  *
- * @brief The funtion initializes the Device and Controller layer 
+ * @brief The function initializes the Device and Controller layer 
  *
- * @param *cdc_config_ptr[IN]:  This structure contians configuration parameter
+ * @param *cdc_config_ptr[IN]:  This structure contains configuration parameter
  *                              send by APP to configure CDC class.
  *
  * @return status       
- *         USB_OK           : When Successfull 
+ *         USB_OK           : When Successful 
  *         Others           : Errors
  ******************************************************************************
  *
- *This function initializes the CDC Class layer and layers it is dependednt on 
+ *This function initializes the CDC Class layer and layers it is dependent on 
  *
  *****************************************************************************/
 usb_status USB_Class_CDC_Init
@@ -626,7 +655,9 @@ usb_status USB_Class_CDC_Init
     devicePtr = (cdc_device_struct_t *)cdc_handle;
     /* initialize the Global Variable Structure */
     OS_Mem_zero(devicePtr, sizeof(cdc_device_struct_t));
+#if CDC_IMPLEMENT_QUEUING
     devicePtr->mutex = OS_Mutex_create();
+#endif
     //devicePtr->ep = NULL;
 #if USBCFG_DEV_COMPOSITE
     devicePtr->class_handle = USB_Class_Get_Class_Handle();
@@ -636,18 +667,18 @@ usb_status USB_Class_CDC_Init
         goto error1;
     }
 #else
-	/* Initialize the device layer*/
-	error = usb_device_init(controller_id, &devicePtr->controller_handle);
-	/* +1 is for Control Endpoint */ 
-	if(error != USB_OK)
-	{
-	  goto error1;  
-	}
+    /* Initialize the device layer*/
+    error = usb_device_init(controller_id, &devicePtr->controller_handle);
+    /* +1 is for Control Endpoint */ 
+    if(error != USB_OK)
+    {
+      goto error1;  
+    }
 
-	/* Initialize the generic class functions */
-	devicePtr->class_handle = USB_Class_Init(devicePtr->controller_handle,
-	USB_Class_CDC_Event,USB_CDC_Other_Requests,(void *)cdc_handle,
-	cdc_config_ptr->desc_callback_ptr);
+    /* Initialize the generic class functions */
+    devicePtr->class_handle = USB_Class_Init(devicePtr->controller_handle,
+    USB_Class_CDC_Event,USB_CDC_Other_Requests,(void *)cdc_handle,
+    cdc_config_ptr->desc_callback_ptr);
 
 #endif
     /* Initialize the generic class functions */
@@ -679,8 +710,8 @@ usb_status USB_Class_CDC_Init
     *cdc_handle_ptr = cdc_handle;
 #if USBCFG_DEV_RNDIS_SUPPORT
     devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr->controller_handle,
-	   USB_RNDIS_INFO,
-	   (uint32_t*)&devicePtr->rndis_info);
+       USB_RNDIS_INFO,
+       (uint32_t*)&devicePtr->rndis_info);
 #endif
     usb_device_postinit(controller_id,devicePtr->controller_handle);
    return USB_OK;
@@ -697,16 +728,16 @@ usb_status USB_Class_CDC_Init
  *
  * @name  USB_Class_CDC_Deinit
  *
- * @brief The funtion initializes the Device and Controller layer 
+ * @brief The function initializes the Device and Controller layer 
  *
  * @param cdc_handle
  *
  * @return status       
- *         USB_OK           : When Successfull 
+ *         USB_OK           : When Successful 
  *         Others           : Errors
  ******************************************************************************
  *
- *This function initializes the CDC Class layer and layers it is dependednt on 
+ *This function initializes the CDC Class layer and layers it is dependent on 
  *
  *****************************************************************************/
 usb_status USB_Class_CDC_Deinit
@@ -730,13 +761,8 @@ usb_status USB_Class_CDC_Deinit
         /* deinitialize the device layer*/
         error = usb_device_deinit(devicePtr->controller_handle);
 #endif
-	OS_Mutex_destroy(devicePtr->mutex);
-
-#if 0
-    if(NULL != devicePtr->ep)
-    {
-        OS_Mem_free(devicePtr->ep);
-    }
+#if CDC_IMPLEMENT_QUEUING
+    OS_Mutex_destroy(devicePtr->mutex);
 #endif
     if(error == USB_OK)
         error = USB_Cdc_Free_Handle(cdc_handle);
@@ -744,6 +770,50 @@ usb_status USB_Class_CDC_Deinit
     devicePtr = NULL;
     return error;    
 }
+
+#if USBCFG_DEV_ADVANCED_CANCEL_ENABLE
+/**************************************************************************//*!
+ *
+ * @name  USB_Class_CDC_Cancel
+ *
+ * @brief 
+ *
+ * @param handle          :   handle returned by USB_Class_CDC_Init
+ * @param ep_num          :   endpoint num 
+ * @param direction        :   direction of the endpoint 
+ *
+ * @return status       
+ *         USB_OK           : When Successfully
+ *         Others           : Errors
+ *****************************************************************************/
+
+usb_status USB_Class_CDC_Cancel
+(
+    cdc_handle_t cdc_handle,/*[IN]*/
+    uint8_t ep_num,/*[IN]*/
+    uint8_t direction
+)
+{
+    cdc_device_struct_t*  devicePtr;
+    //usb_endpoints_t *ep_desc_data;    
+    usb_status error = USB_OK;
+    if (cdc_handle == 0)
+    {
+        return USBERR_ERROR;
+    }
+
+    devicePtr = (cdc_device_struct_t *)cdc_handle;
+    if (NULL == devicePtr)
+    {
+        return USBERR_NO_DEVICE_CLASS;
+    }
+    //ep_desc_data = devicePtr->ep_desc_data; 
+    error = usb_device_cancel_transfer(devicePtr->controller_handle, ep_num, direction);
+
+    return error;
+
+}
+#endif
 /**************************************************************************//*!
  *
  * @name  USB_Class_CDC_Send_Data
@@ -756,7 +826,7 @@ usb_status USB_Class_CDC_Deinit
  * @param size            :   length of the transfer   
  *
  * @return status       
- *         USB_OK         : When Successfull 
+ *         USB_OK         : When Successful 
  *         Others         : Errors
  *****************************************************************************/
 usb_status USB_Class_CDC_Send_Data
@@ -786,7 +856,7 @@ usb_status USB_Class_CDC_Send_Data
         index = USB_Map_Ep_To_Struct_Index(cdc_obj_ptr, ep_num); 
                 
         producer = cdc_obj_ptr->ep[index].bin_producer;
-		OS_Mutex_lock(cdc_obj_ptr->mutex);
+        OS_Mutex_lock(cdc_obj_ptr->mutex);
         consumer = cdc_obj_ptr->ep[index].bin_consumer;
                                 
         if(((uint8_t)(producer - consumer)) != (uint8_t)(CDC_MAX_QUEUE_ELEMS))  
@@ -814,7 +884,7 @@ usb_status USB_Class_CDC_Send_Data
         {
             status = USBERR_DEVICE_BUSY; 
         }    
-		OS_Mutex_unlock(cdc_obj_ptr->mutex);
+        OS_Mutex_unlock(cdc_obj_ptr->mutex);
     #endif 
     return status;
 }
@@ -830,7 +900,7 @@ usb_status USB_Class_CDC_Send_Data
  * @param size            :   length of the transfer   
  *
  * @return status       
- *         USB_OK         : When Successfull 
+ *         USB_OK         : When Successful 
  *         Others         : Errors
  *****************************************************************************/
 usb_status USB_Class_CDC_Recv_Data

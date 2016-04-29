@@ -92,10 +92,10 @@ usb_status usb_class_cdc_acm_init
     usb_status                    status = USB_OK;
     pipe_init_struct_t              pipe_init;
 
-    acm_class_intf = (usb_acm_class_intf_struct_t *)OS_Mem_alloc_zero(sizeof(usb_acm_class_intf_struct_t));
+    acm_class_intf = (usb_acm_class_intf_struct_t *)OS_Mem_alloc_uncached_zero(sizeof(usb_acm_class_intf_struct_t));
     if (acm_class_intf == NULL)
     {
-        printf("usb_class_cdc_acm_init fail on memory allocation\n");
+        USB_PRINTF("usb_class_cdc_acm_init fail on memory allocation\n");
         return USBERR_ERROR;
     }
     
@@ -127,7 +127,7 @@ usb_status usb_class_cdc_acm_init
             status = usb_host_open_pipe(acm_class_intf->host_handle, &acm_class_intf->interrupt_pipe, &pipe_init);
             if (status != USB_OK)
             {
-                printf("usb_class_cdc_acm_init fail to open in pipe\n");
+                USB_PRINTF("usb_class_cdc_acm_init fail to open in pipe\n");
                 *class_handle_ptr = (class_handle)acm_class_intf;
                 return USBERR_ERROR;
             }
@@ -197,7 +197,7 @@ usb_status usb_class_cdc_acm_pre_deinit
     usb_status                    status = USB_OK;
     if (acm_class_intf == NULL)
     {
-        printf("usb_class_cdc_acm_pre_deinit fail\n");
+        USB_PRINTF("usb_class_cdc_acm_pre_deinit fail\n");
         return USBERR_ERROR;
     }
     
@@ -206,7 +206,7 @@ usb_status usb_class_cdc_acm_pre_deinit
         status = usb_host_cancel(acm_class_intf->host_handle, acm_class_intf->interrupt_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close pipe\n");
         }
     }
     
@@ -232,7 +232,7 @@ usb_status usb_class_cdc_acm_deinit
 
     if (acm_class_intf == NULL)
     {
-        printf("usb_class_cdc_acm_deinit fail\n");
+        USB_PRINTF("usb_class_cdc_acm_deinit fail\n");
         return USBERR_ERROR;
     }
     
@@ -241,7 +241,7 @@ usb_status usb_class_cdc_acm_deinit
         status = usb_host_close_pipe(acm_class_intf->host_handle, acm_class_intf->interrupt_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_cdc_acm_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_cdc_acm_deinit to close pipe\n");
         }
     }
     
@@ -287,7 +287,7 @@ usb_status usb_class_cdc_data_init
     data_class_intf = (usb_data_class_intf_struct_t *)OS_Mem_alloc_zero(sizeof(usb_data_class_intf_struct_t));
     if (data_class_intf == NULL)
     {
-        printf("usb_class_cdc_data_init fail on memory allocation\n");
+        USB_PRINTF("usb_class_cdc_data_init fail on memory allocation\n");
         return USBERR_ERROR;
     }
     
@@ -317,7 +317,7 @@ usb_status usb_class_cdc_data_init
 			 pipe_init.interval 		= ep_desc->iInterval;
 			 pipe_init.flags			= 0;
 			 pipe_init.dev_instance 	= data_class_intf->dev_handle;
-			 pipe_init.nak_count		= 30;
+			 pipe_init.nak_count		= USBCFG_HOST_DEFAULT_MAX_NAK_COUNT;
 			 status = usb_host_open_pipe(data_class_intf->host_handle, (usb_pipe_handle *)&data_class_intf->in_pipe, &pipe_init);
 		 }
 		 else if(!(ep_desc->bEndpointAddress & IN_ENDPOINT) && ((ep_desc->bmAttributes & EP_TYPE_MASK) == BULK_ENDPOINT))
@@ -329,12 +329,12 @@ usb_status usb_class_cdc_data_init
 			 pipe_init.interval 		= ep_desc->iInterval;
 			 pipe_init.flags			= 0;
 			 pipe_init.dev_instance 	= data_class_intf->dev_handle;
-			 pipe_init.nak_count		= 3000;
+			 pipe_init.nak_count		= USBCFG_HOST_DEFAULT_MAX_NAK_COUNT;
 			 status = usb_host_open_pipe(data_class_intf->host_handle, (usb_pipe_handle *)&data_class_intf->out_pipe, &pipe_init);
 		 }
 		 if (status != USB_OK)
 		 {
-			 printf("usb_class_cdc_data_init fail to open in pipe\n");
+			 USB_PRINTF("usb_class_cdc_data_init fail to open in pipe\n");
 			 *class_handle_ptr = (class_handle)data_class_intf;
 			 return USBERR_ERROR;
 		 }
@@ -350,7 +350,7 @@ usb_status usb_class_cdc_data_init
 	    ** NOTE!!!
 	    ** This hack is not very clean. We need to maximize number of retries to minimize the time of
 	    ** transaction (minimize task's time while waiting for 1 transaction to be done (with or without data))
-	    ** The time depends on user expecatation of the read() latency, on the delay between 2 NAKs and on number
+	    ** The time depends on user expectation of the read() latency, on the delay between 2 NAKs and on number
 	    ** of NAKs to be performed.
 	    ** The workaround is to limit amount of retries for the pipe maximally to 3.
 	    ** Number 3 is hard-coded here for now.
@@ -441,7 +441,7 @@ usb_status usb_class_cdc_data_pre_deinit
     usb_status                    status = USB_OK;
     if (data_class_intf == NULL)
     {
-        printf("usb_class_cdc_data_pre_deinit fail\n");
+        USB_PRINTF("usb_class_cdc_data_pre_deinit fail\n");
         return USBERR_ERROR;
     }
     
@@ -450,7 +450,7 @@ usb_status usb_class_cdc_data_pre_deinit
         status = usb_host_cancel(data_class_intf->host_handle, data_class_intf->in_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close pipe\n");
         }
     }
     if (data_class_intf->out_pipe != NULL)
@@ -458,7 +458,7 @@ usb_status usb_class_cdc_data_pre_deinit
         status = usb_host_cancel(data_class_intf->host_handle, data_class_intf->out_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close pipe\n");
         }
     }
     return USB_OK;
@@ -483,7 +483,7 @@ usb_status usb_class_cdc_data_deinit
     usb_status                    status = USB_OK;
     if (data_class_intf == NULL)
     {
-        printf("usb_class_cdc_data_deinit fail\n");
+        USB_PRINTF("usb_class_cdc_data_deinit fail\n");
         return USBERR_ERROR;
     }
     
@@ -492,7 +492,7 @@ usb_status usb_class_cdc_data_deinit
         status = usb_host_close_pipe(data_class_intf->host_handle, data_class_intf->in_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_cdc_data_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_cdc_data_deinit to close pipe\n");
         }
     }
     if (data_class_intf->out_pipe != NULL)
@@ -500,7 +500,7 @@ usb_status usb_class_cdc_data_deinit
         status = usb_host_close_pipe(data_class_intf->host_handle, data_class_intf->out_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_cdc_data_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_cdc_data_deinit to close pipe\n");
         }
     }
     
@@ -566,7 +566,7 @@ static void usb_class_cdc_bind_ctrl_interface
       /* [IN] pointer to data interface */
       cdc_class_call_struct_t *                data_class_ptr,
       
-      /* [IN] pointer to (control) interface desriptor to be used to control */
+      /* [IN] pointer to (control) interface descriptor to be used to control */
       void *                              control_descriptor_ptr
    )
 {
@@ -784,7 +784,7 @@ usb_status usb_class_cdc_get_acm_descriptors
 			switch (fd->header.bDescriptorSubtype) {
 				case USB_DESC_SUBTYPE_CS_HEADER:
 					*header_desc = &fd->header;
-					if (USB_SHORT_LE_TO_HOST(*(uint16_t*)((*header_desc)->bcdCDC)) > 0x0110)
+					if (((((*header_desc)->bcdCDC[1]) << 8) + (*header_desc)->bcdCDC[0]) > 0x0110)
 						status = USBERR_INIT_FAILED;
 					break;
 				case USB_DESC_SUBTYPE_CS_UNION:

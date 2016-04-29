@@ -42,11 +42,9 @@
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
-//#include "board.h"
+#include "board.h"
 #include "fsl_debug_console.h"
 #include "fsl_port_hal.h"
-#include "fsl_gpio_common.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -106,9 +104,9 @@ TASK_TEMPLATE_STRUCT  MQX_template_list[] =
 /*****************************************************************************
  * Local Functions Prototypes
  *****************************************************************************/
-void USB_App_Callback(uint8_t event_type, void* val,void* arg);
+void USB_App_Device_Callback(uint8_t event_type, void* val,void* arg);
 void USB_Notif_Callback(uint8_t event_type,void* val,void* arg);
-uint8_t USB_App_Param_Callback(uint8_t request, uint16_t value, uint8_t ** data, 
+uint8_t USB_App_Class_Callback(uint8_t request, uint16_t value, uint8_t ** data, 
     uint32_t* size,void* arg); 
 
 /*****************************************************************************
@@ -146,7 +144,7 @@ void USB_Prepare_Data(void)
 uint8_t endpoint_memory[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
 /******************************************************************************
  * 
- *    @name        USB_App_Param_Callback
+ *    @name        USB_App_Class_Callback
  *    
  *    @brief       This function handles the callback for Get/Set report req  
  *                  
@@ -160,7 +158,7 @@ uint8_t endpoint_memory[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
  *                  else return error
  *
  *****************************************************************************/
- uint8_t USB_App_Param_Callback
+ uint8_t USB_App_Class_Callback
  (
     uint8_t request, 
     uint16_t value, 
@@ -169,36 +167,36 @@ uint8_t endpoint_memory[5] = {0x01, 0x02, 0x03, 0x04, 0x05};
     void* arg
 ) 
 {
-	uint8_t error = USB_OK;
-	uint8_t index;
+    uint8_t error = USB_OK;
+    uint8_t index;
 
-	if((request == USB_DEV_EVENT_SEND_COMPLETE) && (value == USB_REQ_VAL_INVALID))
+    if((request == USB_DEV_EVENT_SEND_COMPLETE) && (value == USB_REQ_VAL_INVALID))
      {
-	      if(arg != NULL)
-	      {
-	       		USB_Prepare_Data();
-				USB_Class_Audio_Send_Data(g_app_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);				
-	      }
-	      return error;
+          if(arg != NULL)
+          {
+                USB_Prepare_Data();
+                USB_Class_Audio_Send_Data(g_app_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);              
+          }
+          return error;
     }
-	else if (request == GET_MEM)
-    	{
-     	*data = &endpoint_memory[value];
-    	}
-	else if (request == SET_MEM)
-    	{
-	    	 for(index = 0; index < *size ; index++) 
-		 {   /* copy the report sent by the host */			  
-			 endpoint_memory[value + index] = *(*data + index);
-		 }
-		*size = 0;	
-    	}
-	error = USB_Class_Get_feature(0x0,value,request, data);
-	if(error == USBERR_INVALID_REQ_TYPE)
-		error = USB_Class_Set_feature(0x0, value,request,data);
-	
-	return error; 
-}	
+    else if (request == GET_MEM)
+        {
+        *data = &endpoint_memory[value];
+        }
+    else if (request == SET_MEM)
+        {
+             for(index = 0; index < *size ; index++) 
+         {   /* copy the report sent by the host */           
+             endpoint_memory[value + index] = *(*data + index);
+         }
+        *size = 0;  
+        }
+    error = USB_Class_Get_feature(0x0,value,request, data);
+    if(error == USBERR_INVALID_REQ_TYPE)
+        error = USB_Class_Set_feature(0x0, value,request,data);
+    
+    return error; 
+}   
 
  /*****************************************************************************
  *  
@@ -219,13 +217,13 @@ void APP_init(void)
     wav_buff = OS_Mem_alloc_uncached_align(AUDIO_ENDPOINT_PACKET_SIZE, 32);
     if(wav_buff == NULL)
     {
-        printf("OS_Mem_alloc_uncached_align fail in audio generator example \r\n");
+        USB_PRINTF("OS_Mem_alloc_uncached_align fail in audio generator example \r\n");
         return ;
     }
 #endif
-   audio_config.audio_application_callback.callback = USB_App_Callback;
+   audio_config.audio_application_callback.callback = USB_App_Device_Callback;
    audio_config.audio_application_callback.arg = &g_app_handle;
-   audio_config.class_specific_callback.callback = USB_App_Param_Callback;
+   audio_config.class_specific_callback.callback = USB_App_Class_Callback;
    audio_config.class_specific_callback.arg = &g_app_handle;
    audio_config.desc_callback_ptr = &desc_callback;
 
@@ -237,20 +235,20 @@ void APP_init(void)
 
 void APP_task(void)
 {
-	while(!start_app)
-	{
-	 //OS_Time_delay(1);
-	}
-	start_app = FALSE;
-	printf("USB_Prepare_Data \r\n");   
-	USB_Prepare_Data();
-	USB_Class_Audio_Send_Data(g_app_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);
+    while(!start_app)
+    {
+     //OS_Time_delay(1);
+    }
+    start_app = FALSE;
+    USB_PRINTF("USB_Prepare_Data \r\n");   
+    USB_Prepare_Data();
+    USB_Class_Audio_Send_Data(g_app_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);
 }
 
 
 /******************************************************************************
  * 
- *    @name        USB_App_Callback
+ *    @name        USB_App_Device_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -261,7 +259,7 @@ void APP_task(void)
  *    @return      None
  *
  *****************************************************************************/
-void USB_App_Callback(uint8_t event_type, void* val,void* arg) 
+void USB_App_Device_Callback(uint8_t event_type, void* val,void* arg) 
 {
    UNUSED_ARGUMENT (arg)
    UNUSED_ARGUMENT (val)
@@ -273,7 +271,7 @@ void USB_App_Callback(uint8_t event_type, void* val,void* arg)
    else if(event_type == USB_DEV_EVENT_ENUM_COMPLETE) 
    {
        start_app=TRUE; 
-       printf("Audio generator is working ... \r\n");       
+       USB_PRINTF("Audio generator is working ... \r\n");       
    }
    else if(event_type == USB_DEV_EVENT_ERROR)
    {
@@ -298,10 +296,10 @@ void Main_Task
    )
 {   
     UNUSED_ARGUMENT (param)
-	APP_init();  
+    APP_init();  
     for ( ; ; )
     {
-    	APP_task();
+        APP_task();
 
     } 
 }
@@ -316,27 +314,27 @@ static void Task_Start(void* param)
   APP_init();
   while(1)
   {
-	while(!start_app)
-	{
-	 //OS_Time_delay(1);
-	}
-	start_app = FALSE;
-	printf("USB_Prepare_Data \r\n");   
-	USB_Prepare_Data();
-	USB_Class_Audio_Send_Data(g_app_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);
+    while(!start_app)
+    {
+     //OS_Time_delay(1);
+    }
+    start_app = FALSE;
+    USB_PRINTF("USB_Prepare_Data \r\n");   
+    USB_Prepare_Data();
+    USB_Class_Audio_Send_Data(g_app_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);
     
         //OSA_TaskDestroy(OSA_TaskGetHandler());
   }
 #else
        APP_init();
-  	while(!start_app)
-	{
-	 //OS_Time_delay(1);
-	}
-	start_app = FALSE;
-	printf("USB_Prepare_Data \r\n");   
-	USB_Prepare_Data();
-	USB_Class_Audio_Send_Data(g_app_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);
+    while(!start_app)
+    {
+     //OS_Time_delay(1);
+    }
+    start_app = FALSE;
+    USB_PRINTF("USB_Prepare_Data \r\n");   
+    USB_Prepare_Data();
+    USB_Class_Audio_Send_Data(g_app_handle, AUDIO_ENDPOINT, wav_buff, AUDIO_ENDPOINT_PACKET_SIZE);
 #endif
 }
 
@@ -352,7 +350,13 @@ TASK_TEMPLATE_STRUCT  MQX_template_list[] =
 #if defined(FSL_RTOS_MQX)
 void Main_Task(uint32_t param)
 #else
+
+#if defined(__CC_ARM) || defined(__GNUC__)
+int main(void)
+#else
 void main(void)
+#endif
+
 #endif
 {
     OSA_Init();
@@ -362,6 +366,9 @@ void main(void)
     OS_Task_create(Task_Start, NULL, 9L, 3000L, "task_start", NULL); 
 
     OSA_Start();
+#if (!defined(FSL_RTOS_MQX))&(defined(__CC_ARM) || defined(__GNUC__))
+    return 1;
+#endif
 }
 #endif
 

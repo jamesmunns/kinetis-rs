@@ -22,7 +22,7 @@
 *
 **************************************************************************
 *
-* $FileName: usb_audio_class.h$
+* $FileName: usb_audio.h$
 * $Version : 
 * $Date    : 
 *
@@ -39,8 +39,8 @@
  * Includes
  *****************************************************************************/
 #include "usb_class.h"
+#include "usb_audio_config.h"
 
-#define AUDIO_IMPLEMENT_QUEUING (0)
 /******************************************************************************
  * Constants - None
  *****************************************************************************/
@@ -48,9 +48,6 @@
 /******************************************************************************
  * Macro's
  *****************************************************************************/
-#define AUDIO_MAX_QUEUE_ELEMS             (4)
-#define MAX_AUDIO_CLASS_EP_NUM            (0x01)
-#define MAX_AUDIO_CLASS_UT_NUM            (0x08)
 
 /* Code of bmRequest Type */
 #define SET_REQUEST_ITF                   (0x21)
@@ -117,7 +114,6 @@
 #define SAMPLING_FREQ_CONTROL             (0x01)
 #define PITCH_CONTROL                     (0x02)
 
-#define MAX_AUDIO_DEVICE                  (0x01)
 
 #if AUDIO_IMPLEMENT_QUEUING
 typedef struct _audio_queue_struct

@@ -37,7 +37,7 @@
 #ifndef _MOUSE_H
 #define _MOUSE_H
 
-#include "usb_descriptor.h"
+
 
 /******************************************************************************
  * Constants - None

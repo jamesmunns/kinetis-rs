@@ -141,7 +141,7 @@
 
 /* Software timer definitions. */
 #define configUSE_TIMERS                          1
-#define configTIMER_TASK_PRIORITY                 17
+#define configTIMER_TASK_PRIORITY                 ( configMAX_PRIORITIES - 1)
 #define configTIMER_QUEUE_LENGTH                  10
 #define configTIMER_TASK_STACK_DEPTH              ( configMINIMAL_STACK_SIZE * 2 )
 
@@ -161,6 +161,7 @@
 #define INCLUDE_xTaskGetIdleTaskHandle            0
 #define INCLUDE_eTaskGetState                     0
 #define INCLUDE_pcTaskGetTaskName                 0
+#define INCLUDE_xEventGroupSetBitFromISR          1
 #define INCLUDE_xTimerPendFunctionCall            1
 /* -------------------------------------------------------------------- */
 /* Macros to identify the compiler used: */

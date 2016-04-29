@@ -32,8 +32,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "fsl_misc_utilities.h"
+#if (defined(__GNUC__) && (!defined(KDS)) && (!defined(ATOLLIC)))
+#include <errno.h>
+#endif
+#include "fsl_debug_console.h"
 
-#if (defined(KEIL))
+#if (defined(__CC_ARM))
 
 /*FUNCTION**********************************************************************
  *
@@ -63,6 +67,47 @@ int _isatty (int fd)
 
 #endif
 
+#if (defined(__GNUC__) && (!defined(KDS)) && (!defined(ATOLLIC)))
+caddr_t
+_sbrk (int incr)
+{
+  extern char   end asm ("end");
+  extern char   heap_limit asm ("__HeapLimit");
+  static char * heap_end;
+  char *        prev_heap_end;
+
+  if (heap_end == NULL)
+    heap_end = & end;
+
+  prev_heap_end = heap_end;
+
+  if (heap_end + incr > &heap_limit)
+    {
+      errno = ENOMEM;
+      return (caddr_t) -1;
+    }
+
+  heap_end += incr;
+
+  return (caddr_t) prev_heap_end;
+}
+#endif
+
+/*FUNCTION**********************************************************************
+ *
+ * Function Name : assert_func
+ * Description   : Print out failure messages.
+ * This function is used to print out failure messages.
+ *
+ *END**************************************************************************/
+void assert_func(const char *file, int line, const char *func, const char *failedExpr)
+{
+    PRINTF("ASSERT ERROR \" %s \": file \"%s\" Line \"%d\" function name \"%s\" \n", failedExpr, file , line, func);
+
+    for (;;)
+    {}
+
+}
 /*******************************************************************************
  * EOF
  ******************************************************************************/

@@ -34,26 +34,12 @@
 #define _USB_OSADAPTER_SDK_H 1
 
 #include "fsl_os_abstraction.h"
+#include "compiler.h"
 
-#if ((defined __CWCC__)||(defined __GNUC__))
-#define PACKED_STRUCT_BEGIN
-#define PACKED_STRUCT_END   __attribute__((__packed__))
-
-#define PACKED_UNION_BEGIN
-#define PACKED_UNION_END    __attribute__((__packed__))
-#elif defined __IAR_SYSTEMS_ICC__
-#define PACKED_STRUCT_BEGIN  __packed
-#define PACKED_STRUCT_END
-  
-#define PACKED_UNION_BEGIN   __packed
-#define PACKED_UNION_END     
-#elif (defined __CC_ARM)
-#define PACKED_STRUCT_BEGIN   _Pragma("pack(1)")
-#define PACKED_STRUCT_END    _Pragma("pack()")
-  
-#define PACKED_UNION_BEGIN    _Pragma("pack()")
-#define PACKED_UNION_END    _Pragma("pack()")
-#endif 
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "fsl_debug_console.h"
 
 #define ENDIANNESS           1
 
@@ -87,7 +73,7 @@
 //extern void * memset (void *, int32_t, unsigned);
 //extern int32_t printf_kinetis (const char *fmt, ...);
 
-//#define printf			                               printf_kinetis
+#define USB_PRINTF			                               PRINTF
 //#define OS_install_isr                                 
 #define OS_install_isr(num, isr, data)   OSA_InstallIntHandler(num, isr) 
 #define OS_intr_init(num, prior, subprior, enable)     	NVIC_SetPriority(num, prior); \

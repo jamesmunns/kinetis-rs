@@ -49,14 +49,12 @@
 //#include "fsl_usb_features.h"
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
-//#include "board.h"
+#include "board.h"
 #include "fsl_debug_console.h"
-#include "fsl_gpio_common.h"
-
 #include "fsl_port_hal.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "uart/fsl_uart_driver.h"
+#include "fsl_uart_driver.h"
 #endif
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
@@ -160,7 +158,7 @@ extern void Mouse_Task_Stun(void* param);
 
 TASK_TEMPLATE_STRUCT  MQX_template_list[] =
 {
-   { MAIN_TASK,      Main_Task,      3000L,  9L, "Main",      MQX_AUTO_START_TASK},
+   { MAIN_TASK,      Main_Task,      3000L,  9L, "Main",      MQX_AUTO_START_TASK | MQX_TIME_SLICE_TASK},
    //{ KEYBOARD_TASK,  Keyboard_Task,  3000L,  9L, "Keyboard",  MQX_TIME_SLICE_TASK},
    //{ MOUSE_TASK,     Mouse_Task,     3000L,  9L, "Mouse",     MQX_TIME_SLICE_TASK},
    { 0L,             0L,             0L,     0L, 0L,          0L }
@@ -208,16 +206,16 @@ void usb_host_hid_unsupported_device_event
     {
         pDeviceIntf = (usb_device_interface_struct_t*)intf_handle;
         intf_ptr    = pDeviceIntf->lpinterfaceDesc;
-        printf("----- Unsupported Interface of attached Device -----\r\n");
-        printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-        printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-        printf("  Class = %d", intf_ptr->bInterfaceClass);
-        printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-        printf("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+        USB_PRINTF("----- Unsupported Interface of attached Device -----\r\n");
+        USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+        USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+        USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+        USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+        USB_PRINTF("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
     }
     else if (USB_ATTACH_DEVICE_NOT_SUPPORT == event_code)
     {
-        printf("----- Unsupported Device attached -----\r\n");
+        USB_PRINTF("----- Unsupported Device attached -----\r\n");
     }
 }
 
@@ -234,7 +232,7 @@ void APP_init(void)
 	status = usb_host_init(CONTROLLER_ID, &g_host_handle);
     if(status != USB_OK) 
     {
-        printf("\r\nUSB Host Initialization failed! STATUS: 0x%x", status);
+        USB_PRINTF("\r\nUSB Host Initialization failed! STATUS: 0x%x", status);
         return;
     }
 	/*
@@ -244,56 +242,56 @@ void APP_init(void)
 	status = usb_host_register_driver_info(g_host_handle, (void *)DriverInfoTable);
     if(status != USB_OK) 
     {         
-        printf("\r\nUSB Initialization driver info failed! STATUS: 0x%x", status);
+        USB_PRINTF("\r\nUSB Initialization driver info failed! STATUS: 0x%x", status);
   	    return;
     }
 
     status = usb_host_register_unsupported_device_notify(g_host_handle, usb_host_hid_unsupported_device_event);
     if(status != USB_OK) 
     {         
-        printf("\r\nUSB Initialization driver info failed! STATUS: 0x%x", status);
+        USB_PRINTF("\r\nUSB Initialization driver info failed! STATUS: 0x%x", status);
   	    return;
     }
   
     mouse_usb_event = OS_Event_create(0);/* manually clear */
     if (mouse_usb_event == NULL)
     {
-        printf("mouse_usb_event create failed\r\n");
+        USB_PRINTF("mouse_usb_event create failed\r\n");
         return;
     }
     mouse_hid_com = (hid_command_t*) OS_Mem_alloc_zero(sizeof(hid_command_t));
     if (mouse_hid_com == NULL)
     {
-        printf("mouse_hid_com create failed\r\n");
+        USB_PRINTF("mouse_hid_com create failed\r\n");
         return;
     }
 
     kbd_usb_event = OS_Event_create(0);/* manually clear */
     if (kbd_usb_event == NULL)
     {
-        printf("kbd_usb_event create failed\r\n");
+        USB_PRINTF("kbd_usb_event create failed\r\n");
         return;
     }
     kbd_hid_com = (hid_command_t*) OS_Mem_alloc_zero(sizeof(hid_command_t));
     if (kbd_hid_com == NULL)
     {
-        printf("kbd_hid_com create failed\r\n");
+        USB_PRINTF("kbd_hid_com create failed\r\n");
         return;
     }
 
     if ((uint32_t)OS_TASK_ERROR == OS_Task_create(USB_KEYBOARD_TASK_ADDRESS, (void*)g_host_handle, (uint32_t)USB_KEYBOARD_TASK_PRIORITY, USB_KEYBOARD_TASK_STACKSIZE, USB_KEYBOARD_TASK_NAME, &opt))
     {
-        printf("keyboard task create failed\r\n");
+        USB_PRINTF("keyboard task create failed\r\n");
         return;
     }
 
     if ((uint32_t)OS_TASK_ERROR == OS_Task_create(USB_MOUSE_TASK_ADDRESS, (void*)g_host_handle, (uint32_t)USB_MOUSE_TASK_PRIORITY, USB_MOUSE_TASK_STACKSIZE, USB_MOUSE_TASK_NAME, &opt))
     {
-        printf("mouse task create failed\r\n");
+        USB_PRINTF("mouse task create failed\r\n");
         return;
     }
      
-    printf("\fUSB HID Mouse+Keyboard\r\nWaiting for USB Mouse or Keyboard to be attached...\r\n"); 
+    USB_PRINTF("\fUSB HID Mouse+Keyboard\r\nWaiting for USB Mouse or Keyboard to be attached...\r\n"); 
 }
 
 void APP_task()
@@ -313,7 +311,7 @@ void APP_task()
 void Main_Task ( uint32_t param )
 {
     APP_init();
-
+    OS_Task_suspend(0);
    /*
     ** Infinite loop, waiting for events requiring action
     */

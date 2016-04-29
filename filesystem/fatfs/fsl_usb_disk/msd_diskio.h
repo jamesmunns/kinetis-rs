@@ -40,6 +40,7 @@
 #include "usb_host_msd_ufi.h"
 #include "diskio.h"
 
+#define THROUGHPUT_TEST_ENABLE                                  (0)
 #define USBCFG_MAX_INSTANCE                                     4
 /* Storage information*/
 #define MSD_DEFAULT_SECTOR_SIZE                                 (512)

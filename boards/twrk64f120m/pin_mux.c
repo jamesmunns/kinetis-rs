@@ -337,6 +337,17 @@ void configure_gpio_i2c_pins(uint32_t instance)
   PORT_HAL_SetMuxMode(PORTC_BASE,11u,kPortMuxAsGpio);
 }
 
+void configure_cmp_pins(uint32_t instance)
+{
+    switch (instance)
+    {
+        case 0U:
+            PORT_HAL_SetMuxMode(PORTC_BASE, 6U, kPortPinDisabled); /* PTC6 - CMP0_IN0. */
+            break;
+        default:
+            break;
+    }
+}
 /* END pin_mux. */
 /*!
 ** @}

@@ -65,65 +65,89 @@
  
 typedef uint32_t msd_handle_t;
 
-/* structure to hold a request in the endpoint queue */
+/*!
+ * @brief MSC app data structure.
+ *
+ * Holds the information of msc app data struct
+ *
+ */
 typedef struct _msc_app_data_struct
 {
-    uint8_t*                data_ptr;         /* pointer to buffer       */     
-    uint32_t                data_size;        /* buffer size of endpoint */
+    uint8_t*                data_ptr;         /*!< pointer to buffer */     
+    uint32_t                data_size;        /*!< buffer size of endpoint*/
 }msc_app_data_struct_t;
 
+/*!
+ * @brief MSC detailed information about the LAB structure.
+ *
+ * Holds the detailed information about the LAB
+ *
+ */
 typedef struct _device_lba_info_struct
 {
-    uint32_t                total_lba_device_supports;/* lab : LOGICAL ADDRESS BLOCK */ 
-    uint32_t                length_of_each_lab_of_device;
-    uint8_t                 num_lun_supported; 
+    uint32_t                total_lba_device_supports;    /*!< blocks number */ 
+    uint32_t                length_of_each_lab_of_device; /*!< size of each block*/
+    uint8_t                 num_lun_supported;            /*!< number of LUN*/
 }device_lba_info_struct_t;
 
+/*!
+ * @brief MSC buffer information structure.
+ *
+ * Holds the detailed information about the buffer
+ *
+ */
 typedef struct _msd_buffers_info
 {
-     uint8_t*               msc_bulk_in_ptr;
-     uint8_t*               msc_bulk_out_ptr;
-     uint32_t               msc_bulk_in_size;
-     uint32_t               msc_bulk_out_size;
+     uint8_t*               msc_bulk_in_ptr;  /*!< pointer to bulk in buffer*/
+     uint8_t*               msc_bulk_out_ptr; /*!< pointer to bulk out buffer*/
+     uint32_t               msc_bulk_in_size; /*!< size of bulk in buffer*/
+     uint32_t               msc_bulk_out_size;/*!< size of bulk out buffer*/
 }msc_buff_info_t;
 
-/* MSD Configuration structure to be passed by APP*/
+/*!
+ * @brief MSD Configuration structure to be passed by APP
+ *
+ * Holds the detailed information about the MSC configuration
+ *
+ */
 typedef struct _msc_config_struct
 {
     /* SCSI related initialization data. To be moved to SCSI layer.*/
      
-     usb_application_callback_struct_t          msc_application_callback;
-     usb_vendor_req_callback_struct_t           vendor_req_callback;
-     usb_class_specific_callback_struct_t       class_specific_callback;
-     usb_desc_request_notify_struct_t*          desc_callback_ptr; 
+     usb_application_callback_struct_t          msc_application_callback; /*!< application callback function to handle the Device status related event*/
+     usb_vendor_req_callback_struct_t           vendor_req_callback;      /*!< application callback function to handle the vendor request related event, reserved for future use*/
+     usb_class_specific_callback_struct_t       class_specific_callback;  /*!< application callback function to handle all the class related event*/
+     usb_desc_request_notify_struct_t*          desc_callback_ptr;        /*!< descriptor related callback function data structure*/
 }msc_config_struct_t;
 
+/*!
+ * @brief MSC  logical block access information structure.
+ *
+ * Holds the information used to perform the logical block access
+ *
+ */
 typedef struct _lba_app_struct
 {
-    uint32_t             offset;
-    uint32_t             size;
-    uint8_t*             buff_ptr;
+    uint32_t             offset;   /*!< offset of target block need to access*/
+    uint32_t             size;     /*!< size need to access*/
+    uint8_t*             buff_ptr; /*!< used to save the content by access the target block*/
 }lba_app_struct_t;
 extern void USB_Class_Periodic_Task(void);
 #define USB_MSC_Periodic_Task USB_Class_Periodic_Task 
 /******************************************************************************
  * Global Functions
  *****************************************************************************/
-/**************************************************************************//*!
- *
- * @name  USB_Class_MSC_Init
- *
- * @brief The funtion initializes the Device and Controller layer 
- *
- * @param msd_config_ptr    : Configuration paramemter strucutre pointer
- *                            passed by APP.
- * @return status       
- *         MSD Handle           : When Successfull 
- *         Others           : Errors
- ******************************************************************************
- *
- *This function initializes the MSC Class layer and layers it is dependednt on 
- ******************************************************************************/
+/*!
+* @brief The funtion initializes the Device and Controller layer.
+*
+* The application calls this API function to initialize the MSD class, the underlying layers, and
+* the controller hardware.
+*
+* @param controller_id controller ID, such as USB_CONTROLLER_KHCI_0
+* @param msd_config_ptr MSD configuration structure
+* @param msd_handle pointer point to the initialized MSD class
+* @return USB_OK-Success/Others-Fail
+*/
 extern usb_status USB_Class_MSC_Init
 (
     uint8_t controller_id,
@@ -131,23 +155,15 @@ extern usb_status USB_Class_MSC_Init
     msd_handle_t *  msd_handle
 ); 
 
-
-/**************************************************************************//*!
+/*!
+ * @brief The funtion De-initializes the Device and Controller layer.
  *
- * @name  USB_Class_MSC_Deinit
+ * The application calls this API function to un-initialize the MSD class, the underlying layers, and
+ * the controller hardware.
  *
- * @brief The funtion initializes the Device and Controller layer 
- *
- * @param cdc_handle
- *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- ******************************************************************************
- *
- *This function initializes the MSC Class layer and layers it is dependednt on 
- *
- *****************************************************************************/
+ * @param msd_handle MSC class handler  
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_MSC_Deinit
 (
     msd_handle_t msd_handle

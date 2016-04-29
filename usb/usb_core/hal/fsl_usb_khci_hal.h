@@ -43,27 +43,27 @@
   #if (defined(CPU_MK22F51212))
     #include "MK22F51212.h"
     #include "MK22F51212_usb.h"
-    #define NEW_USB_HAL_ENABLE  1
+    #define NEW_USB_HAL_ENABLE  0
   #elif (defined(CPU_MK22F12810))
     #include "MK22F12810.h"
     #include "MK22F12810_usb.h"
-    #define NEW_USB_HAL_ENABLE  1
+    #define NEW_USB_HAL_ENABLE  0
   #elif (defined(CPU_MK70F12))
     #include "MK70F12.h"
     #include "MK70F12_usb.h"
-    #define NEW_USB_HAL_ENABLE  1
+    #define NEW_USB_HAL_ENABLE  0
   #elif (defined(CPU_MKL25Z)) 
     #include "MKL25Z4.h"
     #include "MKL25Z4_usb.h"
-    #define NEW_USB_HAL_ENABLE  1
+    #define NEW_USB_HAL_ENABLE  0
   #elif (defined(CPU_MKL26Z)) 
     #include "MKL26Z4.h"
     #include "MKL26Z4_usb.h"
-    #define NEW_USB_HAL_ENABLE  1
+    #define NEW_USB_HAL_ENABLE  0
   #elif (defined(CPU_MK64F12))
     #include "MK64F12.h"
     #include "MK64F12_usb.h"
-    #define NEW_USB_HAL_ENABLE  1
+    #define NEW_USB_HAL_ENABLE  0
   #endif
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
   #if (defined(CPU_MK22F51212))
@@ -79,18 +79,18 @@
 #endif
 
 
-#define usb_hal_khci_bdt_set_address(instance, bdt_base, ep, direction, odd, address) \
+#define usb_hal_khci_bdt_set_address(bdt_base, ep, direction, odd, address) \
     *((uint32_t*)((bdt_base & 0xfffffe00) | ((ep & 0x0f) << 5) | ((direction & 1) << 4) | ((odd & 1) << 3)) + 1) = address
 
 
-#define usb_hal_khci_bdt_set_control(instance, bdt_base, ep, direction, odd, control) \
+#define usb_hal_khci_bdt_set_control(bdt_base, ep, direction, odd, control) \
     *(uint32_t*)((bdt_base & 0xfffffe00) | ((ep & 0x0f) << 5) | ((direction & 1) << 4) | ((odd & 1) << 3)) = control
 
-#define usb_hal_khci_bdt_get_address(instance, bdt_base, ep, direction, odd) \
+#define usb_hal_khci_bdt_get_address(bdt_base, ep, direction, odd) \
     (*((uint32_t*)((bdt_base & 0xfffffe00) | ((ep & 0x0f) << 5) | ((direction & 1) << 4) | ((odd & 1) << 3)) + 1))
 
 
-#define usb_hal_khci_bdt_get_control(instance, bdt_base, ep, direction, odd) \
+#define usb_hal_khci_bdt_get_control(bdt_base, ep, direction, odd) \
     (*(uint32_t*)((bdt_base & 0xfffffe00) | ((ep & 0x0f) << 5) | ((direction & 1) << 4) | ((odd & 1) << 3)))
 
 
@@ -126,7 +126,7 @@ extern "C" {
  * @param baseAddr   USB baseAddr id
  * @param bdtAddress   the BDT address resides in memory
  */
-static void usb_hal_khci_set_buffer_descriptor_table_addr(uint32_t baseAddr, uint32_t bdtAddress)
+static inline void usb_hal_khci_set_buffer_descriptor_table_addr(uint32_t baseAddr, uint32_t bdtAddress)
 {
     
 	HW_USB_BDTPAGE1_WR(baseAddr,(uint8_t)((uint32_t)bdtAddress >> 8));
@@ -272,8 +272,8 @@ static inline void usb_hal_khci_clr_all_interrupts(uint32_t baseAddr)
 */
 static inline uint8_t usb_hal_khci_is_interrupt_issued(uint32_t baseAddr, uint32_t intrType)
 {
-	
-	return ( HW_USB_ISTAT_RD(baseAddr) & HW_USB_INTEN_RD(baseAddr) & (intrType));
+	uint8_t temp = HW_USB_ISTAT_RD(baseAddr);
+	return ( temp & HW_USB_INTEN_RD(baseAddr) & (intrType));
 }
 
 /*!
@@ -554,7 +554,7 @@ static inline uint8_t usb_hal_khci_get_se0_status(uint32_t  baseAddr)
 static inline uint8_t usb_hal_khci_get_transfer_status(uint32_t baseAddr)
 {
 	
-        return HW_USB(baseAddr).STAT.U;
+        return HW_USB_REGS(baseAddr).STAT.U;
 }
 
 /*!
@@ -566,7 +566,7 @@ static inline uint8_t usb_hal_khci_get_transfer_status(uint32_t baseAddr)
 static inline uint8_t usb_hal_khci_get_transfer_done_ep_number(uint32_t baseAddr)
 {
 	
-	return ((HW_USB(baseAddr).STAT.U & 0xf0) >> 4);
+	return ((HW_USB_REGS(baseAddr).STAT.U & 0xf0) >> 4);
 }
 
 /*!
@@ -578,7 +578,7 @@ static inline uint8_t usb_hal_khci_get_transfer_done_ep_number(uint32_t baseAddr
 static inline uint8_t usb_hal_khci_get_transfer_done_direction(uint32_t baseAddr)
 {
 	
-	return ((HW_USB(baseAddr).STAT.U & USB_STAT_TX_MASK) >>USB_STAT_TX_SHIFT);
+	return ((HW_USB_REGS(baseAddr).STAT.U & USB_STAT_TX_MASK) >>USB_STAT_TX_SHIFT);
 }
 
 /*!
@@ -590,7 +590,7 @@ static inline uint8_t usb_hal_khci_get_transfer_done_direction(uint32_t baseAddr
 static inline uint8_t usb_hal_khci_get_transfer_done_odd(uint32_t baseAddr)
 {
 	
-	return ((HW_USB(baseAddr).STAT.U & USB_STAT_ODD_MASK) >> USB_STAT_ODD_SHIFT);
+	return ((HW_USB_REGS(baseAddr).STAT.U & USB_STAT_ODD_MASK) >> USB_STAT_ODD_SHIFT);
 }
 
 /*!
@@ -601,8 +601,8 @@ static inline uint8_t usb_hal_khci_get_transfer_done_odd(uint32_t baseAddr)
 */
 static inline uint16_t usb_hal_khci_get_frame_number(uint32_t baseAddr)
 {
-	
-	return ( HW_USB(baseAddr).FRMNUMH.U << 8 | HW_USB(baseAddr).FRMNUML.U );
+	uint16_t temp = HW_USB_REGS(baseAddr).FRMNUMH.U << 8;
+	return ( temp | HW_USB_REGS(baseAddr).FRMNUML.U );
 }
 
 /*!
@@ -640,7 +640,7 @@ static inline void usb_hal_khci_set_transfer_target(uint32_t baseAddr, uint32_t 
 static inline void usb_hal_khci_endpoint0_init(uint32_t baseAddr, uint32_t isThoughHub, uint32_t isIsochPipe)
 {
 	
-	HW_USB(baseAddr).ENDPOINT[0].ENDPTn.U = (isThoughHub == 1 ? USB_ENDPT_HOSTWOHUB_MASK : 0)| USB_ENDPT_RETRYDIS_MASK |
+	HW_USB_REGS(baseAddr).ENDPOINT[0].ENDPTn.U = (isThoughHub == 1 ? USB_ENDPT_HOSTWOHUB_MASK : 0)| USB_ENDPT_RETRYDIS_MASK |
             USB_ENDPT_EPTXEN_MASK | USB_ENDPT_EPRXEN_MASK | (isIsochPipe == 1 ? 0 : USB_ENDPT_EPHSHK_MASK);	
 }
 
@@ -807,13 +807,13 @@ static inline uint8_t  usb_hal_khci_set_pull_downs(uint32_t baseAddr, uint8_t bi
     {
         HW_USB_OTGCTL_SET(baseAddr,USB_OTGCTL_DMLOW_MASK);     
     }
-    return USB_OK;
+    return 0;
 }
 //TODO:
 static inline void  usb_hal_khci_clr_usbtrc0(uint32_t baseAddr)
 {
 
-    HW_USB_USBTRC0_WR(baseAddr, 0);
+    HW_USB_USBTRC0_WR(baseAddr, 0x40);
 }
 
 
@@ -904,7 +904,7 @@ extern "C" {
  * @param bdtAddress   the BDT address resides in memory
  * 
  */
-static void usb_hal_khci_set_buffer_descriptor_table_addr(uint32_t baseAddr, uint32_t bdtAddress)
+static inline void usb_hal_khci_set_buffer_descriptor_table_addr(uint32_t baseAddr, uint32_t bdtAddress)
 {
     
 	USB0_BDTPAGE1 = (uint8_t)((uint32_t)bdtAddress >> 8);
@@ -1603,14 +1603,14 @@ static inline uint8_t  usb_hal_khci_set_pull_downs(uint32_t baseAddr, uint8_t bi
         //HW_USB_OTGCTL_SET(USB_OTGCTL_DMLOW_MASK);    
 	USB0_OTGCTL |= USB_OTGCTL_DMLOW_MASK;    
     }
-    return USB_OK;
+    return 0;
 }
 //TODO:
 static inline void  usb_hal_khci_clr_usbtrc0(uint32_t baseAddr)
 {
 
     //HW_USB_USBTRC0_WR(0);
-	USB0_USBTRC0 = 0;
+	USB0_USBTRC0 = 0x40;
 }
 
 

@@ -82,6 +82,7 @@
 #define INQUIRY_ALLOCATION_LENGTH       (0x24) 
 #define REQ_SENSE_DATA_LENGTH           (18) 
 #define READ_CAPACITY_DATA_LENGTH       (0x08)
+#define READ_CAPACITY16_DATA_LENGTH     (0x0C)
                                         
 #define PERIPHERAL_QUALIFIER            (0)
 #define PERIPHERAL_QUALIFIER_SHIFT      (5)
@@ -229,6 +230,13 @@ typedef struct _read_capacity_data  /* 8 bytes structure */
    uint32_t block_size; /* in bytes */
 }read_capacity_data_struct_t; 
 
+typedef struct _read_capacity16_data  /* 8 bytes structure */
+{
+   uint32_t last_logical_block_address0;/*last LBA number*/
+   uint32_t last_logical_block_address1;/*last LBA number*/
+   uint32_t block_size; /* in bytes */
+}read_capacity16_data_struct_t; 
+
 typedef struct _capacity_list_header
 {
     uint8_t reserved1[3];
@@ -287,9 +295,13 @@ typedef struct _msc_scsi_variable_struct
        command received by device */
     request_sense_data_struct_t request_sense;
      /* flag to track if the msd device is formatted or not */
-    bool formatted_disk;
     msc_thirteen_case_struct_t thirteen_case;
     usb_class_specific_callback_struct_t scsi_callback;
+    read_capacity_data_struct_t read_capacity;
+    read_capacity16_data_struct_t read_capacity16;
+    uint8_t format_capacity_response_data[sizeof(capacity_list_header_struct_t) + sizeof(curr_max_capacity_desc_struct_t) + sizeof(formattable_cap_desc_t) * 3];
+    bool formatted_disk;
+    uint8_t is_used;
 }msc_scsi_struct_t; 
 
 #endif

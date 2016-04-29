@@ -35,7 +35,7 @@
 /* Public constants */
 
 /* Number of available USB device controllers */
-#define DEBUG_LOG_TRACE(x) printf("\n%s",x)
+#define DEBUG_LOG_TRACE(x) USB_PRINTF("\n%s",x)
 #define USB_OTG_DEVSTATE_B                  0x00
 #define USB_OTG_DEVSTATE_A                  0x01
 /* B state machine indications */
@@ -109,14 +109,20 @@ typedef void     (*otg_event_callback)(usb_otg_handle handle, otg_event event);
   #pragma pack(push)
   #pragma pack(1)
 #endif
+/*!
+ * @brief OTG initialization structure.
+ *
+ * Define the application callback and the functions to get active interrupts.
+ *
+ */
 typedef struct otg_init_struct
 {
 
-    otg_event_callback      app_otg_callback;
-    otg_load_usb_stack      load_usb_host;
-    otg_load_usb_stack      load_usb_device;
-    otg_unload_usb_stack    unload_usb_host;
-    otg_unload_usb_stack    unload_usb_device;
+    otg_event_callback      app_otg_callback; /*!< Application callback*/
+    otg_load_usb_stack      load_usb_host;    /*!< load function for host*/
+    otg_load_usb_stack      load_usb_device;  /*!< load function for device*/
+    otg_unload_usb_stack    unload_usb_host;  /*!< unload function for host*/
+    otg_unload_usb_stack    unload_usb_device;/*!< unload function for device*/
 } otg_int_struct_t;
 
 typedef enum
@@ -133,27 +139,152 @@ enum
     USB_ACTIVE_STACK_HOST
 };
 
+/*!
+ * @brief OTG operation interface structure.
+ *
+ * Define the operation information for OTG.
+ *
+ */
 typedef struct usb_otg_if_struct
 {
-   const struct usb_otg_callback_functions_struct   *otg_if;
-   void*                                            otg_init_param;
-   void*                                            otg_handle;
-   usb_stack_type_t                                 stack_type;
+   const struct usb_otg_callback_functions_struct   *otg_if;       /*!< Interface for operation*/
+   void*                                            otg_init_param;/*!< Initialization parameter*/
+   void*                                            otg_handle;    /*!< Handle of OTG*/
+   usb_stack_type_t                                 stack_type;    /*!< Type of stack*/
 } usb_otg_if_struct_t;
 
 /* Public functions */
 
-extern usb_status  _usb_otg_init(uint8_t controller_id, otg_int_struct_t * init_struct_ptr, usb_host_handle *  handle);
-extern usb_status  _usb_otg_shut_down(usb_otg_handle  otg_handle);
-extern uint32_t    _usb_otg_session_request(usb_otg_handle handle);
-extern uint32_t    _usb_otg_bus_request(usb_otg_handle handle);
-extern uint32_t    _usb_otg_bus_release(usb_otg_handle handle);
-extern uint32_t    _usb_otg_set_a_bus_req(usb_otg_handle otg_handle , bool a_bus_req );
-extern uint32_t    _usb_otg_get_a_bus_req(usb_otg_handle otg_handle , bool* a_bus_req );
-extern uint32_t    _usb_otg_set_a_bus_drop(usb_otg_handle otg_handle , bool a_bus_drop );
-extern uint32_t    _usb_otg_get_a_bus_drop(usb_otg_handle otg_handle , bool* a_bus_drop );
-extern uint32_t    _usb_otg_set_a_clear_err( usb_otg_handle otg_handle );
-extern uint8_t     _usb_otg_get_state(usb_otg_handle otg_handle);
+/*!
+ * @brief Initializes the internal (on chip) and external  OTG hardware.
+ *
+ * This function should be called prior to any other function of the OTG API. It verifies the
+ * input parameters and if they are correct it allocates memory for the usb_otg_state_struct_t
+ * initializes the structure , passes the pointer to this structure to application through the
+ * handle parameter, and initializes the internal (on chip) and external  OTG hardware.
+ *
+ * @param controller_id controller ID
+ * KHCI 0 --- 0
+ * KHCI 1 --- 1
+ * @param init_struct_pt OTG initialization structure
+ * @param handle OTG handle
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_init(uint8_t controller_id, otg_int_struct_t * init_struct_ptr, usb_host_handle *  handle);
+
+/*!
+ * @brief Stop the OTG controller.
+ *
+ * The function is used to stop the OTG controller.
+ *
+ * @param handle OTG handle
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_shut_down(usb_otg_handle  otg_handle);
+
+/*!
+ * @brief Start the SRP protocol from the B-Device side.
+ *
+ * The USB OTG session request function is used to start the SRP protocol from the
+ * B-Device side with the target of requesting the Vbus from the A-Device.
+ * The function is used to send a SRP signal and can only be called by the B role device.
+ 
+ * @param handle OTG handle
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_session_request(usb_otg_handle handle);
+
+/*!
+ * @brief Start the HNP protocol from the B-Device side.
+ *
+ * The USB OTG bus request function is used to start the HNP protocol from the B-Device
+ * side with the target of obtaining the bus control from the A-Device (B-Peripheral will
+ * become a B-Host and A-Host will become A-Peripheral). This request can only be
+ * initiated from the B-device state.
+ *
+ * @param handle OTG handle
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_bus_request(usb_otg_handle handle);
+
+/*!
+ * @brief End a Host session on the B-device.
+ *
+ * The USB OTG bus request function is used to end a Host session on the B-device.
+ * This request is only accepted if the device is in the B-host state and results in the
+ * B device releasing the bus and returning in the B-peripheral state.
+ *
+ * @param handle OTG handle
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_bus_release(usb_otg_handle handle);
+
+/*!
+ * @brief Set USB Bus drop status.
+ *
+ * The function is used to set USB Bus drop status and can only be called by the A
+ * role device.
+ *
+ * @param handle OTG handle
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_set_a_bus_req(usb_otg_handle otg_handle , bool a_bus_req );
+
+/*!
+ * @brief Get USB Bus request status.
+ *
+ * The function is used to get USB Bus request status and can only be called by the A
+ * role device.
+ *
+ * @param handle OTG handle
+ * @param a_bus_req Request USB Bus status
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_get_a_bus_req(usb_otg_handle otg_handle , bool* a_bus_req );
+
+/*!
+ * @brief Set USB Bus drop status.
+ *
+ * The function is used to set USB Bus drop status and can only be called by the A role
+ * device.
+ *
+ * @param handle OTG handle
+ * @param a_bus_drop set USB Bus drop status
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_set_a_bus_drop(usb_otg_handle otg_handle , bool a_bus_drop );
+
+/*!
+ * @brief Get USB Bus drop status .
+ *
+ * The function is used to get USB Bus drop status and can only be called by the A role
+ * device.
+ *
+ * @param handle OTG handle
+ * @param a_bus_drop USB Bus drop status
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_get_a_bus_drop(usb_otg_handle otg_handle , bool* a_bus_drop );
+
+/*!
+ * @brief Clear an error.
+ *
+ * The function is used to clear an error and can only be called by the A role device.
+ *
+ * @param handle OTG handle
+ * @return USB_OK-Success/Others-Fail
+ */
+extern usb_status  usb_otg_set_a_clear_err( usb_otg_handle otg_handle );
+
+/*!
+ * @brief Get the device role state.
+ *
+ * The function is used to get the device role state.
+ *
+ * @param handle OTG handle
+ * @return USB_OK-Success/Others-Fail
+ */
+extern uint8_t     usb_otg_get_state(usb_otg_handle otg_handle);
 
 #ifdef __CC_ARM
   #pragma pop

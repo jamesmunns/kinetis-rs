@@ -65,7 +65,8 @@
 #define  USB_DEVICE_GET_REPORT_DESCRIPTOR_DONE (11)
 #define  USB_DEVICE_SET_IDLE               (12)
 #define  USB_DEVICE_SETTING_IDLE           (13)
-#define  HIGH_SPEED                         (0)
+#define  USB_DEVICE_REMOVE                 (14)
+#define  HIGH_SPEED                        (0)
 
 #if HIGH_SPEED
 #define CONTROLLER_ID                       USB_CONTROLLER_EHCI_0
@@ -83,6 +84,7 @@ typedef struct device_struct {
    usb_device_instance_handle       dev_handle;
    usb_interface_descriptor_handle  intf_handle;
    class_handle                     class_handle; /* Class-specific info */
+   uint32_t                         stall_tries;
 } device_struct_t;
 
 

@@ -61,62 +61,62 @@ static uint8_t g_validate_request[MAX_STRD_REQ][3] =
 #endif
 
 { 
-  TRUE,TRUE,FALSE, /*USB_Strd_Req_Get_Status*/
+  {1,   1,   0,}, /*USB_Strd_Req_Get_Status*/
          /* configured state: valid for existing interfaces/endpoints
             address state   : valid only for interface or endpoint 0
             default state   : not specified
          */ 
-  TRUE,TRUE,FALSE, /* Clear Feature */
+  {1,   1,   0,}, /* Clear Feature */
          /* configured state: valid only for device in configured state
             address state   : valid only for device (in address state), 
                               interface and endpoint 0 
             default state   : not specified
          */
-  FALSE,FALSE,FALSE, /*reserved for future use*/
+  {0,   0,   0,}, /*reserved for future use*/
          /* configured state: request not supported
             address state   : request not supported
             default state   : request not supported
          */ 
 #ifdef USBCFG_OTG
-  TRUE,TRUE,TRUE, /* Set Feature */
+  {1,   1,   1,}, /* Set Feature */
         /*  configured state: valid only for device in configured state
             address state   : valid only for interface or endpoint 0
             default state   : not specified
         */
 #else 
-  TRUE,TRUE,FALSE, /* Set Feature */
+  {1,   1,   0,}, /* Set Feature */
           /*  configured state: valid only for device in configured state
               address state   : valid only for interface or endpoint 0
               default state   : not specified
           */
 #endif
-  FALSE,FALSE,FALSE,/*reserved for future use*/
+  {0,   0,   0,},/*reserved for future use*/
         /*  configured state: request not supported            
             address state   : request not supported
             default state   : request not supported
          */ 
-  FALSE,TRUE,TRUE, /*USB_Strd_Req_Set_Address*/
+  {0,   1,   1,}, /*USB_Strd_Req_Set_Address*/
         /*  configured state: not specified            
             address state   : changes to default state if specified addr == 0,
                               but uses newly specified address
             default state   : changes to address state if specified addr != 0
          */
-  TRUE,TRUE,TRUE, /*USB_Strd_Req_Get_Descriptor*/
+  {1,   1,   1,}, /*USB_Strd_Req_Get_Descriptor*/
          /* configured state: valid request            
             address state   : valid request
             default state   : valid request
          */
-  FALSE,FALSE,FALSE, /*Set Descriptor*/
+  {0,   0,   0,}, /*Set Descriptor*/
          /* configured state: request not supported
             address state   : request not supported
             default state   : request not supported
          */
-  TRUE,TRUE,FALSE, /*USB_Strd_Req_Get_Config*/
+  {1,   1,   0,}, /*USB_Strd_Req_Get_Config*/
          /* configured state: bConfiguration Value of current config returned
             address state   : value zero must be returned
             default state   : not specified            
          */
-  TRUE,TRUE,FALSE, /*USB_Strd_Req_Set_Config*/
+  {1,   1,   0,}, /*USB_Strd_Req_Set_Config*/
          /* configured state: If the specified configuration value is zero, 
                               then the device enters the Address state.If the 
                               specified configuration value matches the 
@@ -134,17 +134,17 @@ static uint8_t g_validate_request[MAX_STRD_REQ][3] =
                               Otherwise,response is Request Error.
             default state   : not specified
          */
-  TRUE,FALSE,FALSE, /*USB_Strd_Req_Get_Interface*/
+  {1,   0,   0,}, /*USB_Strd_Req_Get_Interface*/
          /* configured state: valid request          
             address state   : request error
             default state   : not specified
          */
-  TRUE,FALSE,FALSE, /*USB_Strd_Req_Set_Interface*/
+  {1,   0,   0,}, /*USB_Strd_Req_Set_Interface*/
          /* configured state: valid request
             address state   : request error
             default state   : not specified
          */
-  TRUE,FALSE,FALSE /*USB_Strd_Req_Sync_Frame*/
+  {1,   0,   0,}, /*USB_Strd_Req_Sync_Frame*/
          /* configured state: valid request
             address state   : request error
             default state   : not specified
@@ -359,7 +359,7 @@ void USB_Control_Service
     /* get the device state  */
     (void)usb_device_get_status(usb_fw_ptr->dev_handle, (uint8_t)USB_STATUS_DEVICE_STATE,
         &device_state);
-    //printf("USB_Control_Service ++ \n");
+    //USB_PRINTF("USB_Control_Service ++ \n");
     if (event->setup == TRUE) 
     {
         OS_Mem_copy(event->buffer_ptr,&usb_fw_ptr->setup_packet,USB_SETUP_PKT_SIZE);        
@@ -368,20 +368,20 @@ void USB_Control_Service
         usb_fw_ptr->setup_packet.index = USB_SHORT_LE_TO_HOST(usb_fw_ptr->setup_packet.index);
         usb_fw_ptr->setup_packet.value = USB_SHORT_LE_TO_HOST(usb_fw_ptr->setup_packet.value);
         usb_fw_ptr->setup_packet.length = USB_SHORT_LE_TO_HOST(usb_fw_ptr->setup_packet.length);
-    //  printf("00++ Enter ++ type:%d \n",usb_fw_ptr->setup_packet.request_type);
+    //  USB_PRINTF("00++ Enter ++ type:%d \n",usb_fw_ptr->setup_packet.request_type);
         /* if the request is standard request */
         if ((usb_fw_ptr->setup_packet.request_type & USB_DEV_REQ_STD_REQUEST_TYPE_TYPE_POS) == 
             USB_DEV_REQ_STD_REQUEST_TYPE_TYPE_STANDARD) 
         {
-    //      printf("11++ Enter ++ :%d \n",usb_fw_ptr->setup_packet.request);
+    //      USB_PRINTF("11++ Enter ++ :%d \n",usb_fw_ptr->setup_packet.request);
             /* if callback is not NULL */
             if (g_standard_request[usb_fw_ptr->setup_packet.request] != NULL) 
             {
-    //          printf("22++ Enter ++ :%d \n",usb_fw_ptr->setup_packet.request);
+    //          USB_PRINTF("22++ Enter ++ :%d \n",usb_fw_ptr->setup_packet.request);
                 /* if the request is valid in this device state */
                 if((device_state < USB_STATE_POWERED) && 
                     (g_validate_request[usb_fw_ptr->setup_packet.request][device_state] 
-                        ==TRUE)) 
+                        == (uint8_t)1))
                 {
                     /* Standard Request function pointers */
                     error = g_standard_request[usb_fw_ptr->setup_packet.request]
@@ -403,10 +403,11 @@ void USB_Control_Service
                    some of our Socs. */
                 if((size + USB_SETUP_PKT_SIZE) > MAX_EXPECTED_CONTROL_OUT_SIZE)
                 {
-                    #ifdef _DEV_DEBUG
-                        printf("MAX_EXPECTED_CONTROL_OUT_SIZE insufficient, needed %d\n", size + USB_SETUP_PKT_SIZE);
-                        printf("Please change the macro!!!\n");
+                    #ifdef _DEBUG
+                        USB_PRINTF("MAX_EXPECTED_CONTROL_OUT_SIZE insufficient, needed %d\n", size + USB_SETUP_PKT_SIZE);
+                        USB_PRINTF("Please change the macro!!!\n");
                     #endif  
+                    usb_device_stall_endpoint(usb_fw_ptr->dev_handle,USB_CONTROL_ENDPOINT,USB_RECV);
                     return;
                 }
 
@@ -422,7 +423,7 @@ void USB_Control_Service
             /*call class/vendor request*/
             else if(usb_fw_ptr->request_notify_callback != NULL)
             {
-          //    printf("USB_Control_Service_Handler ++ #### \n");
+          //    USB_PRINTF("USB_Control_Service_Handler ++ #### \n");
                 error = usb_fw_ptr->request_notify_callback(
                 &usb_fw_ptr->setup_packet,&data,&size,usb_fw_ptr->request_notify_param);
             }
@@ -434,7 +435,7 @@ void USB_Control_Service
     {
         /* Device state is PENDING_ADDRESS */
         /* Assign the new adddress to the Device */
-        //printf("send ZLT done\n");
+        //USB_PRINTF("send ZLT done\n");
         (void)USB_Strd_Req_Assign_Address(usb_fw_ptr);
     }
     else if( ((usb_fw_ptr->setup_packet.request_type & USB_DEV_REQ_STD_REQUEST_TYPE_DIR_POS) == USB_DEV_REQ_STD_REQUEST_TYPE_DIR_OUT) && 
@@ -482,6 +483,7 @@ void USB_Reset_Service
 {
     usb_ep_struct_t ep_struct;
     volatile usb_class_fw_object_struct_t*   usb_fw_ptr;
+    void* temp; 
 
     usb_fw_ptr = (usb_class_fw_object_struct_t*)handle;
 
@@ -497,15 +499,50 @@ void USB_Reset_Service
 
     ep_struct.direction = USB_SEND;   
     usb_device_init_endpoint(event->handle, &ep_struct, TRUE);
-
+    temp = usb_fw_ptr->device_notify_param;
     /* let the application know that bus reset has taken place */
     if (usb_fw_ptr->device_notify_callback != NULL)  
     {
-        usb_fw_ptr->device_notify_callback(USB_DEV_EVENT_BUS_RESET,NULL,usb_fw_ptr->device_notify_param); 
+        usb_fw_ptr->device_notify_callback(USB_DEV_EVENT_BUS_RESET,NULL,temp); 
     }
 
     return;
 }
+
+#if USBCFG_DEV_DETACH_ENABLE
+/**************************************************************************//*!
+ *
+ * @name  USB_Detach_Service
+ *
+ * @brief The funtion is called upon a bus reset event.  
+              Initialises the control endpoint.
+ *
+ * @param event:        for Service callback function     
+ *
+ * @return None       
+ *****************************************************************************/
+void USB_Detach_Service
+(
+    void*               handle, 
+    usb_event_struct_t* event, 
+    void*               arg
+)
+{
+    volatile usb_class_fw_object_struct_t*   usb_fw_ptr;
+
+    usb_fw_ptr = (usb_class_fw_object_struct_t*)handle;
+
+    usb_device_reset(usb_fw_ptr->dev_handle);
+
+    /* let the application know that bus reset has taken place */
+    if (usb_fw_ptr->device_notify_callback != NULL)  
+    {
+        usb_fw_ptr->device_notify_callback(USB_DEV_EVENT_DETACH, NULL, usb_fw_ptr->device_notify_param); 
+    }
+
+    return;
+}
+#endif
 
 #if USBCFG_DEV_KHCI_ADVANCED_ERROR_HANDLING
 /**************************************************************************//*!
@@ -626,7 +663,7 @@ void USB_Control_Service_Handler
 
         /* send the data to the host */
         (void)usb_device_send_data(usb_fw_ptr->dev_handle,USB_CONTROL_ENDPOINT, *data, *size);
-        //printf("send %d to host\n", *size);
+        //USB_PRINTF("send %d to host\n", *size);
 
         if ((setup_packet->request_type & USB_DEV_REQ_STD_REQUEST_TYPE_DIR_POS) == USB_DEV_REQ_STD_REQUEST_TYPE_DIR_IN)
         {
@@ -634,7 +671,7 @@ void USB_Control_Service_Handler
             /* setup rcv to get status from host */
             (void)usb_device_recv_data(usb_fw_ptr->dev_handle,
                 USB_CONTROL_ENDPOINT,NULL,0);
-            //printf("ready to receive ZLT on EP0\n");
+            //USB_PRINTF("ready to receive ZLT on EP0\n");
         }
     }
     return;
@@ -743,6 +780,9 @@ static uint8_t USB_Strd_Req_Feature
     uint8_t  epinfo;
     uint8_t  event;
     uint8_t feature;
+#if USBCFG_DEV_EHCI_TEST_MODE
+    uint16_t ptc = 0;
+#endif
 
     UNUSED_ARGUMENT(data)
     *size=0;
@@ -795,9 +835,15 @@ static uint8_t USB_Strd_Req_Feature
             }
             else if (feature == USB_DEV_REQ_STD_FEATURE_SELECTOR_TEST_MODE)
             {
-                /* TODO */
-                /* add test mode code */
-            }
+#if USBCFG_DEV_EHCI_TEST_MODE
+
+                (void)usb_device_send_data(usb_fw_ptr->dev_handle,USB_CONTROL_ENDPOINT, NULL, 0);
+                OS_Time_delay(10);
+                ptc = setup_packet->index >> 8;
+                usb_device_set_test_mode(usb_fw_ptr->dev_handle,ptc);
+                error = USB_OK;
+#endif
+            }           
         }
         else
         {
@@ -821,11 +867,15 @@ static uint8_t USB_Strd_Req_Feature
             else
             {
                 event = USB_DEV_EVENT_TYPE_CLR_EP_HALT;
-                error = usb_device_unstall_endpoint(usb_fw_ptr->dev_handle,epinfo & 0x0F, (epinfo & 0x80) >> 7);
+                if ((epinfo & 0x0f) == 0)
+                {
+                    error = usb_device_unstall_endpoint(usb_fw_ptr->dev_handle,epinfo & 0x0F, (epinfo & 0x80) >> 7);
+                }
             }
             if(usb_fw_ptr->device_notify_callback)
             {
                 usb_fw_ptr->device_notify_callback(event, (void*)&epinfo, usb_fw_ptr->request_notify_param);
+                error = USB_OK;
             }
         }
         else
@@ -1137,12 +1187,10 @@ static uint8_t USB_Strd_Req_Get_Descriptor
     uint8_t str_num = (uint8_t)USB_UNINITIALIZED_VAL_32;
     uint8_t error = USBERR_NULL_CALLBACK;
    
-    if ((type == USB_DESC_TYPE_STR) || (type == USB_DESC_TYPE_CFG))
-    {   /* for string descriptor set the language and string number */ 
-        index = setup_packet->index;
-        /*g_setup_packet.lValue*/
-        str_num = setup_packet->value & 0xFF;
-    }
+    /* for string descriptor set the language and string number */ 
+    index = setup_packet->index;
+    /*g_setup_packet.lValue*/
+    str_num = setup_packet->value & 0xFF;
 
     if(!usb_fw_ptr->desc_notify_callback->get_desc)
     {

@@ -263,6 +263,18 @@
               <bitOffset>0</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-only</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>10</name>
+                  <description>MCU security status is unsecure</description>
+                  <value>#10</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>11</name>
+                  <description>MCU security status is secure</description>
+                  <value>#11</value>
+                </enumeratedValue>
+              </enumeratedValues>
             </field>
             <field>
               <name>FSLACC</name>
@@ -270,6 +282,18 @@
               <bitOffset>2</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-only</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>10</name>
+                  <description>Freescale factory access denied</description>
+                  <value>#10</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>11</name>
+                  <description>Freescale factory access granted</description>
+                  <value>#11</value>
+                </enumeratedValue>
+              </enumeratedValues>
             </field>
             <field>
               <name>MEEN</name>
@@ -277,6 +301,18 @@
               <bitOffset>4</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-only</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>10</name>
+                  <description>Mass erase is disabled</description>
+                  <value>#10</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>11</name>
+                  <description>Mass erase is enabled</description>
+                  <value>#11</value>
+                </enumeratedValue>
+              </enumeratedValues>
             </field>
             <field>
               <name>KEYEN</name>
@@ -284,6 +320,18 @@
               <bitOffset>6</bitOffset>
               <bitWidth>2</bitWidth>
               <access>read-only</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>10</name>
+                  <description>Backdoor key access enabled</description>
+                  <value>#10</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>11</name>
+                  <description>Backdoor key access disabled</description>
+                  <value>#11</value>
+                </enumeratedValue>
+              </enumeratedValues>
             </field>
           </fields>
         </register>
@@ -302,6 +350,18 @@
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-only</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>00</name>
+                  <description>Low-power boot</description>
+                  <value>#00</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>01</name>
+                  <description>Normal boot</description>
+                  <value>#01</value>
+                </enumeratedValue>
+              </enumeratedValues>
             </field>
             <field>
               <name>EZPORT_DIS</name>
@@ -309,6 +369,18 @@
               <bitOffset>1</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-only</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>00</name>
+                  <description>EzPort operation is disabled</description>
+                  <value>#00</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>01</name>
+                  <description>EzPort operation is enabled</description>
+                  <value>#01</value>
+                </enumeratedValue>
+              </enumeratedValues>
             </field>
             <field>
               <name>NMI_DIS</name>
@@ -316,6 +388,18 @@
               <bitOffset>2</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-only</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>00</name>
+                  <description>NMI interrupts are always blocked</description>
+                  <value>#00</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>01</name>
+                  <description>NMI_b pin/interrupts reset default to enabled</description>
+                  <value>#01</value>
+                </enumeratedValue>
+              </enumeratedValues>
             </field>
             <field>
               <name>FAST_INIT</name>
@@ -323,6 +407,18 @@
               <bitOffset>5</bitOffset>
               <bitWidth>1</bitWidth>
               <access>read-only</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>00</name>
+                  <description>Slower initialization</description>
+                  <value>#00</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>01</name>
+                  <description>Fast Initialization</description>
+                  <value>#01</value>
+                </enumeratedValue>
+              </enumeratedValues>
             </field>
           </fields>
         </register>
@@ -3316,8 +3412,8 @@
           <dim>16</dim>
           <dimIncrement>0x20</dimIncrement>
           <dimIndex>0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15</dimIndex>
-          <name>TCD%s_NBYTES_MLOFFYES</name>
-          <description>TCD Signed Minor Loop Offset (Minor Loop and Offset Enabled)</description>
+          <name>TCD%s_NBYTES_MLNO</name>
+          <description>TCD Minor Byte Count (Minor Loop Disabled)</description>
           <alternateGroup>DMA</alternateGroup>
           <addressOffset>0x1008</addressOffset>
           <size>32</size>
@@ -3329,53 +3425,8 @@
               <name>NBYTES</name>
               <description>Minor Byte Transfer Count</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>10</bitWidth>
+              <bitWidth>32</bitWidth>
               <access>read-write</access>
-            </field>
-            <field>
-              <name>MLOFF</name>
-              <description>If SMLOE or DMLOE is set, this field represents a sign-extended offset applied to the source or destination address to form the next-state value after the minor loop completes.</description>
-              <bitOffset>10</bitOffset>
-              <bitWidth>20</bitWidth>
-              <access>read-write</access>
-            </field>
-            <field>
-              <name>DMLOE</name>
-              <description>Destination Minor Loop Offset enable</description>
-              <bitOffset>30</bitOffset>
-              <bitWidth>1</bitWidth>
-              <access>read-write</access>
-              <enumeratedValues>
-                <enumeratedValue>
-                  <name>0</name>
-                  <description>The minor loop offset is not applied to the DADDR</description>
-                  <value>#0</value>
-                </enumeratedValue>
-                <enumeratedValue>
-                  <name>1</name>
-                  <description>The minor loop offset is applied to the DADDR</description>
-                  <value>#1</value>
-                </enumeratedValue>
-              </enumeratedValues>
-            </field>
-            <field>
-              <name>SMLOE</name>
-              <description>Source Minor Loop Offset Enable</description>
-              <bitOffset>31</bitOffset>
-              <bitWidth>1</bitWidth>
-              <access>read-write</access>
-              <enumeratedValues>
-                <enumeratedValue>
-                  <name>0</name>
-                  <description>The minor loop offset is not applied to the SADDR</description>
-                  <value>#0</value>
-                </enumeratedValue>
-                <enumeratedValue>
-                  <name>1</name>
-                  <description>The minor loop offset is applied to the SADDR</description>
-                  <value>#1</value>
-                </enumeratedValue>
-              </enumeratedValues>
             </field>
           </fields>
         </register>
@@ -3443,8 +3494,8 @@
           <dim>16</dim>
           <dimIncrement>0x20</dimIncrement>
           <dimIndex>0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15</dimIndex>
-          <name>TCD%s_NBYTES_MLNO</name>
-          <description>TCD Minor Byte Count (Minor Loop Disabled)</description>
+          <name>TCD%s_NBYTES_MLOFFYES</name>
+          <description>TCD Signed Minor Loop Offset (Minor Loop and Offset Enabled)</description>
           <alternateGroup>DMA</alternateGroup>
           <addressOffset>0x1008</addressOffset>
           <size>32</size>
@@ -3456,8 +3507,53 @@
               <name>NBYTES</name>
               <description>Minor Byte Transfer Count</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
+              <bitWidth>10</bitWidth>
               <access>read-write</access>
+            </field>
+            <field>
+              <name>MLOFF</name>
+              <description>If SMLOE or DMLOE is set, this field represents a sign-extended offset applied to the source or destination address to form the next-state value after the minor loop completes.</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>20</bitWidth>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>DMLOE</name>
+              <description>Destination Minor Loop Offset enable</description>
+              <bitOffset>30</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>0</name>
+                  <description>The minor loop offset is not applied to the DADDR</description>
+                  <value>#0</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>1</name>
+                  <description>The minor loop offset is applied to the DADDR</description>
+                  <value>#1</value>
+                </enumeratedValue>
+              </enumeratedValues>
+            </field>
+            <field>
+              <name>SMLOE</name>
+              <description>Source Minor Loop Offset Enable</description>
+              <bitOffset>31</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>0</name>
+                  <description>The minor loop offset is not applied to the SADDR</description>
+                  <value>#0</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>1</name>
+                  <description>The minor loop offset is applied to the SADDR</description>
+                  <value>#1</value>
+                </enumeratedValue>
+              </enumeratedValues>
             </field>
           </fields>
         </register>
@@ -3528,8 +3624,8 @@
           <dim>16</dim>
           <dimIncrement>0x20</dimIncrement>
           <dimIndex>0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15</dimIndex>
-          <name>TCD%s_CITER_ELINKYES</name>
-          <description>TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)</description>
+          <name>TCD%s_CITER_ELINKNO</name>
+          <description>TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)</description>
           <alternateGroup>DMA</alternateGroup>
           <addressOffset>0x1016</addressOffset>
           <size>16</size>
@@ -3541,14 +3637,7 @@
               <name>CITER</name>
               <description>Current Major Iteration Count</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>9</bitWidth>
-              <access>read-write</access>
-            </field>
-            <field>
-              <name>LINKCH</name>
-              <description>Link Channel Number</description>
-              <bitOffset>9</bitOffset>
-              <bitWidth>4</bitWidth>
+              <bitWidth>15</bitWidth>
               <access>read-write</access>
             </field>
             <field>
@@ -3576,8 +3665,8 @@
           <dim>16</dim>
           <dimIncrement>0x20</dimIncrement>
           <dimIndex>0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15</dimIndex>
-          <name>TCD%s_CITER_ELINKNO</name>
-          <description>TCD Current Minor Loop Link, Major Loop Count (Channel Linking Disabled)</description>
+          <name>TCD%s_CITER_ELINKYES</name>
+          <description>TCD Current Minor Loop Link, Major Loop Count (Channel Linking Enabled)</description>
           <alternateGroup>DMA</alternateGroup>
           <addressOffset>0x1016</addressOffset>
           <size>16</size>
@@ -3589,7 +3678,14 @@
               <name>CITER</name>
               <description>Current Major Iteration Count</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>15</bitWidth>
+              <bitWidth>9</bitWidth>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>LINKCH</name>
+              <description>Link Channel Number</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>4</bitWidth>
               <access>read-write</access>
             </field>
             <field>
@@ -3811,8 +3907,8 @@
           <dim>16</dim>
           <dimIncrement>0x20</dimIncrement>
           <dimIndex>0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15</dimIndex>
-          <name>TCD%s_BITER_ELINKYES</name>
-          <description>TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)</description>
+          <name>TCD%s_BITER_ELINKNO</name>
+          <description>TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)</description>
           <alternateGroup>DMA</alternateGroup>
           <addressOffset>0x101E</addressOffset>
           <size>16</size>
@@ -3824,14 +3920,7 @@
               <name>BITER</name>
               <description>Starting Major Iteration Count</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>9</bitWidth>
-              <access>read-write</access>
-            </field>
-            <field>
-              <name>LINKCH</name>
-              <description>Link Channel Number</description>
-              <bitOffset>9</bitOffset>
-              <bitWidth>4</bitWidth>
+              <bitWidth>15</bitWidth>
               <access>read-write</access>
             </field>
             <field>
@@ -3859,8 +3948,8 @@
           <dim>16</dim>
           <dimIncrement>0x20</dimIncrement>
           <dimIndex>0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15</dimIndex>
-          <name>TCD%s_BITER_ELINKNO</name>
-          <description>TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Disabled)</description>
+          <name>TCD%s_BITER_ELINKYES</name>
+          <description>TCD Beginning Minor Loop Link, Major Loop Count (Channel Linking Enabled)</description>
           <alternateGroup>DMA</alternateGroup>
           <addressOffset>0x101E</addressOffset>
           <size>16</size>
@@ -3872,7 +3961,14 @@
               <name>BITER</name>
               <description>Starting Major Iteration Count</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>15</bitWidth>
+              <bitWidth>9</bitWidth>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>LINKCH</name>
+              <description>Link Channel Number</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>4</bitWidth>
               <access>read-write</access>
             </field>
             <field>
@@ -6264,7 +6360,7 @@
               <description>Calibration Failed Flag</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-only</access>
+              <access>read-write</access>
               <enumeratedValues>
                 <enumeratedValue>
                   <name>0</name>
@@ -7336,7 +7432,7 @@
               <description>Calibration Failed Flag</description>
               <bitOffset>6</bitOffset>
               <bitWidth>1</bitWidth>
-              <access>read-only</access>
+              <access>read-write</access>
               <enumeratedValues>
                 <enumeratedValue>
                   <name>0</name>
@@ -9840,63 +9936,6 @@
           </fields>
         </register>
         <register>
-          <name>CTAR_SLAVE</name>
-          <description>Clock and Transfer Attributes Register (In Slave Mode)</description>
-          <alternateGroup>SPI0</alternateGroup>
-          <addressOffset>0xC</addressOffset>
-          <size>32</size>
-          <access>read-write</access>
-          <resetValue>0x78000000</resetValue>
-          <resetMask>0xFFFFFFFF</resetMask>
-          <fields>
-            <field>
-              <name>CPHA</name>
-              <description>Clock Phase</description>
-              <bitOffset>25</bitOffset>
-              <bitWidth>1</bitWidth>
-              <access>read-write</access>
-              <enumeratedValues>
-                <enumeratedValue>
-                  <name>0</name>
-                  <description>Data is captured on the leading edge of SCK and changed on the following edge.</description>
-                  <value>#0</value>
-                </enumeratedValue>
-                <enumeratedValue>
-                  <name>1</name>
-                  <description>Data is changed on the leading edge of SCK and captured on the following edge.</description>
-                  <value>#1</value>
-                </enumeratedValue>
-              </enumeratedValues>
-            </field>
-            <field>
-              <name>CPOL</name>
-              <description>Clock Polarity</description>
-              <bitOffset>26</bitOffset>
-              <bitWidth>1</bitWidth>
-              <access>read-write</access>
-              <enumeratedValues>
-                <enumeratedValue>
-                  <name>0</name>
-                  <description>The inactive state value of SCK is low.</description>
-                  <value>#0</value>
-                </enumeratedValue>
-                <enumeratedValue>
-                  <name>1</name>
-                  <description>The inactive state value of SCK is high.</description>
-                  <value>#1</value>
-                </enumeratedValue>
-              </enumeratedValues>
-            </field>
-            <field>
-              <name>FMSZ</name>
-              <description>Frame Size</description>
-              <bitOffset>27</bitOffset>
-              <bitWidth>5</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
           <dim>2</dim>
           <dimIncrement>0x4</dimIncrement>
           <dimIndex>0,1</dimIndex>
@@ -10135,6 +10174,63 @@
                   <value>#1</value>
                 </enumeratedValue>
               </enumeratedValues>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>CTAR_SLAVE</name>
+          <description>Clock and Transfer Attributes Register (In Slave Mode)</description>
+          <alternateGroup>SPI0</alternateGroup>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x78000000</resetValue>
+          <resetMask>0xFFFFFFFF</resetMask>
+          <fields>
+            <field>
+              <name>CPHA</name>
+              <description>Clock Phase</description>
+              <bitOffset>25</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>0</name>
+                  <description>Data is captured on the leading edge of SCK and changed on the following edge.</description>
+                  <value>#0</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>1</name>
+                  <description>Data is changed on the leading edge of SCK and captured on the following edge.</description>
+                  <value>#1</value>
+                </enumeratedValue>
+              </enumeratedValues>
+            </field>
+            <field>
+              <name>CPOL</name>
+              <description>Clock Polarity</description>
+              <bitOffset>26</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>0</name>
+                  <description>The inactive state value of SCK is low.</description>
+                  <value>#0</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>1</name>
+                  <description>The inactive state value of SCK is high.</description>
+                  <value>#1</value>
+                </enumeratedValue>
+              </enumeratedValues>
+            </field>
+            <field>
+              <name>FMSZ</name>
+              <description>Frame Size</description>
+              <bitOffset>27</bitOffset>
+              <bitWidth>5</bitWidth>
+              <access>read-write</access>
             </field>
           </fields>
         </register>
@@ -11025,63 +11121,6 @@
           </fields>
         </register>
         <register>
-          <name>CTAR_SLAVE</name>
-          <description>Clock and Transfer Attributes Register (In Slave Mode)</description>
-          <alternateGroup>SPI1</alternateGroup>
-          <addressOffset>0xC</addressOffset>
-          <size>32</size>
-          <access>read-write</access>
-          <resetValue>0x78000000</resetValue>
-          <resetMask>0xFFFFFFFF</resetMask>
-          <fields>
-            <field>
-              <name>CPHA</name>
-              <description>Clock Phase</description>
-              <bitOffset>25</bitOffset>
-              <bitWidth>1</bitWidth>
-              <access>read-write</access>
-              <enumeratedValues>
-                <enumeratedValue>
-                  <name>0</name>
-                  <description>Data is captured on the leading edge of SCK and changed on the following edge.</description>
-                  <value>#0</value>
-                </enumeratedValue>
-                <enumeratedValue>
-                  <name>1</name>
-                  <description>Data is changed on the leading edge of SCK and captured on the following edge.</description>
-                  <value>#1</value>
-                </enumeratedValue>
-              </enumeratedValues>
-            </field>
-            <field>
-              <name>CPOL</name>
-              <description>Clock Polarity</description>
-              <bitOffset>26</bitOffset>
-              <bitWidth>1</bitWidth>
-              <access>read-write</access>
-              <enumeratedValues>
-                <enumeratedValue>
-                  <name>0</name>
-                  <description>The inactive state value of SCK is low.</description>
-                  <value>#0</value>
-                </enumeratedValue>
-                <enumeratedValue>
-                  <name>1</name>
-                  <description>The inactive state value of SCK is high.</description>
-                  <value>#1</value>
-                </enumeratedValue>
-              </enumeratedValues>
-            </field>
-            <field>
-              <name>FMSZ</name>
-              <description>Frame Size</description>
-              <bitOffset>27</bitOffset>
-              <bitWidth>5</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
           <dim>2</dim>
           <dimIncrement>0x4</dimIncrement>
           <dimIndex>0,1</dimIndex>
@@ -11320,6 +11359,63 @@
                   <value>#1</value>
                 </enumeratedValue>
               </enumeratedValues>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>CTAR_SLAVE</name>
+          <description>Clock and Transfer Attributes Register (In Slave Mode)</description>
+          <alternateGroup>SPI1</alternateGroup>
+          <addressOffset>0xC</addressOffset>
+          <size>32</size>
+          <access>read-write</access>
+          <resetValue>0x78000000</resetValue>
+          <resetMask>0xFFFFFFFF</resetMask>
+          <fields>
+            <field>
+              <name>CPHA</name>
+              <description>Clock Phase</description>
+              <bitOffset>25</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>0</name>
+                  <description>Data is captured on the leading edge of SCK and changed on the following edge.</description>
+                  <value>#0</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>1</name>
+                  <description>Data is changed on the leading edge of SCK and captured on the following edge.</description>
+                  <value>#1</value>
+                </enumeratedValue>
+              </enumeratedValues>
+            </field>
+            <field>
+              <name>CPOL</name>
+              <description>Clock Polarity</description>
+              <bitOffset>26</bitOffset>
+              <bitWidth>1</bitWidth>
+              <access>read-write</access>
+              <enumeratedValues>
+                <enumeratedValue>
+                  <name>0</name>
+                  <description>The inactive state value of SCK is low.</description>
+                  <value>#0</value>
+                </enumeratedValue>
+                <enumeratedValue>
+                  <name>1</name>
+                  <description>The inactive state value of SCK is high.</description>
+                  <value>#1</value>
+                </enumeratedValue>
+              </enumeratedValues>
+            </field>
+            <field>
+              <name>FMSZ</name>
+              <description>Frame Size</description>
+              <bitOffset>27</bitOffset>
+              <bitWidth>5</bitWidth>
+              <access>read-write</access>
             </field>
           </fields>
         </register>
@@ -11872,25 +11968,6 @@
       </addressBlock>
       <registers>
         <register>
-          <name>DATALL</name>
-          <description>CRC_DATALL register.</description>
-          <alternateGroup>CRC</alternateGroup>
-          <addressOffset>0</addressOffset>
-          <size>8</size>
-          <access>read-write</access>
-          <resetValue>0xFF</resetValue>
-          <resetMask>0xFF</resetMask>
-          <fields>
-            <field>
-              <name>DATALL</name>
-              <description>CRCLL stores the first 8 bits of the 32 bit DATA</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
           <name>DATA</name>
           <description>CRC Data register</description>
           <alternateGroup>CRC</alternateGroup>
@@ -11950,6 +12027,25 @@
           </fields>
         </register>
         <register>
+          <name>DATALL</name>
+          <description>CRC_DATALL register.</description>
+          <alternateGroup>CRC</alternateGroup>
+          <addressOffset>0</addressOffset>
+          <size>8</size>
+          <access>read-write</access>
+          <resetValue>0xFF</resetValue>
+          <resetMask>0xFF</resetMask>
+          <fields>
+            <field>
+              <name>DATALL</name>
+              <description>CRCLL stores the first 8 bits of the 32 bit DATA</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
           <name>DATALU</name>
           <description>CRC_DATALU register.</description>
           <addressOffset>0x1</addressOffset>
@@ -11961,25 +12057,6 @@
             <field>
               <name>DATALU</name>
               <description>DATALL stores the second 8 bits of the 32 bit CRC</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>DATAHL</name>
-          <description>CRC_DATAHL register.</description>
-          <alternateGroup>CRC</alternateGroup>
-          <addressOffset>0x2</addressOffset>
-          <size>8</size>
-          <access>read-write</access>
-          <resetValue>0xFF</resetValue>
-          <resetMask>0xFF</resetMask>
-          <fields>
-            <field>
-              <name>DATAHL</name>
-              <description>DATAHL stores the third 8 bits of the 32 bit CRC</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
               <access>read-write</access>
@@ -12001,6 +12078,25 @@
               <description>DATAH stores the high 16 bits of the 16/32 bit CRC</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>DATAHL</name>
+          <description>CRC_DATAHL register.</description>
+          <alternateGroup>CRC</alternateGroup>
+          <addressOffset>0x2</addressOffset>
+          <size>8</size>
+          <access>read-write</access>
+          <resetValue>0xFF</resetValue>
+          <resetMask>0xFF</resetMask>
+          <fields>
+            <field>
+              <name>DATAHL</name>
+              <description>DATAHL stores the third 8 bits of the 32 bit CRC</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
               <access>read-write</access>
             </field>
           </fields>
@@ -12050,25 +12146,6 @@
           </fields>
         </register>
         <register>
-          <name>GPOLYLL</name>
-          <description>CRC_GPOLYLL register.</description>
-          <alternateGroup>CRC</alternateGroup>
-          <addressOffset>0x4</addressOffset>
-          <size>8</size>
-          <access>read-write</access>
-          <resetValue>0xFF</resetValue>
-          <resetMask>0xFF</resetMask>
-          <fields>
-            <field>
-              <name>GPOLYLL</name>
-              <description>POLYLL stores the first 8 bits of the 32 bit CRC</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
           <name>GPOLYL</name>
           <description>CRC_GPOLYL register.</description>
           <alternateGroup>CRC</alternateGroup>
@@ -12083,6 +12160,25 @@
               <description>POLYL stores the lower 16 bits of the 16/32 bit CRC polynomial value</description>
               <bitOffset>0</bitOffset>
               <bitWidth>16</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>GPOLYLL</name>
+          <description>CRC_GPOLYLL register.</description>
+          <alternateGroup>CRC</alternateGroup>
+          <addressOffset>0x4</addressOffset>
+          <size>8</size>
+          <access>read-write</access>
+          <resetValue>0xFF</resetValue>
+          <resetMask>0xFF</resetMask>
+          <fields>
+            <field>
+              <name>GPOLYLL</name>
+              <description>POLYLL stores the first 8 bits of the 32 bit CRC</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
               <access>read-write</access>
             </field>
           </fields>
@@ -24568,7 +24664,7 @@
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>LPTimer</name>
+        <name>LPTMR0</name>
         <value>58</value>
       </interrupt>
       <registers>
@@ -27325,7 +27421,7 @@
           <addressOffset>0</addressOffset>
           <size>32</size>
           <access>read-write</access>
-          <resetValue>0</resetValue>
+          <resetValue>0x702</resetValue>
           <resetMask>0xFFFFFFFF</resetMask>
           <fields>
             <field>
@@ -29344,7 +29440,7 @@
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>Watchdog</name>
+        <name>WDOG_EWM</name>
         <value>22</value>
       </interrupt>
       <registers>
@@ -29796,7 +29892,7 @@
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
-        <name>Watchdog</name>
+        <name>WDOG_EWM</name>
         <value>22</value>
       </interrupt>
       <registers>
@@ -35034,25 +35130,6 @@
           </fields>
         </register>
         <register>
-          <name>WP7816A_T1</name>
-          <description>UART 7816 Wait Parameter Register A</description>
-          <alternateGroup>UART0</alternateGroup>
-          <addressOffset>0x3C</addressOffset>
-          <size>8</size>
-          <access>read-write</access>
-          <resetValue>0</resetValue>
-          <resetMask>0xFF</resetMask>
-          <fields>
-            <field>
-              <name>BWI_H</name>
-              <description>Block Wait Time Integer High (C7816[TTYPE] = 1)</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>8</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
           <name>WP7816A_T0</name>
           <description>UART 7816 Wait Parameter Register A</description>
           <alternateGroup>UART0</alternateGroup>
@@ -35072,18 +35149,18 @@
           </fields>
         </register>
         <register>
-          <name>WP7816B_T1</name>
-          <description>UART 7816 Wait Parameter Register B</description>
+          <name>WP7816A_T1</name>
+          <description>UART 7816 Wait Parameter Register A</description>
           <alternateGroup>UART0</alternateGroup>
-          <addressOffset>0x3D</addressOffset>
+          <addressOffset>0x3C</addressOffset>
           <size>8</size>
           <access>read-write</access>
-          <resetValue>0x14</resetValue>
+          <resetValue>0</resetValue>
           <resetMask>0xFF</resetMask>
           <fields>
             <field>
-              <name>BWI_L</name>
-              <description>Block Wait Time Integer Low (C7816[TTYPE] = 1)</description>
+              <name>BWI_H</name>
+              <description>Block Wait Time Integer High (C7816[TTYPE] = 1)</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
               <access>read-write</access>
@@ -35103,6 +35180,25 @@
             <field>
               <name>WI_L</name>
               <description>Wait Time Integer Low (C7816[TTYPE] = 0)</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>WP7816B_T1</name>
+          <description>UART 7816 Wait Parameter Register B</description>
+          <alternateGroup>UART0</alternateGroup>
+          <addressOffset>0x3D</addressOffset>
+          <size>8</size>
+          <access>read-write</access>
+          <resetValue>0x14</resetValue>
+          <resetMask>0xFF</resetMask>
+          <fields>
+            <field>
+              <name>BWI_L</name>
+              <description>Block Wait Time Integer Low (C7816[TTYPE] = 1)</description>
               <bitOffset>0</bitOffset>
               <bitWidth>8</bitWidth>
               <access>read-write</access>

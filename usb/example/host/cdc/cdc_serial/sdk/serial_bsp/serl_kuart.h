@@ -38,10 +38,6 @@
 #ifndef _serial_kuart_h_
 #define _serial_kuart_h_
 
-#if (PSP_MQX_CPU_IS_KINETIS || PSP_MQX_CPU_IS_VYBRID)
-#include <lwtimer.h>
-#include <dma.h>
-#endif
 /*--------------------------------------------------------------------------*/
 /*
 **                    DATATYPE DECLARATIONS
@@ -81,11 +77,6 @@ typedef struct kuart_init_struct
 
    /* ERR interrupt vector priority */
    uint32_t err_priority;
-
-#if (PSP_MQX_CPU_IS_KINETIS || PSP_MQX_CPU_IS_VYBRID)  
-	uint8_t tx_dma_channel;
-	uint8_t rx_dma_channel;
-#endif        
 } kuart_init_struct_t;
 typedef const kuart_init_struct_t * kuart_init_struct_cptr;
 
@@ -120,23 +111,6 @@ typedef struct kuart_info_struct
    uint32_t                           rx_overruns;
    uint32_t                           rx_dropped_input;
    uint32_t                           rx_noise_errors;
-#if (PSP_MQX_CPU_IS_KINETIS || PSP_MQX_CPU_IS_VYBRID)   
-   uint8_t tx_dma_chan;
-   uint8_t rx_dma_chan;
-   uint32_t tx_dma_hardware_request;
-   uint32_t rx_dma_hardware_request;
-   uint32_t err_int;
-   LWTIMER_PERIOD_STRUCT_PTR lw_timer_ptr;
-   LWTIMER_STRUCT_PTR lw_timer;
-   uint8_t tx_keep;
-   uint8_t rx_keep;
-   DMA_CHANNEL_HANDLE tx_dch;
-   DMA_CHANNEL_HANDLE rx_dch;
-   DMA_TCD tx_tcd;
-   DMA_TCD rx_tcd;
-   uint32_t tx_dma_seq;
-   uint32_t rx_dma_seq;	
-#endif
 } kuart_info_struct_t;
 
 /*--------------------------------------------------------------------------*/
@@ -153,13 +127,6 @@ extern uint32_t _kuart_polled_install(char *, kuart_init_struct_cptr, uint32_t);
 extern uint32_t _kuart_int_install(char *, kuart_init_struct_cptr, uint32_t);
 extern void   *_bsp_get_serial_base_address(uint8_t);
 extern uint32_t _kuart_dma_install(char *, kuart_init_struct_cptr, uint32_t);
-#if PSP_MQX_CPU_IS_KINETIS 
-extern uint32_t _bsp_get_serial_error_int_num(uint8_t dev_num);
-#endif
-#if (PSP_MQX_CPU_IS_KINETIS || PSP_MQX_CPU_IS_VYBRID)
-extern uint32_t _bsp_get_serial_tx_dma_request(uint8_t dev_num);
-extern uint32_t _bsp_get_serial_rx_dma_request(uint8_t dev_num);
-#endif
 
 #ifdef __cplusplus
 }

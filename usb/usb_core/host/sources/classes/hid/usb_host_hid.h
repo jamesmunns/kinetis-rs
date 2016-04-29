@@ -127,7 +127,6 @@ typedef struct _usb_hid_class
     usb_device_instance_handle      dev_handle;
     usb_interface_descriptor_handle intf_handle;
      /* Only 1 command can be issued at one time */
-    bool                            in_setup;
     usb_pipe_handle                 in_pipe;
     /* Here we store callback and parameter from higher level */
     tr_callback                     ctrl_callback;
@@ -135,6 +134,7 @@ typedef struct _usb_hid_class
     tr_callback                     recv_callback;
     void*                           recv_param;
     uint32_t                        running;
+    bool                            in_setup;
 } usb_hid_class_struct_t;
 
 typedef struct _hid_command

@@ -117,6 +117,8 @@ void configure_rtc_pins(uint32_t instance);
 
 void configure_ftm_pins(uint32_t instance);
 
+void configure_cmp_pins(uint32_t instance);
+
 /* END pin_mux. */
 #endif /* #ifndef __pins_H_ */
 /*!

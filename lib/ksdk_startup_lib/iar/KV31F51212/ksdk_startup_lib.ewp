@@ -932,7 +932,7 @@
         </option>
         <option>
           <name>IarchiveOutput</name>
-          <state>$PROJ_DIR$/debug/ksdk_startup_lib.a</state>
+          <state>$PROJ_DIR$/debug/libksdk_startup.a</state>
         </option>
       </data>
     </settings>
@@ -1177,7 +1177,7 @@
         </option>
         <option>
           <name>CCDebugInfo</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>IEndianMode</name>
@@ -1395,7 +1395,7 @@
         </option>
         <option>
           <name>ADebug</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>AltRegisterNames</name>
@@ -1873,7 +1873,7 @@
         </option>
         <option>
           <name>IarchiveOutput</name>
-          <state>$PROJ_DIR$/release/ksdk_startup_lib.a</state>
+          <state>$PROJ_DIR$/release/libksdk_startup.a</state>
         </option>
       </data>
     </settings>

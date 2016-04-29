@@ -67,38 +67,47 @@
  *****************************************************************************/
 typedef uint32_t phdc_handle_t;
 
-/* event structures */
+/*!
+ * @brief Data structure for app.
+ *
+ * Holds the buffer information along with the send complete event.
+ *
+ */
 typedef struct _phdc_app_data_struct 
 {
-    uint8_t   qos;
-    uint8_t*  buffer_ptr;
-    uint32_t  size;
+    uint8_t   qos;        /*!< the qos of the transfer*/
+    uint8_t*  buffer_ptr; /*!< the buffer point*/
+    uint32_t  size;       /*!< the buffer size*/
 } phdc_app_data_struct_t;
 
-/* Structures used to configure PHDC class by  APP*/
+/*!
+ * @brief  Structures used to configure PHDC class by  APP
+ *
+ * Holds the detailed information about the PHDC configuration.
+ *
+ */
 typedef struct _phdc_config_struct
 {
-    usb_application_callback_struct_t           phdc_application_callback;
-    usb_vendor_req_callback_struct_t            vendor_req_callback; 
-    usb_class_specific_callback_struct_t        class_specific_callback;
-    usb_desc_request_notify_struct_t*           desc_callback_ptr;  
+    usb_application_callback_struct_t           phdc_application_callback; /*!< application callback function to handle the Device status related event*/
+    usb_vendor_req_callback_struct_t            vendor_req_callback;       /*!< application callback function to handle the vendor request related event, reserved for future use*/
+    usb_class_specific_callback_struct_t        class_specific_callback;   /*!< application callback function to handle all the class related event*/
+    usb_desc_request_notify_struct_t*           desc_callback_ptr;         /*!< descriptor related callback function data structure.*/
 } phdc_config_struct_t;
 
 /******************************************************************************
  * Global Functions
  *****************************************************************************/
-/**************************************************************************//*!
+/*!
+ * @brief The funtion initializes the Device and Controller layer.
  *
- * @name  USB_Class_PHDC_Init
+ * The application calls this API function to initialize the PHDC class, the underlying layers, and
+ * the controller hardware.
  *
- * @brief The funtion initializes the Device and Controller layer 
- *
- * @param  phdc_config_ptr[IN]  : Phdc configuration structure pointer
- * @return phdc_handle      : When Successfull 
- *         Others           : Errors
- ******************************************************************************
- * This function initializes the PHDC Class layer and layers it is dependednt on 
- *****************************************************************************/                          
+ * @param controller_id controller ID, such as USB_CONTROLLER_KHCI_0
+ * @param phdc_config_ptr PHDC configuration structure
+ * @param phdcHandle pointer point to the initialized PHDC class
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_PHDC_Init
 (
     uint8_t                 controller_id,   /*[IN]*/
@@ -106,40 +115,31 @@ extern usb_status USB_Class_PHDC_Init
     phdc_handle_t *           phdcHandle /*[OUT]*/
 );
 
-/**************************************************************************//*!
+/*!
+ * @brief The funtion De-initializes the Device and Controller layer.
  *
- * @name  USB_Class_PHDC_Deinit
- *
- * @brief 
- *
- * @param handle          :   handle returned by USB_Class_PHDC_Deinit   
- *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- *****************************************************************************/
+ * The application calls this API function to un-initialize the PHDC class, the underlying layers, and
+ * the controller hardware.
+ * @param phdcHandle PHDC class handler  
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_PHDC_Deinit
 (
     phdc_handle_t   phdcHandle
 );
 
-/**************************************************************************//*!
+/*!
+ * @brief Receives the PHDC data.
  *
- * @name  USB_PHDC_Class_Recv_Data
- *
- * @brief This fucntion is used by Application to receive data through PHDC class
- *
- * @param handle     :   Handle returned by USB_Class_PHDC_Init
- * @param ep_num          :   endpoint num 
- * @param app_buff        :   buffer to send
- * @param size            :   length of the transfer   
- *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- ******************************************************************************
- * This fucntion is used by Application to send data through PHDC class 
- *****************************************************************************/  
+ * The application calls this API function to receive data from host. Once the data is received, the
+ * application layer receives a callback event USB_DEV_EVENT_DATA_RECEIVED.
+ * 
+ * @param handle PHDC class handler
+ * @param qos the qos of the transfer
+ * @param buff_ptr buffer to save the data from the host
+ * @param size buffer length to receive  
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_PHDC_Recv_Data
 (
     phdc_handle_t       handle,
@@ -147,25 +147,22 @@ extern usb_status USB_Class_PHDC_Recv_Data
     uint8_t*            buff_ptr,      /* [IN] buffer to send */      
     uint32_t            size           /* [IN] length of the transfer */
 );
-/**************************************************************************//*!
+
+/*!
+ * @brief Sends the PHDC data.
  *
- * @name  USB_Class_PHDC_Send_Data
+ * The application calls this API function to send data specified by app_buff and size. Once the data is
+ * sent, the application layer receives a callback event USB_DEV_EVENT_SEND_COMPLETE.
+ * The application reserves the buffer until it receives a callback event stating that the data is sent.
  *
- * @brief This fucntion is used by Application to send data through PHDC class
- *
- * @param handle          :   handle returned by USB_Class_PHDC_Init
- * @param meta_data       :   packet is meta data or not
- * @param num_tfr         :   no. of transfers
- * @param qos             :   current qos of the transfer
- * @param app_buff        :   buffer to send
- * @param size            :   length of the transfer   
- *
- * @return status       
- *         USB_OK           : When Successfull 
- *         Others           : Errors
- ******************************************************************************
- * This fucntion is used by Application to send data through PHDC class 
- *****************************************************************************/  
+ * @param handle PHDC class handler
+ * @param meta_data opaque meta data in app buffer
+ * @param num_tfr	 no. of transfers to follow with given channel--only valid if meta data is true
+ * @param current_qos	  qos of the transfers to follow--only valid if meta data is true
+ * @param app_buff buffer holding application data 
+ * @param size length of the transfer
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Class_PHDC_Send_Data
 (
     phdc_handle_t    handle,    
@@ -178,6 +175,30 @@ extern usb_status USB_Class_PHDC_Send_Data
     uint8_t*         app_buff,     /* buffer holding application data */
     uint32_t         size          /* [IN] length of the transfer */
 );
+
+#if USBCFG_DEV_ADVANCED_CANCEL_ENABLE
+/**************************************************************************//*!
+ *
+ * @name  USB_Class_PHDC_Cancel
+ *
+ * @brief 
+ *
+ * @param handle          :   handle returned by USB_Class_PHDC_Init
+ * @param ep_num          :   endpoint num 
+ * @param direction        :   direction of the endpoint 
+ *
+ * @return status       
+ *         USB_OK           : When Successfull 
+ *         Others           : Errors
+ *****************************************************************************/
+extern usb_status USB_Class_PHDC_Cancel
+(
+    phdc_handle_t handle,/*[IN]*/
+    uint8_t ep_num,/*[IN]*/
+    uint8_t direction
+);
+#endif
+
 extern void USB_Class_Periodic_Task(void);                               
 #define USB_PHDC_Periodic_Task USB_Class_Periodic_Task
 #define USB_Class_PHDC_Periodic_Task USB_Class_Periodic_Task

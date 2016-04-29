@@ -28,121 +28,49 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+//  Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "fsl_device_registers.h"
-#include "fsl_uart_driver.h"
-#include "fsl_clock_manager.h"
+// SDK Included Files
 #include "board.h"
-
-#ifdef DEBUG
 #include "fsl_debug_console.h"
-#endif
 
-/*******************************************************************************
- * Definitions
- ******************************************************************************/
-#define USE_STDIO_FUNCTIONS  /* Define this symbol to use STDIO functions */
+////////////////////////////////////////////////////////////////////////////////
+// Code
+////////////////////////////////////////////////////////////////////////////////
 
-/*******************************************************************************
- * Global Variables
- ******************************************************************************/
-
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
-
-/*******************************************************************************
- * Code
- ******************************************************************************/
-
-/********************************************************************/
+/*!
+ * @brief Main function
+ */
 int main (void)
 {
-    /***************************************************************************
-     *  RX buffers
-     **************************************************************************/
-    /*! @param receiveBuff Buffer used to hold received data */
-    uint8_t receiveBuff[19] = {0};
+    // RX buffers
+    //! @param receiveBuff Buffer used to hold received data
+    uint8_t receiveBuff;
 
-    /* Initialize standard SDK demo application pins */
+    // Initialize standard SDK demo application pins
     hardware_init();
 
-    /* Configure the UART TX/RX pins */
-    configure_uart_pins(BOARD_DEBUG_UART_INSTANCE);
-
-#ifdef USE_STDIO_FUNCTIONS
-    /* Call this function to initialize the console UART.  This function
-       enables the use of STDIO functions (printf, scanf, etc.) */
+    // Call this function to initialize the console UART. This function
+    // enables the use of STDIO functions (printf, scanf, etc.)
     dbg_uart_init();
     
-    /*  Print the initial banner */
-    printf("\r\nHello World!\n\n\r");
+    // Print the initial banner
+    PRINTF("\r\nHello World!\n\n\r");
 
     while(1)
     {
-        /********************************************
-         * Main routine that simply echoes received
-         * characters forever
-         *********************************************/
+        // Main routine that simply echoes received characters forever
 
-        /* First, get character.  */
-        receiveBuff[0] = getchar();
-        
-        /* Now echo the received character */
-        putchar(receiveBuff[0]);
+        // First, get character
+        receiveBuff = GETCHAR();
+
+        // Now echo the received character
+        PUTCHAR(receiveBuff);
     }
-#else
-    /***************************************************************************
-     * UART configuration and state structures
-     **************************************************************************/
-    /*! @param uartConfig UART configuration structure */
-    /*! @param uartState UARt state structure which is used internally by the*/
-    /*! by the UART driver to keep track of the UART states */
-    uart_user_config_t uartConfig;
-    uart_state_t uartState;
-    
-    /***************************************************************************
-     *  TX buffers
-     **************************************************************************/
-    /*! @param sourceBuff Buffer used to hold the string to be transmitted */
-    uint8_t sourceBuff[19] = {"\r\nHello World!\n\n\r"};
-    
-    /* Configure the UART for 115200, 8 data bits, No parity, and one stop bit*/
-    uartConfig.baudRate = 115200;
-    uartConfig.bitCountPerChar = kUart8BitsPerChar;
-    uartConfig.parityMode = kUartParityDisabled;
-    uartConfig.stopBitCount = kUartOneStopBit;
-    
-    /* Must call the OSA Init function to use Communication drivers */
-    OSA_Init();
-    
-    /* Initialize the UART module */
-    UART_DRV_Init(BOARD_DEBUG_UART_INSTANCE, &uartState, &uartConfig);
-    
-    /*  Print the initial banner */
-    UART_DRV_SendDataBlocking(BOARD_DEBUG_UART_INSTANCE, sourceBuff, 17, 200);
-
-    while(1)
-    {
-        /********************************************
-         * Main routine that simply echoes received
-         * characters forever
-         *********************************************/
-
-        /* First, get character.  */
-        UART_DRV_ReceiveDataBlocking(BOARD_DEBUG_UART_INSTANCE, receiveBuff, 1, 
-                                     OSA_WAIT_FOREVER);
-
-        /* Now, stuff the buffer for the TX side and send the character*/
-        sourceBuff[0] = receiveBuff[0];
-
-        /* Now echo the received character */
-        UART_DRV_SendDataBlocking(BOARD_DEBUG_UART_INSTANCE, sourceBuff, 1, 
-                                  200);
-    }
-#endif
 }
-/********************************************************************/
-/********************************************************************/

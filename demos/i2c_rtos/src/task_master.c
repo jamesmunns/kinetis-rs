@@ -28,47 +28,54 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// SDK Included Files
 #include "fsl_i2c_master_driver.h"
 #include "fsl_uart_driver.h"
 #include "i2c_rtos.h"
 
-/*******************************************************************************
- * Definition
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 
-/*******************************************************************************
- * Global Variables
- ******************************************************************************/
+#define I2C_RTOS_LED_R   'R'
+#define I2C_RTOS_LED_G   'G'
+#define I2C_RTOS_LED_B   'B'
+
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
+
 extern uint32_t gSlaveId;
-
-/********************************************************************************
- * Variables
- ******************************************************************************/
-/* i2c master driver control block */
+// i2c master driver control block
 static i2c_master_state_t master;
-/* i2c slave info */
+// i2c slave info
 static i2c_device_t slave =
 {
     .address = I2C_RTOS_SLAVE_ADDRESS,
     .baudRate_kbps = 50
 };
 
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
+
 static int cmd_read_temperature(void)
 {
     i2c_status_t i2c_ret;
-    int16_t temperature;
-    /* Buffers for send and recv data to/from I2C bus */
-    uint8_t bufRecv[4] = {0};
+
+    // Buffers for send and recv data to/from I2C bus 
+    uint32_t bufRecv[1] = {0};
     uint8_t bufSend[2] = {0};
 
     bufSend[0] = I2C_RTOS_MAGIC;
     bufSend[1] = I2C_RTOS_TEMP_CMD;
 
     printf("Fetching temperature from client\r\n");
-    /* Send read temperature request to slave */
+    // Send read temperature request to slave 
     i2c_ret = I2C_DRV_MasterSendDataBlocking(I2C_RTOS_MASTER_INSTANCE,
                                              &slave, NULL, 0, bufSend, 2, 20);
     if (i2c_ret != kStatus_I2C_Success)
@@ -77,39 +84,34 @@ static int cmd_read_temperature(void)
         return 1;
     }
 
-    /* wait for slave prepare the data */
+    // wait for slave prepare the data 
     OSA_TimeDelay(200);
 
-    /* read from slave */
+    // read from slave 
     I2C_DRV_MasterReceiveDataBlocking(I2C_RTOS_MASTER_INSTANCE,
-                                      &slave, NULL, 0, bufRecv, 4, 20);
+                                      &slave, NULL, 0, (uint8_t*)bufRecv, 4, 20);
 
-    temperature = *(int32_t *)&bufRecv[0];
-    /* get data, and convert to C degree */
-    printf("Client Chip Temperature:%hdC\r\n", temperature);
+    // get data, and convert to C degree 
+    printf("Client Chip Temperature:%hdC\r\n", (int)bufRecv[0]);
     return 0;
 }
-
-#define I2C_RTOS_LED_R   'R'
-#define I2C_RTOS_LED_G   'G'
-#define I2C_RTOS_LED_B   'B'
 
 static int cmd_light_led(int32_t led_type, int32_t on)
 {
     i2c_status_t i2c_ret;
-    /* Buffer for transmitted data.  */
+    // Buffer for transmitted data
     uint8_t bufSend[4] = {0};
 
-    /* Set the send buffer */
+    // Set the send buffer
     bufSend[0] = I2C_RTOS_MAGIC;
     bufSend[1] = I2C_RTOS_LIGHT_CMD;
     bufSend[2] = led_type;
     bufSend[3] = on;
 
-    /* Send RGB value to slave */
+    // Send RGB value to slave
     i2c_ret = I2C_DRV_MasterSendDataBlocking(I2C_RTOS_MASTER_INSTANCE, &slave,
                                   NULL, 0, bufSend, 4, 200);
-    /* print error message if transfer was not successful */
+    // print error message if transfer was not successful
     if (i2c_ret != kStatus_I2C_Success)
     {
         printf("Error while sending RGB values to slave:%d\r\n", i2c_ret);
@@ -118,47 +120,19 @@ static int cmd_light_led(int32_t led_type, int32_t on)
     return 0;
 }
 
-#if 0
-static int cmd_req_sleep(int argc, char * const argv[])
-{
-    i2c_status_t i2c_ret;
-    /* Buffer for transmitted data.  */
-    uint8_t bufSend[6] = {0};
-
-    if (argc != 1)
-    {
-        return CMD_RET_USAGE;
-    }
-    /* Set the send buffer */
-    bufSend[0] = I2C_RTOS_MAGIC;
-    bufSend[1] = I2C_RTOS_SLEEP_CMD;
-    *(uint32_t *)&bufSend[2] = gSlaveId;
-
-    /* Send sleep request to slave */
-    i2c_ret = i2c_master_transfer(&master, &slave,
-                                  kI2CWrite, true, 0, 0, bufSend, 6, NULL, 20);
-    /* print error message if transfer was not successful */
-    if (i2c_ret != kStatus_I2C_Success)
-    {
-        printf("Error while sending request to slave:%d\r\n", i2c_ret);
-        return CMD_RET_SUCCESS;
-    }
-    return CMD_RET_SUCCESS;
-}
-#endif
-
 static int cmd_read_id(void)
 {
     i2c_status_t i2c_ret;
-    /* Buffers for send and recv data to/from I2C bus */
-    uint8_t bufRecv[4] = {0};
+
+    // Buffers for send and recv data to/from I2C bus
+    uint32_t bufRecv[1] = {0};
     uint8_t bufSend[2] = {0};
 
     bufSend[0] = I2C_RTOS_MAGIC;
     bufSend[1] = I2C_RTOS_READID_CMD;
 
     printf("Fetching chip ID from client\r\n");
-    /* Send read temperature request to slave */
+    // Send read temperature request to slave
     i2c_ret = I2C_DRV_MasterSendDataBlocking(I2C_RTOS_MASTER_INSTANCE, &slave, NULL,
                                   0, bufSend, 2, 200);
     if (i2c_ret != kStatus_I2C_Success)
@@ -167,15 +141,15 @@ static int cmd_read_id(void)
         return 1;
     }
 
-    /* wait for slave prepare the data */
+    // wait for slave prepare the data
     OSA_TimeDelay(200);
 
-    /* read from slave */
+    // read from slave
     I2C_DRV_MasterReceiveDataBlocking(I2C_RTOS_MASTER_INSTANCE, &slave, NULL, 0,
-                        bufRecv, 4, 200);
+                        (uint8_t *)bufRecv, 4, 200);
 
-    /* get data, and convert to C degree */
-    printf("Client ID:0x%x\r\n", *(uint32_t *)&bufRecv[0]);
+    // get data, and convert to C degree
+    printf("Client ID:0x%x\r\n", (unsigned int)bufRecv[0]);
     return 0;
 }
 
@@ -206,10 +180,10 @@ static uint32_t get_user_choice(void)
 void task_master(task_param_t param)
 
 {
-    /* init i2c master driver */
+    // init i2c master driver
     I2C_DRV_MasterInit(I2C_RTOS_MASTER_INSTANCE, &master);
 
-    /* main loop */
+    // main loop
     while (1)
     {
         static int32_t ledr_sts = 0;
@@ -222,29 +196,29 @@ void task_master(task_param_t param)
         switch (get_user_choice())
         {
         case '1':
-            /* Led Red toggle */
+            // Led Red toggle
             ledr_sts ^= 1;
             cmd_light_led(I2C_RTOS_LED_R, ledr_sts);
             printf("Red LED %s\r\n", ledr_sts ? "on" : "off");
             break;
         case '2':
-            /* Led Green toggle */
+            // Led Green toggle
             ledg_sts ^= 1;
             cmd_light_led(I2C_RTOS_LED_G, ledg_sts);
             printf("Green LED %s\r\n", ledg_sts ? "on" : "off");
             break;
         case '3':
-            /* Led Blue toggle */
+            // Led Blue toggle
             ledb_sts ^= 1;
             cmd_light_led(I2C_RTOS_LED_B, ledb_sts);
             printf("Blue LED %s\r\n", ledb_sts ? "on" : "off");
             break;
         case '4':
-            /* Read temp */
+            // Read temp
             cmd_read_temperature();
             break;
         case '5':
-            /* Read id */
+            // Read id
             cmd_read_id();
             break;
         default:

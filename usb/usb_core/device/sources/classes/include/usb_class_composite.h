@@ -46,41 +46,79 @@
 /******************************************************************************
  * Macro's
  *****************************************************************************/
-/* Audio class type */ 
+/* Composite class type */ 
 
-
- typedef uint32_t comosite_handle_t;
+ /*!
+  * @brief Represents the composite class handle..
+  *
+  * This structure represents the composite class handle.. 
+  *
+  */
+ typedef uint32_t composite_handle_t;
 /******************************************************************************
  * Types
  *****************************************************************************/
 
- /* Structure used to configure composite class by APP*/
+ /*!
+  * @brief Structure used to configure composite class by APP.
+  *
+  * Define the structure of the composite class configuration. 
+  *
+  */
  typedef struct _class_config_struct
  {
-     usb_application_callback_struct_t          composite_application_callback;
-     usb_vendor_req_callback_struct_t           vendor_req_callback;
-     usb_class_specific_callback_struct_t       class_specific_callback;
-     usb_desc_request_notify_struct_t*          desc_callback_ptr;
-     class_type                                 type;
+     usb_application_callback_struct_t          composite_application_callback;           /*!< application callback function to handle the Device status related event for the specified type of class*/
+     usb_vendor_req_callback_struct_t           vendor_req_callback;                      /*!< application callback function to handle the vendor request related event, reserved for future use*/
+     usb_class_specific_callback_struct_t       class_specific_callback;                  /*!< application callback function to handle all the class related event for the specified type of class*/
+     usb_desc_request_notify_struct_t*          desc_callback_ptr;                        /*!< related callback function data structure for the specified type of class*/
+     uint32_t                                   class_handle;                             /*!< the handle of the class*/
+     class_type                                 type;                                     /*!< class type*/
  }class_config_struct_t;
- 
+
+
+ /*!
+  * @brief Structure used to hold the detailed information about the composite class configuration.
+  *
+  * Define the structure of detailed inforamtion of the composite class. 
+  *
+  */
  typedef struct _composite_config_struct
  {
-     uint8_t                                    count;               /* Number of class support */   
-     class_config_struct_t*                     class_app_callback;  /* Array of Endpoints Structures */
+     uint8_t                                    count;               /*!< Number of class support */   
+     class_config_struct_t*                     class_app_callback;  /*!< Array of Endpoints Structures */
  }composite_config_struct_t;
+ 
 /******************************************************************************
  * Global function prototypes
  *****************************************************************************/
+ /*!
+ * @brief The funtion initializes the Device and Controller layer 
+ *
+ * This function initializes the Composite Class layer and layers it is dependent on 
+ *
+ * @param controller_id	[in] - controller ID, like USB_CONTROLLER_KHCI_0
+ * @param composite_callback_ptr	[in] - composite configuration structure, refer to composite_config_struct_t
+ * @param compositeHandle	[out] - pointer point to the initialized composite class, refer to composite_handle_t    
+ *
+ * @return USB_OK-Success/Others-Fail
+ */
 extern usb_status USB_Composite_Init(
     uint8_t                    controller_ID,                /* [IN] Controller ID */
     composite_config_struct_t* composite_callback_ptr,       /* [IN] Poiter to class info */
-    comosite_handle_t*         compositeHandle   
+    composite_handle_t*         compositeHandle   
 );
 
+/*!
+* @brief The funtion deinitializes the Device and Controller layer 
+*
+* This function deinitializes the Composite Class layer and layers it is dependent on 
+*
+* @param compositeHandle   [in] - pointer point to the initialized composite class, refer to composite_handle_t    
+*
+* @return USB_OK-Success/Others-Fail
+*/
 extern usb_status USB_Composite_DeInit(
-    comosite_handle_t          compositeHandle               /* [IN] Controller ID */
+    composite_handle_t          compositeHandle               /* [IN] Controller ID */
 );
-extern usb_status USB_Composite_Get_Class_Handle(comosite_handle_t handle, class_type type, void *   class_handle_ptr);
 #endif
 /* EOF */

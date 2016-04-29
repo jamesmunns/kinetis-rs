@@ -53,7 +53,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "board.h"
-#include "uart/fsl_uart_driver.h"
+#include "fsl_uart_driver.h"
 #endif 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
 #include "sci.h"
@@ -80,7 +80,7 @@
 #error This application requires BSPCFG_ENABLE_I2C0 defined non-zero in user_config.h. Please recompile BSP with this option.
 #endif
 #endif
-#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
+#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK) || (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
 #define MAIN_TASK                       (10)
 #endif
 /*****************************************************************************
@@ -204,7 +204,6 @@ void OTG_App_Load_Unload_Task(os_event_handle event)
 *END*--------------------------------------------------------------------*/
 void APP_task()
 {
-    uint32_t otg_app_event_value;
 #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)||((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)&& USE_RTOS))  
     OS_Event_wait(g_otg_app_event_handle,OTG_LOAD_UNLOAD_EVENT_MARK, FALSE, 10);
 #endif  
@@ -234,9 +233,9 @@ void APP_init()
     g_vbus_err = FALSE;
 
     g_otg_app_event_handle = OS_Event_create(0);
-    printf("\n\r otg module is initilalizing:");
-    _usb_otg_init(USBCFG_DEFAULT_OTG_CONTROLLER, (otg_int_struct_t *)&g_otg_init, &g_otg_handle);
-    printf("\n\rPress P to print the menu:");
+    USB_PRINTF("\n\r otg module is initilalizing:");
+    usb_otg_init(USBCFG_DEFAULT_OTG_CONTROLLER, (otg_int_struct_t *)&g_otg_init, &g_otg_handle);
+    USB_PRINTF("\n\rPress P to print the menu:");
     OS_Unlock();
 }
 
@@ -251,7 +250,7 @@ void APP_init()
 void App_OtgCallback(usb_otg_handle handle, os_event_handle event)
 {
     uint8_t device_state;
-    device_state = _usb_otg_get_state(handle);
+    device_state = usb_otg_get_state(handle);
     if(device_state == USB_OTG_DEVSTATE_B)
     {
         if(OS_Event_check_bit(event, OTG_B_IDLE)) 
@@ -278,22 +277,22 @@ void App_OtgCallback(usb_otg_handle handle, os_event_handle event)
         }
         if(OS_Event_check_bit(event, OTG_B_A_HNP_REQ)) 
         {
-            (void)_usb_otg_bus_release(g_otg_handle); 
+            (void)usb_otg_bus_release(g_otg_handle); 
         }
     }
    else if(device_state == USB_OTG_DEVSTATE_A)
    {
         if(OS_Event_check_bit(event, OTG_A_WAIT_BCON_TMOUT)) 
         {
-            _usb_otg_set_a_bus_req(g_otg_handle , FALSE);
+            usb_otg_set_a_bus_req(g_otg_handle , FALSE);
         }
         if(OS_Event_check_bit(event, OTG_A_BIDL_ADIS_TMOUT)) 
         {
-            _usb_otg_set_a_bus_req(g_otg_handle, TRUE);    
+            usb_otg_set_a_bus_req(g_otg_handle, TRUE);    
         }
         if(OS_Event_check_bit(event, OTG_A_B_HNP_REQ)) 
         {
-            _usb_otg_set_a_bus_req( handle , FALSE);
+            usb_otg_set_a_bus_req( handle , FALSE);
         }
         if(OS_Event_check_bit(event, OTG_A_IDLE)) 
         {
@@ -304,7 +303,7 @@ void App_OtgCallback(usb_otg_handle handle, os_event_handle event)
         if(OS_Event_check_bit(event, OTG_A_WAIT_VRISE)) 
         {
             g_otg_state = OTG_A_WAIT_VRISE;
-            _usb_otg_set_a_bus_req( handle , TRUE);
+            usb_otg_set_a_bus_req( handle , TRUE);
         }
         if(OS_Event_check_bit(event, OTG_A_WAIT_BCON)) 
         {
@@ -356,73 +355,73 @@ static void App_HandleUserInput(void)
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
     if (status())
     {
-        printf("\n\r");
+        USB_PRINTF("\n\r");
         character = getchar();
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM)
     uart_getchar_no_block(&character);
     if(character)  
     {
-        printf("\n\r %c", character);        
+        USB_PRINTF("\n\r %c", character);        
 #elif (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
     uint32_t baseAddr = g_uartBaseAddr[BOARD_DEBUG_UART_INSTANCE];
     if(UART_HAL_IsRxDataRegFull(baseAddr))
     UART_HAL_Getchar(baseAddr, &character);
     if(character != (int8_t)0x00)  
     {
-        printf("\n\r %c", character);
+        USB_PRINTF("\n\r %c", character);
 #endif    
         switch (character)
         {
 
         case '1':
-            if (_usb_otg_session_request(g_otg_handle) == USB_OK)
+            if (usb_otg_session_request(g_otg_handle) == USB_OK)
             {
-                printf("\n\rSRP request");
+                USB_PRINTF("\n\rSRP request");
             }
             else
             {
-                printf("\n\rError Requesting SRP");
+                USB_PRINTF("\n\rError Requesting SRP");
             }
             break;
         case '2': 
-            if (_usb_otg_bus_request(g_otg_handle) == USB_OK)
+            if (usb_otg_bus_request(g_otg_handle) == USB_OK)
             {
-                printf("\n\rB bus request");
+                USB_PRINTF("\n\rB bus request");
             }
             else
             {
-                printf("\n\rError requesting the bus");
+                USB_PRINTF("\n\rError requesting the bus");
             }
             break;
 
         case '3':
-            if (_usb_otg_bus_release(g_otg_handle) == USB_OK)
+            if (usb_otg_bus_release(g_otg_handle) == USB_OK)
             {
-                printf("\n\rB bus release");
+                USB_PRINTF("\n\rB bus release");
             }
             else
             {
-                printf("\n\rError releasing the bus");
+                USB_PRINTF("\n\rError releasing the bus");
             }
             break;
         case '4': 
-            _usb_otg_set_a_bus_req(g_otg_handle , TRUE);
-            printf("\n\rA bus request");
+            usb_otg_set_a_bus_req(g_otg_handle , TRUE);
+            USB_PRINTF("\n\rA bus request");
             break;
         case '5': 
-            _usb_otg_set_a_bus_req(g_otg_handle , FALSE);
-            printf("\n\rA bus release");
+            usb_otg_set_a_bus_req(g_otg_handle , FALSE);
+            USB_PRINTF("\n\rA bus release");
             break;
         case '6': 
-            _usb_otg_set_a_bus_drop(g_otg_handle , TRUE);
-            printf("\n\rA set a bus drop true");
+            usb_otg_set_a_bus_drop(g_otg_handle , TRUE);
+            USB_PRINTF("\n\rA set a bus drop true");
             break;
         case '7': 
-            _usb_otg_set_a_bus_drop(g_otg_handle , FALSE);
-            printf("\n\rA set a bus drop false");
+            usb_otg_set_a_bus_drop(g_otg_handle , FALSE);
+            USB_PRINTF("\n\rA set a bus drop false");
             break;
         case '8':
-            _usb_otg_set_a_clear_err(g_otg_handle);
+            usb_otg_set_a_clear_err(g_otg_handle);
             break;
         case 'p':
         case 'P': App_PrintMenu();
@@ -444,46 +443,46 @@ static void App_PrintMenu(void)
 {
     bool a_bus_req;
     bool a_bus_drop;
-    printf("\n\r  OTG App User Input Menu");
+    USB_PRINTF("\n\r  OTG App User Input Menu");
     if (g_dev_type == dev_a)
     {
         if (g_vbus_err == FALSE)
         {
             if (g_sess_vld == TRUE)
             {
-                _usb_otg_get_a_bus_req(g_otg_handle, &a_bus_req);
+                usb_otg_get_a_bus_req(g_otg_handle, &a_bus_req);
                 if(FALSE == a_bus_req)
                 {
-                    printf("\n\r      4. A bus request ");
+                    USB_PRINTF("\n\r      4. A bus request ");
                 }
                 else
                 {
-                    printf("\n\r      5. A bus release ");
+                    USB_PRINTF("\n\r      5. A bus release ");
                 }
-                printf("\n\r      6. A set a bus drop true (session end)");
+                USB_PRINTF("\n\r      6. A set a bus drop true (session end)");
             }
             else  /* session not valid */
             {
-                _usb_otg_get_a_bus_req(g_otg_handle, &a_bus_req);
+                usb_otg_get_a_bus_req(g_otg_handle, &a_bus_req);
                 if(FALSE == a_bus_req)
                 {
-                    printf("\n\r      4. A bus request ");
+                    USB_PRINTF("\n\r      4. A bus request ");
                 }
                 else
                 {
-                    printf("\n\r      5. A bus release ");
+                    USB_PRINTF("\n\r      5. A bus release ");
                 }
-                _usb_otg_get_a_bus_drop(g_otg_handle, &a_bus_drop);
+                usb_otg_get_a_bus_drop(g_otg_handle, &a_bus_drop);
                 if (TRUE == a_bus_drop)
                 {
-                    printf("\n\r      7. A set a bus drop false");
+                    USB_PRINTF("\n\r      7. A set a bus drop false");
                 }
              }
         }
         else    /* no VBUS error */
         {
-            printf("\n\r      6. A set a bus drop true (session end)");
-            printf("\n\r      8. A clear error");
+            USB_PRINTF("\n\r      6. A set a bus drop true (session end)");
+            USB_PRINTF("\n\r      8. A clear error");
         }
     }
     else if (g_dev_type == dev_b)
@@ -492,16 +491,16 @@ static void App_PrintMenu(void)
         {
             if (g_otg_state == OTG_B_PERIPHERAL)
             {
-                printf("\n\r      2. B bus request (HNP start)");
+                USB_PRINTF("\n\r      2. B bus request (HNP start)");
             }
             if (g_otg_state == OTG_B_HOST)
             {
-                printf("\n\r      3. B bus release");
+                USB_PRINTF("\n\r      3. B bus release");
             }
         }
         else
         {
-            printf("\n\r      1. B session request (SRP start)");
+            USB_PRINTF("\n\r      1. B session request (SRP start)");
         }
     }
 }
@@ -516,64 +515,64 @@ static void App_PrintMenu(void)
 static void App_Print_Event(usb_otg_handle handle, os_event_handle event)
 {
     uint8_t device_state;
-    device_state = _usb_otg_get_state(handle);
+    device_state = usb_otg_get_state(handle);
     if(device_state == USB_OTG_DEVSTATE_B)
     {
         if(OS_Event_check_bit(event, OTG_B_IDLE)) 
         {
-            printf("\n\r>B: OTG state change to B idle");
+            USB_PRINTF("\n\r>B: OTG state change to B idle");
         }
         if(OS_Event_check_bit(event, OTG_B_IDLE_SRP_READY)) 
         {
-            printf("\n\r>B: OTG is ready to initialize SRP");
+            USB_PRINTF("\n\r>B: OTG is ready to initialize SRP");
 
         }
         if(OS_Event_check_bit(event, OTG_B_SRP_INIT)) 
         {
-            printf("\n\r>B: OTG has initialized SRP");
+            USB_PRINTF("\n\r>B: OTG has initialized SRP");
         }    
         if(OS_Event_check_bit(event, OTG_B_SRP_FAIL)) 
         {
-            printf("\n\r>B: OTG SRP failed to get a response from the Host");
+            USB_PRINTF("\n\r>B: OTG SRP failed to get a response from the Host");
         }    
         if(OS_Event_check_bit(event, OTG_B_PERIPHERAL)) 
         {
-            printf("\n\r>B: OTG state change to B peripheral.");
-            printf("\n\r>B: USB peripheral stack initialized.");
+            USB_PRINTF("\n\r>B: OTG state change to B peripheral.");
+            USB_PRINTF("\n\r>B: USB peripheral stack initialized.");
             App_PrintMenu();
         }
         if(OS_Event_check_bit(event, OTG_B_PERIPHERAL_LOAD_ERROR))    
         {
-            printf("\n\r>B: OTG state change to B peripheral.");
-            printf("\n\r>B: USB peripheral stack initialization failed.");
+            USB_PRINTF("\n\r>B: OTG state change to B peripheral.");
+            USB_PRINTF("\n\r>B: USB peripheral stack initialization failed.");
         }
         if(OS_Event_check_bit(event, OTG_B_PERIPHERAL_HNP_READY)) 
         {
-            printf("\n\r>B: OTG is ready to initialize HNP.");    
+            USB_PRINTF("\n\r>B: OTG is ready to initialize HNP.");    
         }
         if(OS_Event_check_bit(event, OTG_B_PERIPHERAL_HNP_START)) 
         {
-            printf("\n\r>B: OTG has initialized the HNP to request the bus from Host");    
+            USB_PRINTF("\n\r>B: OTG has initialized the HNP to request the bus from Host");    
         }
         if(OS_Event_check_bit(event, OTG_B_PERIPHERAL_HNP_FAIL)) 
         {
-            printf("\n\r>B: HNP failed. OTG is back into peripheral state");
+            USB_PRINTF("\n\r>B: HNP failed. OTG is back into peripheral state");
         }
         if(OS_Event_check_bit(event, OTG_B_HOST)) 
         {     
-            printf("\n\r>B: OTG is in the Host state");
-            printf("\n\r>B: USB host stack initialized.");
+            USB_PRINTF("\n\r>B: OTG is in the Host state");
+            USB_PRINTF("\n\r>B: USB host stack initialized.");
 
         }
         if(OS_Event_check_bit(event, OTG_B_HOST_LOAD_ERROR)) 
         {
-            printf("\n\r>B: OTG is in the Host state");
-            printf("\n\r>B: USB host stack initialization failed.");
+            USB_PRINTF("\n\r>B: OTG is in the Host state");
+            USB_PRINTF("\n\r>B: USB host stack initialization failed.");
         }
         if(OS_Event_check_bit(event, OTG_B_A_HNP_REQ)) 
         {
 
-            printf("\n\r>B: OTG_B_A_HNP_REQ");
+            USB_PRINTF("\n\r>B: OTG_B_A_HNP_REQ");
 
         }
     }
@@ -581,73 +580,73 @@ static void App_Print_Event(usb_otg_handle handle, os_event_handle event)
     {
         if(OS_Event_check_bit(event, OTG_A_WAIT_BCON_TMOUT)) 
         {
-            printf("\n\r>A: OTG_A_WAIT_BCON_TMOUT");
+            USB_PRINTF("\n\r>A: OTG_A_WAIT_BCON_TMOUT");
         }
         if(OS_Event_check_bit(event, OTG_A_BIDL_ADIS_TMOUT)) 
         {
-            printf("\n\r>A: OTG_A_BIDL_ADIS_TMOUT");
+            USB_PRINTF("\n\r>A: OTG_A_BIDL_ADIS_TMOUT");
         }
         if(OS_Event_check_bit(event, OTG_A_AIDL_BDIS_TMOUT)) 
         {
-            printf("\n\r>A: OTG_A_AIDL_BDIS_TMOUT");
+            USB_PRINTF("\n\r>A: OTG_A_AIDL_BDIS_TMOUT");
         }
         if(OS_Event_check_bit(event, OTG_A_ID_TRUE)) 
         {
-            printf("\n\r>A: ID = TRUE ");
+            USB_PRINTF("\n\r>A: ID = TRUE ");
         }
         if(OS_Event_check_bit(event, OTG_A_WAIT_VRISE_TMOUT)) 
         {
-            printf("\n\r>A: VBUS rise failed");
+            USB_PRINTF("\n\r>A: VBUS rise failed");
         }
         if(OS_Event_check_bit(event, OTG_A_B_HNP_REQ)) 
         {
-            printf("\n\r>A: OTG_A_B_HNP_REQ");
+            USB_PRINTF("\n\r>A: OTG_A_B_HNP_REQ");
         }
         if(OS_Event_check_bit(event, OTG_A_IDLE)) 
         {
-            printf("\n\r>A: OTG state change to A_IDLE");
+            USB_PRINTF("\n\r>A: OTG state change to A_IDLE");
         }
         if(OS_Event_check_bit(event, OTG_A_WAIT_VRISE)) 
         {
-            printf("\n\r>A: OTG state change to A_WAIT_VRISE");
+            USB_PRINTF("\n\r>A: OTG state change to A_WAIT_VRISE");
         }
         if(OS_Event_check_bit(event, OTG_A_WAIT_BCON)) 
         {
-            printf("\n\r>A: OTG state change to A_WAIT_BCON");
+            USB_PRINTF("\n\r>A: OTG state change to A_WAIT_BCON");
         }
         if(OS_Event_check_bit(event, OTG_A_HOST)) 
         {
-            printf("\n\r>A: OTG state change to OTG_A_HOST");
-            printf("\n\r>A: USB host stack initialized.");
+            USB_PRINTF("\n\r>A: OTG state change to OTG_A_HOST");
+            USB_PRINTF("\n\r>A: USB host stack initialized.");
         }
         if(OS_Event_check_bit(event, OTG_A_HOST_LOAD_ERROR)) 
         {
-            printf("\n\r>A: OTG state change to OTG_A_HOST");
-            printf("\n\r>A: USB host stack initialization failed.");
+            USB_PRINTF("\n\r>A: OTG state change to OTG_A_HOST");
+            USB_PRINTF("\n\r>A: USB host stack initialization failed.");
         }
         if(OS_Event_check_bit(event, OTG_A_SUSPEND)) 
         {
-            printf("\n\r>A: OTG state change to A_SUSPEND");
+            USB_PRINTF("\n\r>A: OTG state change to A_SUSPEND");
         }    
         if(OS_Event_check_bit(event, OTG_A_PERIPHERAL)) 
         {     
-            printf("\n\r>A: OTG state change to A_PERIPHERAL    ");
-            printf("\n\r>A: USB peripheral stack initialized.");
+            USB_PRINTF("\n\r>A: OTG state change to A_PERIPHERAL    ");
+            USB_PRINTF("\n\r>A: USB peripheral stack initialized.");
             App_PrintMenu();
         }    
         if(OS_Event_check_bit(event, OTG_A_PERIPHERAL_LOAD_ERROR)) 
         {
-            printf("\n\r>A: USB peripheral stack initialization failed.");
-            printf("\n\r>A: OTG state change to A_PERIPHERAL    ");
+            USB_PRINTF("\n\r>A: USB peripheral stack initialization failed.");
+            USB_PRINTF("\n\r>A: OTG state change to A_PERIPHERAL    ");
         }    
         if(OS_Event_check_bit(event, OTG_A_WAIT_VFALL)) 
         {
-            printf("\n\r>A: OTG state change to OTG_A_WAIT_VFALL");
+            USB_PRINTF("\n\r>A: OTG state change to OTG_A_WAIT_VFALL");
         }
         if(OS_Event_check_bit(event, OTG_A_VBUS_ERR)) 
         {
-            printf("\n\r>A: VBUS falls below VBUS_Valid treshold");
-            printf("\n\r>A: OTG state change to A_VBUS_ERR");
+            USB_PRINTF("\n\r>A: VBUS falls below VBUS_Valid treshold");
+            USB_PRINTF("\n\r>A: OTG state change to A_VBUS_ERR");
         }
     }
     OS_Event_clear(event,OTG_A_B_STATE_EVENT_MARK);    
@@ -664,8 +663,6 @@ static void App_Print_Event(usb_otg_handle handle, os_event_handle event)
 *END*--------------------------------------------------------------------*/
 void Main_Task ( uint32_t param )
 {
-    OSA_Init();
-    init_debug_uart_hardware();
     APP_init();
     /*
     ** Infinite loop, waiting for events requiring action

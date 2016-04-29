@@ -76,7 +76,7 @@ usb_status usb_class_hub_init
 
     if (level > 5)
     {
-        printf("Too many level of hub attached\n");
+        USB_PRINTF("Too many level of hub attached\n");
         *class_handle_ptr = NULL;
         return USBERR_ERROR;
     }
@@ -84,7 +84,7 @@ usb_status usb_class_hub_init
     hub_class = (usb_hub_class_struct_t*)OS_Mem_alloc_zero(sizeof(usb_hub_class_struct_t));
     if (hub_class == NULL)
     {
-        printf("usb_class_hub_init fail on memory allocation\n");
+        USB_PRINTF("usb_class_hub_init fail on memory allocation\n");
         *class_handle_ptr = NULL;
         return USBERR_ERROR;
     }
@@ -113,7 +113,7 @@ usb_status usb_class_hub_init
             status = usb_host_open_pipe(hub_class->host_handle, &hub_class->interrupt_pipe, &pipe_init);
             if (status != USB_OK)
             {
-                printf("usb_class_hid_init fail to open in pipe\n");
+                USB_PRINTF("usb_class_hid_init fail to open in pipe\n");
                 *class_handle_ptr = (class_handle)hub_class;
                 return USBERR_ERROR;
             }
@@ -146,7 +146,7 @@ usb_status usb_class_hub_deinit
     usb_status                    status = USB_OK;
     if (hub_class == NULL)
     {
-        printf("usb_class_hid_deinit fail\n");
+        USB_PRINTF("usb_class_hid_deinit fail\n");
         return USBERR_ERROR;
     }
     
@@ -155,12 +155,12 @@ usb_status usb_class_hub_deinit
         status = usb_host_close_pipe(hub_class->host_handle, hub_class->interrupt_pipe);
         if (status != USB_OK)
         {
-            printf("error in usb_class_hid_deinit to close pipe\n");
+            USB_PRINTF("error in usb_class_hid_deinit to close pipe\n");
         }
     }
     
     OS_Mem_free(handle);
-    //printf("HID class driver de-initialized\n");
+    //USB_PRINTF("HID class driver de-initialized\n");
     return USB_OK;
 } /* Endbody */
 
@@ -183,7 +183,7 @@ usb_status usb_class_hub_pre_deinit
     usb_status                    status = USB_OK;
     if (hub_class == NULL)
     {
-        printf("_usb_host_cancel_call_interface fail\n");
+        USB_PRINTF("_usb_host_cancel_call_interface fail\n");
         return USBERR_ERROR;
     }
     
@@ -192,11 +192,11 @@ usb_status usb_class_hub_pre_deinit
         status = usb_host_cancel(hub_class->host_handle, hub_class->interrupt_pipe, NULL);
         if (status != USB_OK)
         {
-            printf("error in _usb_host_cancel_call_interface to close pipe\n");
+            USB_PRINTF("error in _usb_host_cancel_call_interface to close pipe\n");
         }
     }
     
-    //printf("HID class driver pre_deinit\n");
+    //USB_PRINTF("HID class driver pre_deinit\n");
     return USB_OK;
 } /* Endbody */
 
@@ -252,14 +252,14 @@ void usb_class_hub_cntrl_callback
 {
     usb_hub_class_struct_t* hub_class = (usb_hub_class_struct_t*)param;
 
-    //printf("ctrl c\n");
+    //USB_PRINTF("ctrl c\n");
     #ifdef _HOST_DEBUG_
        DEBUG_LOG_TRACE("usb_class_hub_cntrl_callback");
     #endif
 
     if (usb_host_release_tr(hub_class->host_handle, tr_ptr) != USB_OK)
     {
-        printf("_usb_host_release_tr failed\n");
+        USB_PRINTF("_usb_host_release_tr failed\n");
     }
 
     hub_class->in_setup = FALSE;
@@ -329,7 +329,7 @@ usb_status usb_class_hub_cntrl_common
 
     if (usb_host_get_tr(hub_class->host_handle, usb_class_hub_cntrl_callback, hub_class, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr hub\n");
+        USB_PRINTF("error to get tr hub\n");
         return USBERR_ERROR;
     }
 
@@ -590,7 +590,7 @@ usb_status usb_class_hub_recv_bitmap
     #ifdef _HOST_DEBUG_
        DEBUG_LOG_TRACE("usb_class_hub_recv_bitmap");
     #endif
-    //printf("r \n");
+    //USB_PRINTF("r \n");
 
     if ((com_ptr == NULL) || (com_ptr->class_ptr == NULL))
     {
@@ -601,7 +601,7 @@ usb_status usb_class_hub_recv_bitmap
     
     if ((hub_class == NULL) || (buffer == NULL))
     {
-        printf("input parameter error\n");
+        USB_PRINTF("input parameter error\n");
         return USBERR_ERROR;
     }
 
@@ -620,7 +620,7 @@ usb_status usb_class_hub_recv_bitmap
 
     if (usb_host_get_tr(hub_class->host_handle, usb_class_hub_int_callback, hub_class, &tr_ptr) != USB_OK)
     {
-        printf("error to get tr\n");
+        USB_PRINTF("error to get tr\n");
         return USBERR_ERROR;
     }
     
@@ -629,7 +629,7 @@ usb_status usb_class_hub_recv_bitmap
     status = usb_host_recv_data(hub_class->host_handle, hub_class->interrupt_pipe, tr_ptr);
     if (status != USB_OK)
     {
-        printf("\nError in usb_class_hub_recv_bitmap: %x", status);
+        USB_PRINTF("\nError in usb_class_hub_recv_bitmap: %x", (unsigned int)status);
         usb_host_release_tr(hub_class->host_handle, tr_ptr);
         return USBERR_ERROR;
     }
@@ -661,10 +661,10 @@ void usb_class_hub_int_callback
 {
     usb_hub_class_struct_t*      hub_class = (usb_hub_class_struct_t*)param;
 
-    //printf("hub int\n");
+    //USB_PRINTF("hub int\n");
     if (usb_host_release_tr(hub_class->host_handle, tr_ptr) != USB_OK)
     {
-        printf("_usb_host_release_tr failed\n");
+        USB_PRINTF("_usb_host_release_tr failed\n");
     }
     hub_class->in_interrupt = FALSE;
     

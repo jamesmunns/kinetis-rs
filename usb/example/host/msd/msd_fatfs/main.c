@@ -85,6 +85,7 @@ Include the USB stack header files.
 #define DEBUG_UART_BAUD (115200)
 #endif
 
+#define  HIGH_SPEED                        (0)
 #if HIGH_SPEED
 #define CONTROLLER_ID                      USB_CONTROLLER_EHCI_0
 #else
@@ -102,11 +103,13 @@ Include the USB stack header files.
 #error This application requires BSP_DEFAULT_IO_CHANNEL to be not NULL. Please set corresponding BSPCFG_ENABLE_TTYx to non-zero in user_config.h and recompile BSP with this option.
 #endif
 
+extern volatile device_struct_t   g_mass_device[USBCFG_MAX_INSTANCE];
+extern volatile uint8_t           g_mass_device_new_index;
 #endif
 
 void   APP_task(void);
 void   usb_host_mass_device_event (usb_device_instance_handle,usb_interface_descriptor_handle,uint32_t);
-
+void   usb_host_test_device_event (usb_device_instance_handle,usb_interface_descriptor_handle,uint32_t);
 const usb_host_driver_info_t DriverInfoTable[] = 
 {
    /* Floppy drive */
@@ -131,7 +134,16 @@ const usb_host_driver_info_t DriverInfoTable[] =
       0,                            /* Reserved                         */
       usb_host_mass_device_event    /* Application call back function   */
    },
-
+   
+    {
+      {0x0a,0x1a},                  /* Vendor ID per USB-IF             *///0x1a0a 0x0a 0x1a
+      {0x00,0x02},                  /* Product ID per manufacturer      *///0x0200 0x00 0x02
+      0xfe,       /* Class code                       */
+      0xfe,       /* Sub-Class code                   */
+      0xfe,       /* Protocol                         */
+      0,                            /* Reserved                         */
+      usb_host_test_device_event    /* Application call back function   */
+   },
 #if USBCFG_HOST_HUB
    /* USB 1.1 hub */
    {
@@ -217,7 +229,7 @@ void APP_init(void)
 	status = usb_host_init(CONTROLLER_ID, &g_host_handle);
     if(status != USB_OK) 
     {
-        printf("\r\nUSB Host Initialization failed! STATUS: 0x%x", status);
+        USB_PRINTF("\r\nUSB Host Initialization failed! STATUS: 0x%x", status);
         return;
     }
 	/*
@@ -227,11 +239,11 @@ void APP_init(void)
 	status = usb_host_register_driver_info(g_host_handle, (void *)DriverInfoTable);
     if(status != USB_OK) 
     {         
-        printf("\r\nUSB Initialization driver info failed! STATUS: 0x%x", status);
+        USB_PRINTF("\r\nUSB Initialization driver info failed! STATUS: 0x%x", status);
         return;
     }
     
-    printf("\r\nUSB file system test\r\nWaiting for USB mass storage to be attached...\r\n");
+    USB_PRINTF("\r\nUSB file system test\r\nWaiting for USB mass storage to be attached...\r\n");
 
 	/* EnableInterrupts; */
 #if (defined _MCF51MM256_H) || (defined _MCF51JE256_H)
@@ -265,12 +277,12 @@ void APP_task ( void )
 		case USB_DEVICE_IDLE:
 			break;
 		case USB_DEVICE_ATTACHED:
-			printf( "Mass Storage Device Attached\r\n" );
+			USB_PRINTF( "Mass Storage Device Attached\r\n" );
 			g_mass_device[i].dev_state = USB_DEVICE_SET_INTERFACE_STARTED;
 			status = usb_host_open_dev_interface(g_host_handle, g_mass_device[i].dev_handle, g_mass_device[i].intf_handle, (class_handle*)&g_mass_device[i].CLASS_HANDLE);
             if (status != USB_OK)
             {
-                printf("\r\nError in _usb_hostdev_open_interface: %x\r\n", status);
+                USB_PRINTF("\r\nError in _usb_hostdev_open_interface: %x\r\n", status);
                 return;
             } /* Endif */
 			/* Can run fat task */
@@ -283,16 +295,20 @@ void APP_task ( void )
 			{
 				g_mass_device_new_index = i;
 #if ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_BM) || ((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)))// && !(defined (FSL_RTOS_MQX))))
-				fat_demo();			
+                            #if THROUGHPUT_TEST_ENABLE
+                                fat_throughput_test();
+                            #else
+                                fat_demo();
+                            #endif
 #else
-				mfs_mount(i);
+                                mfs_mount(i);
 #endif
 			}
 			/* Disable flag to run FAT task */
 			fat_task_flag[i] = 0;
 			break;
 		case USB_DEVICE_DETACHED:
-			printf ( "\r\nMass Storage Device Detached\r\n" );
+			USB_PRINTF ( "\r\nMass Storage Device Detached\r\n" );
 
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
 			mfs_unmount(i);
@@ -301,17 +317,17 @@ void APP_task ( void )
 			status = usb_host_close_dev_interface(g_host_handle, g_mass_device[i].dev_handle, g_mass_device[i].intf_handle, g_mass_device[i].CLASS_HANDLE);
 			if (status != USB_OK)
 			{
-				printf("error in _usb_hostdev_close_interface %x\r\n", status);
+				USB_PRINTF("error in _usb_hostdev_close_interface %x\r\n", status);
 			}
 			g_mass_device[i].intf_handle = NULL;
 			g_mass_device[i].CLASS_HANDLE = NULL;
-			printf("Going to idle state\r\n");
+			USB_PRINTF("Going to idle state\r\n");
 			g_mass_device[i].dev_state = USB_DEVICE_IDLE;
 			break;
 		case USB_DEVICE_OTHER:
 			break;
 		default:
-			printf ( "Unknown Mass Storage Device State = %d\r\n",\
+			USB_PRINTF ( "Unknown Mass Storage Device State = %d\r\n",\
 					g_mass_device[i].dev_state );
 			break;
 		} /* Endswitch */
@@ -342,6 +358,43 @@ void Main_Task ( uint32_t param )
     } /* Endfor */
 } /* Endbody */
 #endif
+
+void usb_host_test_device_event
+   (
+      /* [IN] pointer to device instance */
+      usb_device_instance_handle      dev_handle,
+
+      /* [IN] pointer to interface descriptor */
+      usb_interface_descriptor_handle intf_handle,
+
+      /* [IN] code number for event causing callback */
+      uint32_t           event_code
+   )
+{ /* Body */
+   uint8_t*        dev_instance_ptr = dev_handle;
+   switch (event_code) 
+   {
+      case USB_ATTACH_EVENT:
+         USB_PRINTF("----- PET Test device Attach Event -----\r\n");
+         break;
+         /* Drop through into attach, same processing */
+         
+      case USB_CONFIG_EVENT:  
+         break;
+          
+      case USB_INTF_OPENED_EVENT:
+         USB_PRINTF("----- PET Interface opened Event -----\r\n");
+         break ;
+         
+      case USB_DETACH_EVENT:
+         if(dev_instance_ptr != NULL)
+            OS_Mem_free(dev_instance_ptr);
+         USB_PRINTF("----- PET Test device Detach Event -----\r\n");
+         break;
+      default:
+         break;
+   } /* EndSwitch */
+} /* Endbody */
 
 /*FUNCTION*----------------------------------------------------------------
 *
@@ -390,7 +443,7 @@ void usb_host_mass_device_event
    
    if(NULL == mass_device_ptr)
    {
-	   printf("Access devices is full.\r\n");
+	   USB_PRINTF("Access devices is full.\r\n");
 	   return;
    }
    
@@ -399,13 +452,13 @@ void usb_host_mass_device_event
       case USB_ATTACH_EVENT:
          g_interface_info[i][g_interface_number[i]] = pHostIntf;
          g_interface_number[i]++;
-         printf("----- Attach Event -----\r\n");
-         printf("State = %d", mass_device_ptr->dev_state);
-         printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-         printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-         printf("  Class = %d", intf_ptr->bInterfaceClass);
-         printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-         printf("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+         USB_PRINTF("----- Attach Event -----\r\n");
+         USB_PRINTF("State = %d", mass_device_ptr->dev_state);
+         USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+         USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+         USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+         USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+         USB_PRINTF("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
          break;
          /* Drop through into attach, same processing */
          
@@ -418,29 +471,29 @@ void usb_host_mass_device_event
          } 
          else 
          {
-            printf("Mass Storage Device is already attached - DEV_STATE = %d\r\n", mass_device_ptr->dev_state);
+            USB_PRINTF("Mass Storage Device is already attached - DEV_STATE = %d\r\n", mass_device_ptr->dev_state);
          } /* EndIf */
          break;
           
       case USB_INTF_OPENED_EVENT:
-         printf("----- Interface opened Event -----\r\n");
+         USB_PRINTF("----- Interface opened Event -----\r\n");
          mass_device_ptr->dev_state = USB_DEVICE_INTERFACE_OPENED;
          break ;
          
       case USB_DETACH_EVENT:
          /* Use only the interface with desired protocol */
-         printf("----- Detach Event -----\r\n");
-         printf("State = %d", mass_device_ptr->dev_state);
-         printf("  Interface Number = %d", intf_ptr->bInterfaceNumber);
-         printf("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
-         printf("  Class = %d", intf_ptr->bInterfaceClass);
-         printf("  SubClass = %d", intf_ptr->bInterfaceSubClass);
-         printf("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
+         USB_PRINTF("----- Detach Event -----\r\n");
+         USB_PRINTF("State = %d", mass_device_ptr->dev_state);
+         USB_PRINTF("  Interface Number = %d", intf_ptr->bInterfaceNumber);
+         USB_PRINTF("  Alternate Setting = %d", intf_ptr->bAlternateSetting);
+         USB_PRINTF("  Class = %d", intf_ptr->bInterfaceClass);
+         USB_PRINTF("  SubClass = %d", intf_ptr->bInterfaceSubClass);
+         USB_PRINTF("  Protocol = %d\r\n", intf_ptr->bInterfaceProtocol);
          g_interface_number[i] = 0;
          mass_device_ptr->dev_state = USB_DEVICE_DETACHED;
          break;
       default:
-    	 printf("Mass Storage Device state = %d??\r\n", mass_device_ptr->dev_state);
+    	 USB_PRINTF("Mass Storage Device state = %d??\r\n", mass_device_ptr->dev_state);
     	 mass_device_ptr->dev_state = USB_DEVICE_IDLE;
          break;
    } /* EndSwitch */

@@ -30,14 +30,19 @@
 #ifndef __I2C_RTOS_H__
 #define __I2C_RTOS_H__
 
+///////////////////////////////////////////////////////////////////////////////
+//  Includes
+///////////////////////////////////////////////////////////////////////////////
+// Standard C Included Files
 #include <stdio.h>
+// SDK Included Files
 #include "fsl_os_abstraction.h"
 #include "board.h"
 #include "fsl_smc_hal.h"
 
-/*******************************************************************************
- * Definition
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 #define I2C_RTOS_SLAVE_ADDRESS    (0x7F)
 #define I2C_RTOS_LIGHT_CMD        1
 #define I2C_RTOS_TEMP_CMD         2
@@ -48,5 +53,11 @@
 #define I2C_RTOS_SLAVE_INSTANCE   (1)
 
 #define I2C_RTOS_MAGIC            0xBB
+
+#if defined(FRDM_KL46Z48M)
+#define HWADC_INSTANCE            HW_ADC0
+#else
+#define HWADC_INSTANCE            HW_ADC1
+#endif
 
 #endif /* __I2C_RTOS_H__ */

@@ -28,31 +28,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "fsl_adc_driver.h"
+///////////////////////////////////////////////////////////////////////////////
+//  Includes
+///////////////////////////////////////////////////////////////////////////////
+// SDK Included Files
+#include "fsl_adc16_driver.h"
 #include "fsl_interrupt_manager.h"
 #include "i2c_rtos.h"
 
-/* These values are used covert temperature. DO NOT MODIFY */
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
+// These values are used covert temperature. DO NOT MODIFY
 #define VTEMP25_ADC             (14219)
 #define K                       (10000)
 #define M1                      (250000)
 #define M2                      (311)
 
-/* temperature global variable */
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
+// temperature global variable
 static int32_t gTemperature;
 
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
 /*!
  * task to read ADC for internal temperature
  */
 void task_sample(task_param_t param)
 {
-#if FSL_FEATURE_ADC_HAS_CALIBRATION
-    adc_calibration_param_t tempSnseCalibraitionParam;
+#if FSL_FEATURE_ADC16_HAS_CALIBRATION
+    adc16_calibration_param_t tempSnseCalibraitionParam;
 #endif
-    adc_user_config_t tempSnseAdcConfig;
-    adc_state_t tempSnseAdcState;
-    /* ADC Channel Configuration */
-    adc_chn_config_t tempSnseChannelConfig =
+    adc16_user_config_t tempSnseAdcConfig;
+    // ADC Channel Configuration
+    adc16_chn_config_t tempSnseChannelConfig =
     {
         .chnNum = 26,
         .chnMux = kAdcChnMuxOfA,
@@ -61,43 +73,43 @@ void task_sample(task_param_t param)
     };
     uint32_t adcValue;
 
-#if FSL_FEATURE_ADC_HAS_CALIBRATION
-    /* Auto calibraion. */
-    ADC_DRV_GetAutoCalibrationParam(HW_ADC1, &tempSnseCalibraitionParam);
-    ADC_DRV_SetCalibrationParam(HW_ADC1, &tempSnseCalibraitionParam);
-#endif /* FSL_FEATURE_ADC_HAS_CALIBRATION */
+#if FSL_FEATURE_ADC16_HAS_CALIBRATION
+    // Auto calibraion
+    ADC16_DRV_GetAutoCalibrationParam(HWADC_INSTANCE, &tempSnseCalibraitionParam);
+    ADC16_DRV_SetCalibrationParam(HWADC_INSTANCE, &tempSnseCalibraitionParam);
+#endif // FSL_FEATURE_ADC16_HAS_CALIBRATION
     
-	ADC_DRV_StructInitUserConfigForOneTimeTriggerMode(&tempSnseAdcConfig);
+    ADC16_DRV_StructInitUserConfigDefault(&tempSnseAdcConfig);
     tempSnseAdcConfig.clkSrcMode = kAdcClkSrcOfAsynClk;
     tempSnseAdcConfig.resolutionMode = kAdcResolutionBitOfSingleEndAs16;
-    /* Initialize ADC */
-    ADC_DRV_Init(HW_ADC1, &tempSnseAdcConfig, &tempSnseAdcState);
+    // Initialize ADC
+    ADC16_DRV_Init(HWADC_INSTANCE, &tempSnseAdcConfig);
 
     while (1)
     {
-        /* ADC starts conversion */
-		ADC_DRV_ConfigConvChn(HW_ADC1, 0U, &tempSnseChannelConfig);
-        /* poll to complete status and read back result */
-		ADC_DRV_WaitConvDone(HW_ADC1, 0U);
-		adcValue = ADC_DRV_GetConvValueRAW(HW_ADC1, 0U);
-		adcValue = ADC_DRV_ConvRAWData(adcValue, false, tempSnseAdcConfig.resolutionMode);
-        /* ADC stop conversion */
-		ADC_DRV_PauseConv(HW_ADC1, 0U);
-        /* convert to temperature */
+        // ADC starts conversion
+        ADC16_DRV_ConfigConvChn(HWADC_INSTANCE, 0U, &tempSnseChannelConfig);
+        // poll to complete status and read back result
+        ADC16_DRV_WaitConvDone(HWADC_INSTANCE, 0U);
+        adcValue = ADC16_DRV_GetConvValueRAW(HWADC_INSTANCE, 0U);
+        adcValue = ADC16_DRV_ConvRAWData(adcValue, false, tempSnseAdcConfig.resolutionMode);
+        // ADC stop conversion
+        ADC16_DRV_PauseConv(HWADC_INSTANCE, 0U);
+        // convert to temperature
         INT_SYS_DisableIRQGlobal();
         gTemperature = (M1 - (adcValue - VTEMP25_ADC) * M2)/K;
         INT_SYS_EnableIRQGlobal();
-        /* sleep 4s */
+        // sleep 4s
         OSA_TimeDelay(4000);
     }
 }
 
 /*!
- * Get the 32bits temperature in byte
+ * Get temperature pointer
  * from the ISR context
  */
-uint8_t get_temp_in_byte(uint32_t index)
+uint8_t* get_temp_pointer(void)
 {
     static uint8_t *pTemp = (uint8_t*)&gTemperature;
-    return pTemp[index];
+    return pTemp;
 }

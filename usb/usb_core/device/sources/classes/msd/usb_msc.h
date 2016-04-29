@@ -44,6 +44,8 @@
 
 #include "usb_class_msc.h"
 
+#include "usb_msc_config.h"
+
 /******************************************************************************
  * Constants - None
  *****************************************************************************/
@@ -51,14 +53,6 @@
 /******************************************************************************
  * Macro's
  *****************************************************************************/
-
-/* If Implementing Disk Drive then configure the macro below as TRUE,
-   otherwise keep it False(say for Hard Disk)*/
-#define IMPLEMENTING_DISK_DRIVE         (0) /*1: TRUE; 0:FALSE*/
-
-#define MSD_RECV_MAX_TRANS_LENGTH       (65536)
-#define MSD_SEND_MAX_TRANS_LENGTH       (65536)
-
 
 /* Class specific request Codes */
 #define BULK_ONLY_MASS_STORAGE_RESET          (0xFF)
@@ -91,6 +85,7 @@
 #define PREVENT_ALLOW_MEDIUM_REM_COMMAND   (0x1E)
 #define FORMAT_UNIT_COMMAND                (0x04)
 #define READ_CAPACITY_10_COMMAND           (0x25)
+#define READ_CAPACITY_16_COMMAND           (0x9E)
 #define READ_FORMAT_CAPACITIES_COMMAND     (0x23)
 #define MODE_SENSE_10_COMMAND              (0x5A) 
 #define MODE_SENSE_6_COMMAND               (0x1A)
@@ -99,9 +94,6 @@
 #define SEND_DIAGNOSTIC_COMMAND            (0x1D)
 #define VERIFY_COMMAND                     (0x2F)
 #define START_STOP_UNIT_COMMAND            (0x1B)
-
-#define MAX_MSC_DEVICE                     (0x01)
-#define MAX_MSC_SUPPORTED_INTERFACES       (0x01)
  
 /*****************************************************************************
  * Local Functions
@@ -120,6 +112,13 @@ typedef enum
     USB_MSD_INTERFACE_COUNT,
     USB_MSD_CLASS_INFO,
  }USB_MSD_DESC_INFO_T;
+ 
+typedef enum
+ {
+    STALL_IN_CBW = 1,
+    STALL_IN_DATA_PHASE,
+    STALL_IN_CSW,
+ }STALL_TYPES_T;
 
 typedef struct _usb_msc_cbw   /* Command Block Wrapper -- 31 bytes */
 {
@@ -224,13 +223,22 @@ typedef struct _msc_variable_struct
     bool                                        out_flag; 
     /* flag to track bulk in data processing before CSW if needed*/
     bool                                        in_flag;
-    /* flag to track if there is need to stall BULK IN ENDPOINT because of BULK COMMAND*/
+    /* flag to track if there is stall BULK IN ENDPOINT because of BULK COMMAND*/
     bool                                        in_stall_flag;
-    /* flag to track if there is need to stall BULK OUT ENDPOIN because of BULK COMMAND */
+    /* flag to track if there is stall BULK OUT ENDPOIN because of BULK COMMAND */
     bool                                        out_stall_flag;
     /* flag to validate CBW */
     bool                                        cbw_valid_flag;
     bool                                        re_stall_flag;
+    bool                                        wait_for_reset_recovery;
+    bool                                        need_to_prepare_next;
+    /* flag to track if there is need to stall BULK IN ENDPOINT because of BULK COMMAND*/
+    bool                                        need_in_stall_flag;
+    /* flag to track if there is need to stall BULK OUT ENDPOIN because of BULK COMMAND */
+    bool                                        need_out_stall_flag;
+    bool                                        cbw_prime_flag;
+    bool                                        csw_prime_flag;
+    uint8_t                                     stall_status;
     /* LUN can have value only from 0 to 15 decimal */
     uint8_t                                     lun;
 }msc_device_struct_t; 

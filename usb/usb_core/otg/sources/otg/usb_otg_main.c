@@ -35,7 +35,9 @@
 #include "usb_otg_private.h"
 #include "usb_device_stack_interface.h"
 #include "usb_otg_khci.h"
-#include "usb_otg_max3353.h"
+
+#include "usb_otg.h"
+
 /* OTG task parameters */
 #define USB_OTG_TASK_TEMPLATE_INDEX       0
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)||((OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)&& (USE_RTOS))  
@@ -53,7 +55,7 @@
 #define USB_OTG_TASK_DEFAULT_TIME_SLICE   0
 #define USB_OTG_ISR_EVENT_MASK            (~(uint32_t)0)
 
-extern const usb_otg_api_functions_struct_t g_usb_khci_max3353_otg_callback_table;
+extern const usb_otg_api_functions_struct_t g_usb_otg_callback_table;
 
 /* Type Definitions*********************************************************/
 
@@ -107,12 +109,12 @@ static usb_status _usb_otg_task_create(usb_otg_handle otg_handle) {
 }
 /*FUNCTION*-------------------------------------------------------------
 *
-*  Function Name  : _usb_otg_get_state
+*  Function Name  : usb_otg_get_state
 *  Returned Value : error or USB_OK
 *  Comments       :
 *  
 *END*-----------------------------------------------------------------*/
-uint8_t _usb_otg_get_state(usb_otg_handle otg_handle) {
+uint8_t usb_otg_get_state(usb_otg_handle otg_handle) {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)otg_handle;
     return usb_otg_struct_ptr->device_state ;
 }
@@ -147,20 +149,20 @@ static usb_status _usb_otg_task_delete(usb_otg_handle otg_handle) {
 static void _usb_otg_get_api(uint8_t controller_id, usb_otg_api_functions_struct_t * * controller_api_ptr)
 {
     if (controller_id == 0)
-	  {
-        *controller_api_ptr =(usb_otg_api_functions_struct_t *)&g_usb_khci_max3353_otg_callback_table;
+    {
+        *controller_api_ptr =(usb_otg_api_functions_struct_t *)&g_usb_otg_callback_table;
     }
 }
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_init
+* Function Name    : usb_otg_init
 * Returned Value   : initialization message
 * Comments         : Initializes OTG stack 
 *    
 *
 *END*----------------------------------------------------------------------*/
-usb_status _usb_otg_init
+usb_status usb_otg_init
 (
     /* [IN] the USB device controller to initialize */
     uint8_t controller_id,
@@ -176,7 +178,7 @@ usb_status _usb_otg_init
     if ((init_struct_ptr == NULL)||(handle == NULL))
     {
         #if _OTG_DEBUG_
-        DEBUG_LOG_TRACE ("_usb_otg_init invalid parameters");
+        DEBUG_LOG_TRACE ("usb_otg_init invalid parameters");
         #endif
         
         return USBERR_ERROR;
@@ -193,7 +195,7 @@ usb_status _usb_otg_init
         if (error ||(usb_otg_ptr == NULL) )
         {
             #if _OTG_DEBUG_
-            DEBUG_LOG_TRACE ("_usb_OTG_init preinit failure");
+            DEBUG_LOG_TRACE ("usb_OTG_init preinit failure");
             #endif
             return USBERR_ALLOC;
         }             
@@ -262,13 +264,13 @@ usb_status _usb_otg_init
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_session_request
+* Function Name    : usb_otg_session_request
 * Returned Value   : session request message
 * Comments         : B-device requests a new session to be started by the A device
 *    
 *
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_session_request(usb_otg_handle handle)
+usb_status usb_otg_session_request(usb_otg_handle handle)
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)handle;
 
@@ -290,13 +292,13 @@ uint32_t _usb_otg_session_request(usb_otg_handle handle)
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_bus_request
+* Function Name    : usb_otg_bus_request
 * Returned Value   : bus request message
 * Comments         : B-device requests to become Host
 *    
 *
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_bus_request(usb_otg_handle handle)
+usb_status usb_otg_bus_request(usb_otg_handle handle)
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)handle;
     uint16_t dev_otg_status;
@@ -325,13 +327,13 @@ uint32_t _usb_otg_bus_request(usb_otg_handle handle)
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_bus_release
+* Function Name    : usb_otg_bus_release
 * Returned Value   : bus release message
 * Comments         : B-device hands over the bus back to the A device
 *    
 *
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_bus_release(usb_otg_handle handle)
+usb_status usb_otg_bus_release(usb_otg_handle handle)
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)handle;
 
@@ -353,14 +355,14 @@ uint32_t _usb_otg_bus_release(usb_otg_handle handle)
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_device_hnp_enable
+* Function Name    : usb_otg_device_hnp_enable
 * Returned Value   : HNP enable status
 * Comments         : This function is intended to be called from the Peripheral USB stack 
 *                  : in response to SET/CLEAR Feature requests from the Host for HNP_Enable 
 *    
 *
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_device_hnp_enable
+uint32_t usb_otg_device_hnp_enable
 (
     usb_otg_handle handle, 
     uint8_t enable
@@ -412,14 +414,14 @@ static void _usb_otg_task(void* otg_handle)
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_set_a_bus_req
+* Function Name    : usb_otg_set_a_bus_req
 * Returned Value   : set A bus request status
 * Comments         : This function is called from the application to set/clear the 
 *                    a_bus_req parameter. This is one of the parameters that determines 
 *                    A state machine behavior.If the A device is in peripheral state 
 *                    the otg status changes to USB_OTG_HOST_REQUEST_FLAG.  
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_set_a_bus_req(usb_otg_handle otg_handle , bool a_bus_req )
+usb_status usb_otg_set_a_bus_req(usb_otg_handle otg_handle , bool a_bus_req )
 {
     uint16_t dev_otg_status;
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)otg_handle;
@@ -444,12 +446,12 @@ uint32_t _usb_otg_set_a_bus_req(usb_otg_handle otg_handle , bool a_bus_req )
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_get_a_bus_req
+* Function Name    : usb_otg_get_a_bus_req
 * Returned Value   : get A bus request status
 * Comments         : This function is called from the application to get 
 *                    a_bus_req parameter.  
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_get_a_bus_req(usb_otg_handle otg_handle, bool* a_bus_req)
+usb_status usb_otg_get_a_bus_req(usb_otg_handle otg_handle, bool* a_bus_req)
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)otg_handle;
     usb_otg_status_t *otg_status =  &usb_otg_struct_ptr->otg_status;
@@ -467,13 +469,13 @@ uint32_t _usb_otg_get_a_bus_req(usb_otg_handle otg_handle, bool* a_bus_req)
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_set_a_bus_drop
+* Function Name    : usb_otg_set_a_bus_drop
 * Returned Value   : set A bus drop status
 * Comments         : This function is called from the application to set/clear the 
 *                    a_bus_drop parameter. This is one of the parameters that determines 
 *                    A state machine behavior.
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_set_a_bus_drop(usb_otg_handle otg_handle , bool a_bus_drop )
+usb_status usb_otg_set_a_bus_drop(usb_otg_handle otg_handle , bool a_bus_drop )
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)otg_handle;
     usb_otg_status_t *otg_status =  &usb_otg_struct_ptr->otg_status;
@@ -501,12 +503,12 @@ uint32_t _usb_otg_set_a_bus_drop(usb_otg_handle otg_handle , bool a_bus_drop )
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_get_a_bus_drop
+* Function Name    : usb_otg_get_a_bus_drop
 * Returned Value   : set A bus drop status
 * Comments         : This function is called from the application to get the 
 *                    a_bus_drop parameter. 
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_get_a_bus_drop(usb_otg_handle otg_handle, bool* a_bus_drop)
+usb_status usb_otg_get_a_bus_drop(usb_otg_handle otg_handle, bool* a_bus_drop)
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)otg_handle;
     usb_otg_status_t *otg_status =  &usb_otg_struct_ptr->otg_status;
@@ -525,13 +527,13 @@ uint32_t _usb_otg_get_a_bus_drop(usb_otg_handle otg_handle, bool* a_bus_drop)
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_set_a_clear_err
+* Function Name    : usb_otg_set_a_clear_err
 * Returned Value   : set A clear error status
 * Comments         : This function is called from the application to set the a_clr_err
 *                    parameter which is one way to escape from the a_vbus_err state.
 *                    The other two are id = FALSE and a_bus_drop = TRUE.
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_set_a_clear_err( usb_otg_handle otg_handle )
+usb_status usb_otg_set_a_clear_err( usb_otg_handle otg_handle )
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)otg_handle;
     usb_otg_status_t *otg_status =  &usb_otg_struct_ptr->otg_status;
@@ -552,14 +554,14 @@ uint32_t _usb_otg_set_a_clear_err( usb_otg_handle otg_handle )
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_host_a_set_b_hnp_en
+* Function Name    : usb_otg_host_a_set_b_hnp_en
 * Returned Value   : set B HNP status
 * Comments         : This function is called from usb host stack at device enumeration.
 *                    More specific it is called from usb_host_cntrl_transaction_done function
 *                    (in host_ch9.c) when b_hnp_enable feature was successfully set in the B OTG device.
 *                    The function simply set the a_set_b_hnp_en status parameter. 
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_host_a_set_b_hnp_en(usb_otg_handle otg_handle , bool b_hnp_en)  
+uint32_t usb_otg_host_a_set_b_hnp_en(usb_otg_handle otg_handle , bool b_hnp_en)  
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr =(usb_otg_state_struct_t *)otg_handle;
     usb_otg_status_t *  otg_status_ptr;
@@ -575,7 +577,7 @@ uint32_t _usb_otg_host_a_set_b_hnp_en(usb_otg_handle otg_handle , bool b_hnp_en)
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_host_get_otg_attribute
+* Function Name    : usb_otg_host_get_otg_attribute
 * Returned Value   : get OTG attribute status
 * Comments         : This function is called from usb host stack at device enumeration.
 *                    More specific it is called from usb_host_cntrl_transaction_done function
@@ -584,7 +586,7 @@ uint32_t _usb_otg_host_a_set_b_hnp_en(usb_otg_handle otg_handle , bool b_hnp_en)
 *                    The function simply set srp_support hnp_support status parameters according with
 *                    their corresponding values in the OTG descriptor bmAttributes.
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_host_get_otg_attribute(usb_otg_handle  otg_handle, uint8_t bm_attributes)  
+uint32_t usb_otg_host_get_otg_attribute(usb_otg_handle  otg_handle, uint8_t bm_attributes)  
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)otg_handle;
     usb_otg_status_t *  otg_status;  
@@ -601,7 +603,7 @@ uint32_t _usb_otg_host_get_otg_attribute(usb_otg_handle  otg_handle, uint8_t bm_
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_host_set_feature_required
+* Function Name    : usb_otg_host_set_feature_required
 * Returned Value   : set feature status
 * Comments         : This function is called from usb host stack at device enumeration.
 *                    More specific it is called from usb_host_cntrl_transaction_done function
@@ -612,7 +614,7 @@ uint32_t _usb_otg_host_get_otg_attribute(usb_otg_handle  otg_handle, uint8_t bm_
 *                    The function returns TRUE if the following two conditions are met: the peripheral  
 *                    supports hnp and the host is the A device.
 *END*----------------------------------------------------------------------*/
-uint8_t _usb_otg_host_set_feature_required(usb_otg_handle  otg_handle)  
+uint8_t usb_otg_host_set_feature_required(usb_otg_handle  otg_handle)  
 {
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)otg_handle;
     usb_otg_status_t * otg_status_ptr;
@@ -633,7 +635,7 @@ uint8_t _usb_otg_host_set_feature_required(usb_otg_handle  otg_handle)
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_host_on_interface_event
+* Function Name    : usb_otg_host_on_interface_event
 * Returned Value   : on interface event status
 * Comments         : This function is called from the host application at interface event.
 *                    The function simply set the dev_inst_ptr pointer in the status struct  
@@ -642,7 +644,7 @@ uint8_t _usb_otg_host_set_feature_required(usb_otg_handle  otg_handle)
 *                    The dev_inst_ptr value will be used in the OTG state machine to poll 
 *                    the peripheral for hnp request.
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_host_on_interface_event(usb_otg_handle  otg_handle, usb_device_handle  dev_handle)  
+uint32_t usb_otg_host_on_interface_event(usb_otg_handle  otg_handle, usb_device_handle  dev_handle)  
 {
 
     usb_otg_state_struct_t * usb_otg_struct_ptr = (usb_otg_state_struct_t *)otg_handle;
@@ -660,7 +662,7 @@ uint32_t _usb_otg_host_on_interface_event(usb_otg_handle  otg_handle, usb_device
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_host_on_detach_event
+* Function Name    : usb_otg_host_on_detach_event
 * Returned Value   : on detach status
 * Comments         : This function is called from the host event function in the host application 
 *                    at detach event.
@@ -669,7 +671,7 @@ uint32_t _usb_otg_host_on_interface_event(usb_otg_handle  otg_handle, usb_device
 *                    The function doesn't take any actions if the host event function was called
 *                    due to a host stack unload.
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_host_on_detach_event(usb_otg_handle  otg_handle)  
+uint32_t usb_otg_host_on_detach_event(usb_otg_handle  otg_handle)  
 {
     usb_otg_state_struct_t *    usb_otg_struct_ptr;
     usb_otg_status_t *          otg_status_ptr;
@@ -697,13 +699,13 @@ uint32_t _usb_otg_host_on_detach_event(usb_otg_handle  otg_handle)
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_device_on_class_init
+* Function Name    : usb_otg_device_on_class_init
 * Returned Value   : 
 * Comments         : 
 *
 *
 *END*----------------------------------------------------------------------*/
-uint32_t _usb_otg_device_on_class_init(usb_otg_handle  otg_handle, usb_device_handle  dev_handle, uint8_t bm_attributes )  
+uint32_t usb_otg_device_on_class_init(usb_otg_handle  otg_handle, usb_device_handle  dev_handle, uint8_t bm_attributes )  
 {
 
     usb_otg_state_struct_t *    usb_otg_struct_ptr;
@@ -723,13 +725,13 @@ uint32_t _usb_otg_device_on_class_init(usb_otg_handle  otg_handle, usb_device_ha
 
 /*FUNCTION*-------------------------------------------------------------------
 *
-* Function Name    : _usb_otg_shut_down
+* Function Name    : usb_otg_shut_down
 * Returned Value   : de-initialization status
 * Comments         : De-Initializes OTG stack 
 *        
 *
 *END*----------------------------------------------------------------------*/
-usb_status _usb_otg_shut_down
+usb_status usb_otg_shut_down
 (
     /*[IN] address of the OTG interface structure */
     usb_otg_handle  otg_handle
@@ -755,7 +757,7 @@ usb_status _usb_otg_shut_down
     if (error != USB_OK)
     {
         #if _OTG_DEBUG_
-        DEBUG_LOG_TRACE ("_usb_otg_shut_down _usb_otg_task_delete failure");
+        DEBUG_LOG_TRACE ("usb_otg_shut_down _usb_otg_task_delete failure");
         #endif
         return USBERR_ALLOC;
     }
@@ -766,7 +768,7 @@ usb_status _usb_otg_shut_down
         if (error)
         {
             #if _OTG_DEBUG_
-            DEBUG_LOG_TRACE ("_usb_otg_shut_down otg_shutdown failure");
+            DEBUG_LOG_TRACE ("usb_otg_shut_down otg_shutdown failure");
             #endif
             return USBERR_ALLOC;
         }             

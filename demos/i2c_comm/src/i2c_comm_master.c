@@ -28,22 +28,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "board.h"
-#include "fsl_i2c_master_driver.h"
-#include "fsl_device_registers.h"
-#include "fsl_port_hal.h"
-#include "fsl_debug_console.h"
-#include "fsl_clock_manager.h"
-#include "fsl_gpio_driver.h"
-#include "fsl_uart_hal.h"
+///////////////////////////////////////////////////////////////////////////////
+//  Includes
+///////////////////////////////////////////////////////////////////////////////
+
+// Standard C Included Files
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
 
-static void LED_toggle_master(void)
-{
-    GPIO_DRV_TogglePinOutput(kGpioLED1);
-}
+// SDK Included Files
+#include "board.h"
+#include "fsl_i2c_master_driver.h"
+
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 
 enum _subaddress_index_e
 {
@@ -59,18 +59,27 @@ enum _subaddress_index_e
     Max_Subaddress_Index
 };
 
-////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
 // Code
-////////////////////////////////////////////////////////////////////////////////
-void main(void)
+///////////////////////////////////////////////////////////////////////////////
+
+static void LED_toggle_master(void)
 {
-    // status_t err;
+    GPIO_DRV_TogglePinOutput(kGpioLED1);
+}
+
+/*!
+ * @brief main function
+ */
+int main(void)
+{
     uint8_t i;
     uint8_t index, indexChar, value;
     uint8_t cmdBuff[1] = {0xFF};
-    uint8_t sendBuff[1] = {0xFF};       //save data sent to i2c slave
-    uint8_t receiveBuff[1] = {0xFF};    //save data received from i2c slave
-    
+    uint8_t sendBuff[1] = {0xFF};       // save data sent to i2c slave
+    uint8_t receiveBuff[1] = {0xFF};    // save data received from i2c slave
+
     i2c_master_state_t master;
     i2c_status_t returnValue;
 
@@ -81,8 +90,11 @@ void main(void)
     };
 
     hardware_init();
-    
+
     dbg_uart_init();
+
+    // Configure I2C pins
+    configure_i2c_pins(BOARD_I2C_COMM_INSTANCE);
 
     OSA_Init();
 
@@ -92,7 +104,7 @@ void main(void)
     I2C_DRV_MasterInit(BOARD_I2C_COMM_INSTANCE, &master);
 
     printf("\r\n====== I2C Master ======\r\n\r\n");
-    
+
     OSA_TimeDelay(500);
     LED_toggle_master();
     OSA_TimeDelay(500);
@@ -112,13 +124,13 @@ void main(void)
         {
             cmdBuff[0] = i;
             returnValue = I2C_DRV_MasterReceiveDataBlocking(
-                                                            BOARD_I2C_COMM_INSTANCE,
-                                                            &slave,
-                                                            cmdBuff,
-                                                            1,
-                                                            receiveBuff,
-                                                            sizeof(receiveBuff),
-                                                            500);
+                                                       BOARD_I2C_COMM_INSTANCE,
+                                                       &slave,
+                                                       cmdBuff,
+                                                       1,
+                                                       receiveBuff,
+                                                       sizeof(receiveBuff),
+                                                       500);
             if (returnValue == kStatus_I2C_Success)
             {
                 printf("\r\n[%d]                      %c", i, receiveBuff[0]);
@@ -156,7 +168,7 @@ void main(void)
 
         cmdBuff[0]  = index;
         sendBuff[0] = value;
-        
+
         returnValue = I2C_DRV_MasterSendDataBlocking(
                                                     BOARD_I2C_COMM_INSTANCE,
                                                     &slave,
@@ -169,11 +181,5 @@ void main(void)
         {
             printf("\r\nI2C communication failed, error code: %d", returnValue);
         }
-
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// EOF
-////////////////////////////////////////////////////////////////////////////////
-

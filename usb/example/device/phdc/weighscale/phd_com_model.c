@@ -933,11 +933,13 @@ void PHD_Send_Measurements_to_Manager
         }
         scan_rpt_no = (uint16_t*)&g_phdc_com.phd_buff[24];
         *scan_rpt_no = USB_HOST_TO_BE_SHORT(g_scan_report_no);
-        g_scan_report_no++;
 
         /* send measurements */
-        (void)USB_Class_PHDC_Send_Data(handle, FALSE, 0,SEND_DATA_QOS, 
-            (uint8_t *)g_phdc_com.phd_buff, DIM_DATA_TX_SIZE);
+        if (USB_OK == USB_Class_PHDC_Send_Data(handle, FALSE, 0,SEND_DATA_QOS, 
+                      (uint8_t *)g_phdc_com.phd_buff, DIM_DATA_TX_SIZE))
+        {
+            g_scan_report_no++;
+        }
     }
 }
 /* EOF */

@@ -39,26 +39,14 @@
  * Includes
  *****************************************************************************/
 #include "usb_class_hid.h"
-
-/******************************************************************************
- * Constants - None
- *****************************************************************************/
+#include "usb_hid_config.h"
 
 /******************************************************************************
  * Macro's
  *****************************************************************************/
-#define HID_IMPLEMENT_QUEUING  0 
-#define MAX_HID_CLASS_EP_NUM   1
-
- /* class specific requests */
-
 /* for class specific requests */
 #define REPORT_SIZE                       (4)
-#define CLASS_REQ_DATA_SIZE               (0x01)
-#define MAX_HID_DEVICE                    (0x05)
-#if HID_IMPLEMENT_QUEUING
-#define HID_MAX_QUEUE_ELEMS               (4) 
-#endif
+
 
 /*****************************************************************************
  * Local Functions

@@ -55,7 +55,7 @@ void USB_PHDC_Endpoint_Service(usb_event_struct_t* event,void* arg);
 /****************************************************************************
  * Global Variables
  ****************************************************************************/
-phdc_device_struct_t g_phdc_class;
+phdc_device_struct_t g_phdc_class[MAX_PHDC_DEVICE];
 phdc_app_data_struct_t event_data_recieved; 
  /* Add all the variables needed for usb_phdc.c to this structure */
 #if USB_METADATA_SUPPORTED
@@ -72,7 +72,57 @@ phdc_app_data_struct_t event_data_recieved;
 /*****************************************************************************
  * Local Functions
  *****************************************************************************/
+
+
+   /*************************************************************************//*!
+  *
+  * @name  USB_Phdc_Allocate_Handle
+  *
+  * @brief The funtion reserves entry in device array and returns the index.
+  *
+  * @param none.
+  * @return returns the reserved handle or if no entry found device busy.      
+  *
+  *****************************************************************************/
+ static usb_status USB_Phdc_Allocate_Handle(phdc_device_struct_t** handle)
+ {
+     uint32_t cnt = 0;
+     for (;cnt< MAX_PHDC_DEVICE;cnt++)
+     {
+         if (g_phdc_class[cnt].handle == NULL)
+         {
+             *handle = (phdc_device_struct_t*)&g_phdc_class[cnt];
+             return USB_OK;
+         }
+     }
+     return USBERR_DEVICE_BUSY;
+ }
+  /*************************************************************************//*!
+  *
+  * @name  USB_Phdc_Free_Handle
+  *
+  * @brief The funtion releases entry in device array .
+  *
+  * @param handle  index in device array to be released..
+  * @return returns and error code or USB_OK.      
+  *
+  *****************************************************************************/
  
+ static usb_status USB_Phdc_Free_Handle(phdc_device_struct_t* handle)
+ {
+     int32_t cnt = 0;
+     for (;cnt< MAX_PHDC_DEVICE;cnt++)
+     {
+         if ((&g_phdc_class[cnt]) == handle)
+         {
+             OS_Mem_zero((void*)handle, sizeof(phdc_device_struct_t));
+             return USB_OK;
+         }
+     }
+     return USBERR_INVALID_PARAM;
+ }
+  
+
  /*************************************************************************//*!
  *
  * @name  USB_Phdc_Get_Device_Ptr
@@ -121,6 +171,7 @@ void USB_Class_PHDC_Event
     uint8_t *               phdc_qos;
 #if USBCFG_DEV_COMPOSITE
     usb_composite_info_struct_t* usb_composite_info;
+    uint32_t                     interface_index = 0xFF;
 #else
     usb_class_struct_t* usbclass = NULL;
 #endif
@@ -140,14 +191,32 @@ void USB_Class_PHDC_Event
         devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr->handle,
                                                        USB_PHDC_QOS_INFO, 
                                                        (uint32_t *)&phdc_qos); 
-
+        
+        devicePtr->desc_callback.get_desc_entity((uint32_t)devicePtr,
+            USB_CLASS_INTERFACE_INDEX_INFO, (uint32_t *)&interface_index);
+        if(interface_index == 0xFF)
+        {
+        #if _DEBUG
+            USB_PRINTF("not find interface index\n");
+        #endif  
+            return;
+        }
+        
         for (type_sel = 0;type_sel < usb_composite_info->count;type_sel++)
         {
-            if (usb_composite_info->class[type_sel].type == USB_CLASS_PHDC)
+            if ((usb_composite_info->class[type_sel].type == USB_CLASS_PHDC) && (type_sel == interface_index))
             {
                 break;
             }
         }
+        if(type_sel >= usb_composite_info->count)
+        {
+        #if _DEBUG
+            USB_PRINTF("not find phdc interface\n");
+        #endif 
+            return;
+        }
+        
         devicePtr->ep_desc_data = (usb_endpoints_t *) &usb_composite_info->class[type_sel].interfaces.interface->endpoints;
         devicePtr->phdc_endpoint_data.count_rx = 0; /* init the count_rx */
         devicePtr->phdc_endpoint_data.count_tx = 0; /* init the count_tx */
@@ -280,7 +349,7 @@ void USB_Class_PHDC_Event
 
             /* register callback service for endpoint 1 */
             (void)usb_device_register_service(devicePtr->handle,
-                                              (uint8_t)(USB_SERVICE_EP0+ep_struct_ptr->ep_num), 
+                                              (uint8_t)((USB_SERVICE_EP0+ep_struct_ptr->ep_num) | ((uint8_t)(ep_struct_ptr->direction << 7))), 
                                               USB_PHDC_Endpoint_Service, arg);
             count++;
         }
@@ -332,7 +401,7 @@ usb_status USB_PHDC_Requests
     if (devicePtr == NULL)
     {
         #if _DEBUG
-            printf("USB_PHDC_Requests:phdc_object_ptr is NULL\n");
+            USB_PRINTF("USB_PHDC_Requests:phdc_object_ptr is NULL\n");
         #endif  
         return error;
     }
@@ -786,7 +855,12 @@ usb_status USB_Class_PHDC_Init
         return USBERR_ERROR;
     }
     
-    devicePtr = &g_phdc_class;/*(hid_device_struct_t*)OS_Mem_alloc_zero(sizeof(hid_device_struct_t));*/
+    error = USB_Phdc_Allocate_Handle(&devicePtr);
+    if (USB_OK != error)
+    {
+        return error;
+    }
+
     devicePtr->mutex = OS_Mutex_create();
 
 #if USBCFG_DEV_COMPOSITE
@@ -904,6 +978,7 @@ usb_status USB_Class_PHDC_Deinit
     {
         OS_Mutex_destroy(devicePtr->mutex);
     }
+    USB_Phdc_Free_Handle(devicePtr);
     devicePtr = NULL;
 
     return USB_OK;

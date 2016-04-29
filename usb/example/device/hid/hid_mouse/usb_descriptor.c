@@ -35,10 +35,11 @@
 /******************************************************************************
  * Includes
  *****************************************************************************/
-#if 1
 #include "usb_device_config.h"
 #include "usb.h"
 #include "usb_device_stack_interface.h"
+#include "usb_class_hid.h"
+#include "mouse.h"
 #include "usb_descriptor.h"
 
 /*****************************************************************************
@@ -46,10 +47,12 @@
  *****************************************************************************/ 
 usb_ep_struct_t g_ep[HID_DESC_ENDPOINT_COUNT] = 
 {
-    HID_ENDPOINT, 
-    USB_INTERRUPT_PIPE, 
-    USB_SEND,
-    HID_ENDPOINT_PACKET_SIZE
+    {
+        HID_ENDPOINT,
+        USB_INTERRUPT_PIPE,
+        USB_SEND,
+        HID_ENDPOINT_PACKET_SIZE,
+    }
 };
 
 /* structure containing details of all the endpoints used by this device */ 
@@ -87,9 +90,9 @@ uint8_t g_device_descriptor[DEVICE_DESCRIPTOR_SIZE] =
    /* Max Packet size */
    CONTROL_MAX_PACKET_SIZE,
     /* Vendor ID */
-    0x04,0x25,
+    0xa2,0x15,
     /* Product ID */
-    0x00,0x01,
+    0x7c,0x00,
     /* BCD Device version */
     0x02,0x00,
     /* Manufacturer string index */
@@ -150,7 +153,7 @@ uint8_t g_config_descriptor[CONFIG_DESC_SIZE] =
     0x0A
 };
 
-#if HIGH_SPEED_DEVICE
+#if HIGH_SPEED
     uint8_t  g_device_qualifier_descriptor[DEVICE_QUALIFIER_DESCRIPTOR_SIZE] =
     {
         /* Device Qualifier Descriptor Size */
@@ -348,13 +351,13 @@ uint8_t g_std_desc_size[USB_MAX_STD_DESCRIPTORS+1] =
     0, /* string */
     0, /* Interfdace */
     0, /* Endpoint */
-    #if HIGH_SPEED_DEVICE
-        DEVICE_QUALIFIER_DESCRIPTOR_SIZE,
-        OTHER_SPEED_CONFIG_DESCRIPTOR_SIZE,
-    #else
-        0, /* Device Qualifier */
-        0, /* other spped config */
-    #endif
+#if HIGH_SPEED
+    DEVICE_QUALIFIER_DESCRIPTOR_SIZE,
+    OTHER_SPEED_CONFIG_DESCRIPTOR_SIZE,
+#else
+    0, /* Device Qualifier */
+    0, /* other spped config */
+#endif
     REPORT_DESC_SIZE
 };   
 
@@ -366,12 +369,12 @@ uint8_t *g_std_descriptors[USB_MAX_STD_DESCRIPTORS+1] =
     NULL, /* string */
     NULL, /* Interfdace */
     NULL, /* Endpoint */
-    #if HIGH_SPEED_DEVICE
-        g_device_qualifier_descriptor,
-        g_other_speed_config_descriptor,
-    #else
-        NULL, /* Device Qualifier */
-        NULL, /* other spped config*/
+#if HIGH_SPEED
+    g_device_qualifier_descriptor,
+    g_other_speed_config_descriptor,
+#else
+    NULL, /* Device Qualifier */
+    NULL, /* other spped config*/
     #endif
     g_report_descriptor
 }; 
@@ -655,5 +658,4 @@ usb_desc_request_notify_struct_t  g_desc_callback =
     USB_Set_Configation,
     USB_Desc_Get_Entity
 };
-#endif
 /* EOF */

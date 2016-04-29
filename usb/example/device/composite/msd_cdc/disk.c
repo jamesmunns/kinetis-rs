@@ -60,13 +60,8 @@
  * Global Variables
  ****************************************************************************/ 
  /* Add all the variables needed for disk.c to this structure */
-extern usb_desc_request_notify_struct_t     desc_callback;
-usb_application_callback_struct_t           msc_application_callback;
-usb_vendor_req_callback_struct_t            vendor_req_callback;
-usb_application_callback_struct_t           param_cb;
+disk_struct_t*                           g_msc_disk_ptr;
 
-disk_struct_t                               g_disk;
-msc_config_struct_t                         g_msd_config;
 #if SD_CARD_APP
 	#define USE_SDHC_PROTOCOL    (1)
 	#define USE_SPI_PROTOCOL     (0)
@@ -79,8 +74,8 @@ msc_config_struct_t                         g_msd_config;
 /*****************************************************************************
  * Local Functions Prototypes
  *****************************************************************************/
-void Disk_USB_App_Callback(uint8_t event_type, void* val,void* arg);
-uint8_t MSD_Event_Callback
+void Disk_USB_App_Device_Callback(uint8_t event_type, void* val,void* arg);
+uint8_t Disk_USB_App_Class_Callback
 (   uint8_t event_type, 
     uint16_t value,  
     uint8_t ** data, 
@@ -124,7 +119,7 @@ void Disk_App(void)
 
 /******************************************************************************
  * 
- *    @name        Disk_USB_App_Callback
+ *    @name        Disk_USB_App_Device_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -135,17 +130,17 @@ void Disk_App(void)
  *    @return      None
  *
  *****************************************************************************/
-void Disk_USB_App_Callback(uint8_t event_type, void* val,void* arg) 
+void Disk_USB_App_Device_Callback(uint8_t event_type, void* val,void* arg) 
 {
     UNUSED_ARGUMENT (arg)
     UNUSED_ARGUMENT (val)    
     if(event_type == USB_DEV_EVENT_BUS_RESET) 
     {
-        g_disk.start_app=FALSE;    
+        g_msc_disk_ptr->start_app=FALSE;    
     }
     else if(event_type == USB_DEV_EVENT_ENUM_COMPLETE) 
     {
-        g_disk.start_app=TRUE;        
+        g_msc_disk_ptr->start_app=TRUE;        
     }
     else if(event_type == USB_DEV_EVENT_ERROR)
     {
@@ -179,7 +174,7 @@ void Disk_USB_App_Callback(uint8_t event_type, void* val,void* arg)
 
 /******************************************************************************
  * 
- *    @name        MSD_Event_Callback
+ *    @name        Disk_USB_App_Class_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -190,7 +185,7 @@ void Disk_USB_App_Callback(uint8_t event_type, void* val,void* arg)
  *    @return      None
  *
  *****************************************************************************/
-uint8_t MSD_Event_Callback
+uint8_t Disk_USB_App_Class_Callback
 (	uint8_t event_type, 
 	uint16_t value,  
 	uint8_t ** data, 
@@ -224,7 +219,7 @@ uint8_t MSD_Event_Callback
             #if RAM_DISK_APP
                 if(data != NULL)
                 {
-                    *data = g_disk.storage_disk + lba_data_ptr->offset;
+                    *data = g_msc_disk_ptr->storage_disk + lba_data_ptr->offset;
                 }
 			#elif SD_CARD_APP
             #endif
@@ -242,7 +237,7 @@ uint8_t MSD_Event_Callback
         #if RAM_DISK_APP
                 if(data != NULL)
                 {
-                    *data = g_disk.storage_disk + lba_data_ptr->offset;
+                    *data = g_msc_disk_ptr->storage_disk + lba_data_ptr->offset;
                 }
 		#elif SD_CARD_APP
                 if(data != NULL)
@@ -261,7 +256,7 @@ uint8_t MSD_Event_Callback
         #if RAM_DISK_APP
                 if(data != NULL)
                 {
-                    *data = g_disk.storage_disk + lba_data_ptr->offset;
+                    *data = g_msc_disk_ptr->storage_disk + lba_data_ptr->offset;
                 }
 		#elif SD_CARD_APP
                 if(data != NULL)
@@ -276,7 +271,7 @@ uint8_t MSD_Event_Callback
 			prevent_removal_ptr = (uint8_t *) size;
 			if(SUPPORT_DISK_LOCKING_MECHANISM)
 			{				 
-				g_disk.disk_lock = *prevent_removal_ptr;
+				g_msc_disk_ptr->disk_lock = *prevent_removal_ptr;
 			}
 			else if((!SUPPORT_DISK_LOCKING_MECHANISM)&&(!(*prevent_removal_ptr)))
 			{
@@ -304,9 +299,9 @@ uint8_t MSD_Event_Callback
 
  /******************************************************************************
   *  
-  *   @name 	   Disk_TestApp_Init
+  *   @name 	   msc_disk_preinit
   * 
-  *   @brief	   This function initializes the App.
+  *   @brief	   This function pre initializes the App.
   * 
   *   @param	   None
   * 
@@ -314,7 +309,7 @@ uint8_t MSD_Event_Callback
   **				
   *****************************************************************************/
   
- void Disk_TestApp_Init(void)
+ void msc_disk_preinit(void)
  {
 #if SD_CARD_APP
 
@@ -349,21 +344,24 @@ uint8_t MSD_Event_Callback
 		 }	   /* SD Card inserted */
   #endif
 		 if(!SD_Init()) return; /* Initialize SD_CARD and SPI Interface */
-#endif	
-	 
-    OS_Mem_zero(&g_disk, sizeof(disk_struct_t));
-    OS_Mem_zero(&g_msd_config,sizeof(msc_config_struct_t)); 
+#endif
+ }
 
-    msc_application_callback.callback = Disk_USB_App_Callback;
-    msc_application_callback.arg = &g_disk.app_handle;
-	 
-    /* Register the callbacks to lower layers */
-    g_msd_config.msc_application_callback = msc_application_callback;
-    g_msd_config.vendor_req_callback = vendor_req_callback;
-    g_msd_config.class_specific_callback.callback = MSD_Event_Callback;
-	g_msd_config.class_specific_callback.arg = &g_disk.app_handle;
-    g_msd_config.desc_callback_ptr = &desc_callback;
+ /******************************************************************************
+  *  
+  *   @name 	   msc_disk_init
+  * 
+  *   @brief	   This function initializes the App.
+  * 
+  *   @param	   None
+  * 
+  *   @return	   None
+  **				
+  *****************************************************************************/
 
+ void msc_disk_init(void *param)
+ {
+     g_msc_disk_ptr = (disk_struct_t*)param;
  }
  /******************************************************************************
   *  
@@ -377,13 +375,13 @@ uint8_t MSD_Event_Callback
   **				
   *****************************************************************************/
   
- void Disk_TestApp_Task(void)
+ void msc_disk_task(void)
  {
 	 /* call the periodic task function */		
 	 USB_MSC_Periodic_Task();			
  
 	/*check whether enumeration is complete or not */
-	 if(g_disk.start_app==TRUE)
+	 if(g_msc_disk_ptr->start_app==(uint32_t)TRUE)
 	 {		  
 		 Disk_App(); 
 	 }			  

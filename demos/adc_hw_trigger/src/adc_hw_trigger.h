@@ -31,14 +31,18 @@
 #ifndef _ADC_HW_TRIGGER_H
 #define _ADC_HW_TRIGGER_H
 
-#include "device/fsl_device_registers.h"
 #include "fsl_sim_hal.h"
+#include "board.h"
 
 #define ADC_INST          0U  /*!< ADC instance */
 #define INPUT_SIGNAL_FREQ 20U /* in HZ */
 #define CHART_ROWS        30U /*!< chart row for sampled data */
 #define CHART_COLS        100U /*!< chart column for sampled data */
 #define NR_SAMPLES        100U /*!< number of samples in one period */
+#ifdef BOARD_ADC_HW_TRIGGER_CHAN
+#define ADC_INPUT_CHAN    BOARD_ADC_HW_TRIGGER_CHAN /* default input signal channel */
+#else
 #define ADC_INPUT_CHAN    23U /* default input signal channel */
+#endif
 
 #endif /*_ADC_HW_TRIGGER_H*/

@@ -297,7 +297,7 @@
         <option>
           <name>CCIncludePath2</name>
           
-        <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/config</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/bsp</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/psp</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/mqx_stdlib</state><state>$PROJ_DIR$/../../../../../platform/utilities</state><state>$PROJ_DIR$/../../../../../platform/osa</state><state>$PROJ_DIR$/../../../../../platform/CMSIS/Include</state><state>$PROJ_DIR$/../../../../../platform/CMSIS/Include/device</state><state>$PROJ_DIR$/../../../../../platform/startup/MK22F51212</state><state>$PROJ_DIR$/../../../../../platform/hal</state><state>$PROJ_DIR$/../../../../../platform/hal/adc</state><state>$PROJ_DIR$/../../../../../platform/hal/can</state><state>$PROJ_DIR$/../../../../../platform/hal/dac</state><state>$PROJ_DIR$/../../../../../platform/hal/dmamux</state><state>$PROJ_DIR$/../../../../../platform/hal/dspi</state><state>$PROJ_DIR$/../../../../../platform/hal/edma</state><state>$PROJ_DIR$/../../../../../platform/hal/enet</state><state>$PROJ_DIR$/../../../../../platform/hal/flextimer</state><state>$PROJ_DIR$/../../../../../platform/hal/gpio</state><state>$PROJ_DIR$/../../../../../platform/hal/i2c</state><state>$PROJ_DIR$/../../../../../platform/hal/lptmr</state><state>$PROJ_DIR$/../../../../../platform/hal/lpuart</state><state>$PROJ_DIR$/../../../../../platform/hal/mcg</state><state>$PROJ_DIR$/../../../../../platform/hal/osc</state><state>$PROJ_DIR$/../../../../../platform/hal/pdb</state><state>$PROJ_DIR$/../../../../../platform/hal/pit</state><state>$PROJ_DIR$/../../../../../platform/hal/pmc</state><state>$PROJ_DIR$/../../../../../platform/hal/port</state><state>$PROJ_DIR$/../../../../../platform/hal/rtc</state><state>$PROJ_DIR$/../../../../../platform/hal/sai</state><state>$PROJ_DIR$/../../../../../platform/hal/sdhc</state><state>$PROJ_DIR$/../../../../../platform/hal/sim</state><state>$PROJ_DIR$/../../../../../platform/hal/smc</state><state>$PROJ_DIR$/../../../../../platform/hal/spi</state><state>$PROJ_DIR$/../../../../../platform/hal/uart</state><state>$PROJ_DIR$/../../../../../platform/hal/wdog</state><state>$PROJ_DIR$/../../../../../platform/drivers</state><state>$PROJ_DIR$/../../../../../platform/drivers/adc</state><state>$PROJ_DIR$/../../../../../platform/drivers/adc/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/can</state><state>$PROJ_DIR$/../../../../../platform/drivers/can/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/edma</state><state>$PROJ_DIR$/../../../../../platform/drivers/edma/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/dac</state><state>$PROJ_DIR$/../../../../../platform/drivers/dac/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/dspi/dspi_master</state><state>$PROJ_DIR$/../../../../../platform/drivers/dspi/dspi_slave</state><state>$PROJ_DIR$/../../../../../platform/drivers/dspi/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/enet</state><state>$PROJ_DIR$/../../../../../platform/drivers/enet/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/enet/src</state><state>$PROJ_DIR$/../../../../../platform/drivers/flash</state><state>$PROJ_DIR$/../../../../../platform/drivers/flextimer</state><state>$PROJ_DIR$/../../../../../platform/drivers/flextimer/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/gpio</state><state>$PROJ_DIR$/../../../../../platform/drivers/gpio/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/i2c/i2c_master</state><state>$PROJ_DIR$/../../../../../platform/drivers/i2c/i2c_slave</state><state>$PROJ_DIR$/../../../../../platform/drivers/i2c/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/lptmr</state><state>$PROJ_DIR$/../../../../../platform/drivers/lptmr/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/lpuart</state><state>$PROJ_DIR$/../../../../../platform/drivers/lpuart/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/mmcau</state><state>$PROJ_DIR$/../../../../../platform/drivers/pdb</state><state>$PROJ_DIR$/../../../../../platform/drivers/pdb/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/pit</state><state>$PROJ_DIR$/../../../../../platform/drivers/pit/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/rtc</state><state>$PROJ_DIR$/../../../../../platform/drivers/rtc/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/sai</state><state>$PROJ_DIR$/../../../../../platform/drivers/sai/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/sdhc</state><state>$PROJ_DIR$/../../../../../platform/drivers/sdhc/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/soundcard</state><state>$PROJ_DIR$/../../../../../platform/drivers/spi</state><state>$PROJ_DIR$/../../../../../platform/drivers/spi/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/uart</state><state>$PROJ_DIR$/../../../../../platform/drivers/uart/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/wdog</state><state>$PROJ_DIR$/../../../../../platform/drivers/wdog/common</state><state>$PROJ_DIR$/../../../../../platform/system/clock</state><state>$PROJ_DIR$/../../../../../platform/system/hwtimer</state><state>$PROJ_DIR$/../../../../../platform/system/interrupt</state><state>$PROJ_DIR$/../../../../../platform/system/power</state><state>$PROJ_DIR$/../../../src</state><state>$PROJ_DIR$/../../../../../boards/twrk22f120m</state></option>
+        <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/config</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/mqx</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/mqx_stdlib</state><state>$PROJ_DIR$/../../../../../rtos/mqx/config/mcu/mk22f120m</state><state>$PROJ_DIR$/../../../../../rtos/mqx/config/board/twrk22f120m</state><state>$PROJ_DIR$/../../../../../boards/common/phyksz8041</state><state>$PROJ_DIR$/../../../../../platform/startup/MK22F51212</state><state>$PROJ_DIR$/../../../../../platform/system/inc</state><state>$PROJ_DIR$/../../../../../platform/hal/inc</state><state>$PROJ_DIR$/../../../../../platform/drivers/inc</state><state>$PROJ_DIR$/../../../../../platform/drivers/src/mpu</state><state>$PROJ_DIR$/../../../../../platform/startup</state><state>$PROJ_DIR$/../../../../../rtos/mqx/config/common</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/bsp</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/include</state><state>$PROJ_DIR$/../../../../../platform/utilities/inc</state><state>$PROJ_DIR$/../../../../../platform/osa/inc</state><state>$PROJ_DIR$/../../../../../platform/CMSIS/Include</state><state>$PROJ_DIR$/../../../../../platform/CMSIS/Include/device</state><state>$PROJ_DIR$/../../../../../platform/startup/MK22F51212</state><state>$PROJ_DIR$/../../../../../platform/hal/inc</state><state>$PROJ_DIR$/../../../../../platform/drivers/inc</state><state>$PROJ_DIR$/../../../../../platform/system/inc</state><state>$PROJ_DIR$/../../../src</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/include</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/bsp</state><state>$PROJ_DIR$/../../../../../rtos/mqx/config/common</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_dummy</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_mem</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_null</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_pipe</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_serial</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_tfs</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_tty</state><state>$PROJ_DIR$/../../../../../platform/drivers/src/uart</state><state>$PROJ_DIR$/../../../../../platform/drivers/src/i2c</state><state>$PROJ_DIR$/../../../../../boards/twrk22f120m</state></option>
         <option>
           <name>CCStdIncCheck</name>
           <state>0</state>
@@ -678,8 +678,8 @@
         </option>
         <option>
           <name>IlinkConfigDefines</name>
-          <state/>
-        </option>
+          
+        <state>__stack_size__=0x400</state><state>__heap_size__=0x400</state><state>__ram_vector_table__=1</state></option>
         <option>
           <name>IlinkMapFile</name>
           <state>1</state>
@@ -710,7 +710,7 @@
         </option>
         <option>
           <name>IlinkIcfFile</name>
-          <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/bsp/K22FN512xxx12_flash.icf</state>
+          <state>$PROJ_DIR$/../../../../../platform/linker/MK22F51212/iar/MK22FN512xxx12_flash.icf</state>
         </option>
         <option>
           <name>IlinkIcfFileSlave</name>
@@ -759,10 +759,10 @@
         <option>
           <name>IlinkAdditionalLibs</name>
           
-        <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/bsp/bsp.a</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/psp/psp.a</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/mqx_stdlib/mqx_stdlib.a</state><state>$PROJ_DIR$/../../../../../lib/ksdk_mqx_lib/iar/K22F51212/debug/ksdk_mqx_lib.a</state></option>
+        <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/mqx/lib_mqx.a</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/debug/mqx_stdlib/lib_mqx_stdlib.a</state><state>$PROJ_DIR$/../../../../../lib/ksdk_mqx_lib/iar/K22F51212/debug/libksdk_platform_mqx.a</state></option>
         <option>
           <name>IlinkOverrideProgramEntryLabel</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>IlinkProgramEntryLabelSelect</name>
@@ -770,7 +770,7 @@
         </option>
         <option>
           <name>IlinkProgramEntryLabel</name>
-          <state>__iar_program_start</state>
+          <state>Reset_Handler</state>
         </option>
         <option>
           <name>DoFill</name>
@@ -1173,7 +1173,7 @@
         </option>
         <option>
           <name>CCDebugInfo</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>IEndianMode</name>
@@ -1238,7 +1238,7 @@
         <option>
           <name>CCIncludePath2</name>
           
-        <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/config</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/bsp</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/psp</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/mqx_stdlib</state><state>$PROJ_DIR$/../../../../../platform/utilities</state><state>$PROJ_DIR$/../../../../../platform/osa</state><state>$PROJ_DIR$/../../../../../platform/CMSIS/Include</state><state>$PROJ_DIR$/../../../../../platform/CMSIS/Include/device</state><state>$PROJ_DIR$/../../../../../platform/startup/MK22F51212</state><state>$PROJ_DIR$/../../../../../platform/hal</state><state>$PROJ_DIR$/../../../../../platform/hal/adc</state><state>$PROJ_DIR$/../../../../../platform/hal/can</state><state>$PROJ_DIR$/../../../../../platform/hal/dac</state><state>$PROJ_DIR$/../../../../../platform/hal/dmamux</state><state>$PROJ_DIR$/../../../../../platform/hal/dspi</state><state>$PROJ_DIR$/../../../../../platform/hal/edma</state><state>$PROJ_DIR$/../../../../../platform/hal/enet</state><state>$PROJ_DIR$/../../../../../platform/hal/flextimer</state><state>$PROJ_DIR$/../../../../../platform/hal/gpio</state><state>$PROJ_DIR$/../../../../../platform/hal/i2c</state><state>$PROJ_DIR$/../../../../../platform/hal/lptmr</state><state>$PROJ_DIR$/../../../../../platform/hal/lpuart</state><state>$PROJ_DIR$/../../../../../platform/hal/mcg</state><state>$PROJ_DIR$/../../../../../platform/hal/osc</state><state>$PROJ_DIR$/../../../../../platform/hal/pdb</state><state>$PROJ_DIR$/../../../../../platform/hal/pit</state><state>$PROJ_DIR$/../../../../../platform/hal/pmc</state><state>$PROJ_DIR$/../../../../../platform/hal/port</state><state>$PROJ_DIR$/../../../../../platform/hal/rtc</state><state>$PROJ_DIR$/../../../../../platform/hal/sai</state><state>$PROJ_DIR$/../../../../../platform/hal/sdhc</state><state>$PROJ_DIR$/../../../../../platform/hal/sim</state><state>$PROJ_DIR$/../../../../../platform/hal/smc</state><state>$PROJ_DIR$/../../../../../platform/hal/spi</state><state>$PROJ_DIR$/../../../../../platform/hal/uart</state><state>$PROJ_DIR$/../../../../../platform/hal/wdog</state><state>$PROJ_DIR$/../../../../../platform/drivers</state><state>$PROJ_DIR$/../../../../../platform/drivers/adc</state><state>$PROJ_DIR$/../../../../../platform/drivers/adc/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/can</state><state>$PROJ_DIR$/../../../../../platform/drivers/can/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/edma</state><state>$PROJ_DIR$/../../../../../platform/drivers/edma/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/dac</state><state>$PROJ_DIR$/../../../../../platform/drivers/dac/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/dspi/dspi_master</state><state>$PROJ_DIR$/../../../../../platform/drivers/dspi/dspi_slave</state><state>$PROJ_DIR$/../../../../../platform/drivers/dspi/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/enet</state><state>$PROJ_DIR$/../../../../../platform/drivers/enet/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/enet/src</state><state>$PROJ_DIR$/../../../../../platform/drivers/flash</state><state>$PROJ_DIR$/../../../../../platform/drivers/flextimer</state><state>$PROJ_DIR$/../../../../../platform/drivers/flextimer/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/gpio</state><state>$PROJ_DIR$/../../../../../platform/drivers/gpio/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/i2c/i2c_master</state><state>$PROJ_DIR$/../../../../../platform/drivers/i2c/i2c_slave</state><state>$PROJ_DIR$/../../../../../platform/drivers/i2c/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/lptmr</state><state>$PROJ_DIR$/../../../../../platform/drivers/lptmr/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/lpuart</state><state>$PROJ_DIR$/../../../../../platform/drivers/lpuart/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/mmcau</state><state>$PROJ_DIR$/../../../../../platform/drivers/pdb</state><state>$PROJ_DIR$/../../../../../platform/drivers/pdb/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/pit</state><state>$PROJ_DIR$/../../../../../platform/drivers/pit/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/rtc</state><state>$PROJ_DIR$/../../../../../platform/drivers/rtc/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/sai</state><state>$PROJ_DIR$/../../../../../platform/drivers/sai/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/sdhc</state><state>$PROJ_DIR$/../../../../../platform/drivers/sdhc/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/soundcard</state><state>$PROJ_DIR$/../../../../../platform/drivers/spi</state><state>$PROJ_DIR$/../../../../../platform/drivers/spi/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/uart</state><state>$PROJ_DIR$/../../../../../platform/drivers/uart/common</state><state>$PROJ_DIR$/../../../../../platform/drivers/wdog</state><state>$PROJ_DIR$/../../../../../platform/drivers/wdog/common</state><state>$PROJ_DIR$/../../../../../platform/system/clock</state><state>$PROJ_DIR$/../../../../../platform/system/hwtimer</state><state>$PROJ_DIR$/../../../../../platform/system/interrupt</state><state>$PROJ_DIR$/../../../../../platform/system/power</state><state>$PROJ_DIR$/../../../src</state><state>$PROJ_DIR$/../../../../../boards/twrk22f120m</state></option>
+        <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/config</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/mqx</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/mqx_stdlib</state><state>$PROJ_DIR$/../../../../../rtos/mqx/config/mcu/mk22f120m</state><state>$PROJ_DIR$/../../../../../rtos/mqx/config/board/twrk22f120m</state><state>$PROJ_DIR$/../../../../../boards/common/phyksz8041</state><state>$PROJ_DIR$/../../../../../platform/startup/MK22F51212</state><state>$PROJ_DIR$/../../../../../platform/system/inc</state><state>$PROJ_DIR$/../../../../../platform/hal/inc</state><state>$PROJ_DIR$/../../../../../platform/drivers/inc</state><state>$PROJ_DIR$/../../../../../platform/drivers/src/mpu</state><state>$PROJ_DIR$/../../../../../platform/startup</state><state>$PROJ_DIR$/../../../../../rtos/mqx/config/common</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/bsp</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/include</state><state>$PROJ_DIR$/../../../../../platform/utilities/inc</state><state>$PROJ_DIR$/../../../../../platform/osa/inc</state><state>$PROJ_DIR$/../../../../../platform/CMSIS/Include</state><state>$PROJ_DIR$/../../../../../platform/CMSIS/Include/device</state><state>$PROJ_DIR$/../../../../../platform/startup/MK22F51212</state><state>$PROJ_DIR$/../../../../../platform/hal/inc</state><state>$PROJ_DIR$/../../../../../platform/drivers/inc</state><state>$PROJ_DIR$/../../../../../platform/system/inc</state><state>$PROJ_DIR$/../../../src</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/include</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/bsp</state><state>$PROJ_DIR$/../../../../../rtos/mqx/config/common</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_dummy</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_mem</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_null</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_pipe</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_serial</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_tfs</state><state>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/nio/drivers/nio_tty</state><state>$PROJ_DIR$/../../../../../platform/drivers/src/uart</state><state>$PROJ_DIR$/../../../../../platform/drivers/src/i2c</state><state>$PROJ_DIR$/../../../../../boards/twrk22f120m</state></option>
         <option>
           <name>CCStdIncCheck</name>
           <state>0</state>
@@ -1395,7 +1395,7 @@
         </option>
         <option>
           <name>ADebug</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>AltRegisterNames</name>
@@ -1619,8 +1619,8 @@
         </option>
         <option>
           <name>IlinkConfigDefines</name>
-          <state/>
-        </option>
+          
+        <state>__stack_size__=0x400</state><state>__heap_size__=0x400</state><state>__ram_vector_table__=1</state></option>
         <option>
           <name>IlinkMapFile</name>
           <state>0</state>
@@ -1651,7 +1651,7 @@
         </option>
         <option>
           <name>IlinkIcfFile</name>
-          <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/bsp/K22FN512xxx12_flash.icf</state>
+          <state>$PROJ_DIR$/../../../../../platform/linker/MK22F51212/iar/MK22FN512xxx12_flash.icf</state>
         </option>
         <option>
           <name>IlinkIcfFileSlave</name>
@@ -1700,10 +1700,10 @@
         <option>
           <name>IlinkAdditionalLibs</name>
           
-        <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/bsp/bsp.a</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/psp/psp.a</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/mqx_stdlib/mqx_stdlib.a</state><state>$PROJ_DIR$/../../../../../lib/ksdk_mqx_lib/iar/K22F51212/release/ksdk_mqx_lib.a</state></option>
+        <state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/mqx/lib_mqx.a</state><state>$PROJ_DIR$/../../../../../rtos/mqx/lib/twrk22f120m.iar/release/mqx_stdlib/lib_mqx_stdlib.a</state><state>$PROJ_DIR$/../../../../../lib/ksdk_mqx_lib/iar/K22F51212/release/libksdk_platform_mqx.a</state></option>
         <option>
           <name>IlinkOverrideProgramEntryLabel</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>IlinkProgramEntryLabelSelect</name>
@@ -1711,7 +1711,7 @@
         </option>
         <option>
           <name>IlinkProgramEntryLabel</name>
-          <state>__iar_program_start</state>
+          <state>Reset_Handler</state>
         </option>
         <option>
           <name>DoFill</name>
@@ -1888,4 +1888,4 @@
   
   
   
-<group><name>utilities</name><file><name>$PROJ_DIR$/../../../../../platform/utilities/src/fsl_debug_console.c</name></file><file><name>$PROJ_DIR$/../../../../../platform/utilities/fsl_debug_console.h</name></file></group><group><name>source</name><file><name>$PROJ_DIR$/../../../../../platform/drivers/i2c/fsl_i2c_irq.c</name></file><file><name>$PROJ_DIR$/../../../src/i2c_rtos.c</name></file><file><name>$PROJ_DIR$/../../../src/task_master.c</name></file><file><name>$PROJ_DIR$/../../../src/task_slave.c</name></file><file><name>$PROJ_DIR$/../../../src/task_sample.c</name></file><file><name>$PROJ_DIR$/../../../src/i2c_rtos.h</name></file></group><group><name>board</name><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/gpio_pins.c</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/gpio_pins.h</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/pin_mux.c</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/pin_mux.h</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/board.h</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/hardware_init.c</name></file></group></project>
+<group><name>BSP Files</name><file><name>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/bsp/bsp.h</name></file><file><name>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/bsp/bsp_config.h</name></file><file><name>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/bsp/init_bsp.c</name></file><file><name>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/include/mqx.h</name></file><file><name>$PROJ_DIR$/../../../../../rtos/mqx/mqx/source/bsp/mqx_main.c</name></file></group><group><name>Config Files</name><group><name>Common</name><file><name>$PROJ_DIR$/../../../../../rtos/mqx/config/common/maximum_config.h</name></file><file><name>$PROJ_DIR$/../../../../../rtos/mqx/config/common/small_ram_config.h</name></file><file><name>$PROJ_DIR$/../../../../../rtos/mqx/config/common/verif_enabled_config.h</name></file></group><file><name>$PROJ_DIR$/../../../../../rtos/mqx/config/mcu/mk22f120m/mqx_sdk_config.h</name></file><file><name>$PROJ_DIR$/../../../../../rtos/mqx/config/board/twrk22f120m/user_config.h</name></file></group><group><name>utilities</name><file><name>$PROJ_DIR$/../../../../../platform/utilities/src/fsl_debug_console.c</name></file><file><name>$PROJ_DIR$/../../../../../platform/utilities/inc/fsl_debug_console.h</name></file><file><name>$PROJ_DIR$/../../../../../platform/utilities/src/print_scan.c</name></file><file><name>$PROJ_DIR$/../../../../../platform/utilities/src/print_scan.h</name></file></group><group><name>source</name><file><name>$PROJ_DIR$/../../../src/i2c_rtos_irq.c</name></file><file><name>$PROJ_DIR$/../../../src/i2c_rtos.c</name></file><file><name>$PROJ_DIR$/../../../src/task_master.c</name></file><file><name>$PROJ_DIR$/../../../src/task_slave.c</name></file><file><name>$PROJ_DIR$/../../../src/task_sample.c</name></file><file><name>$PROJ_DIR$/../../../src/i2c_rtos.h</name></file></group><group><name>board</name><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/gpio_pins.c</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/gpio_pins.h</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/pin_mux.c</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/pin_mux.h</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/board.h</name></file><file><name>$PROJ_DIR$/../../../../../boards/twrk22f120m/hardware_init.c</name></file></group></project>

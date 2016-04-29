@@ -56,7 +56,7 @@
 /**************************************************************************
    Global variables
 **************************************************************************/
-volatile device_struct_t                g_mass_device[USBCFG_MAX_INSTANCE] = { 0 };   /* mass storage device struct */
+volatile device_struct_t                g_mass_device[USBCFG_MAX_INSTANCE];   /* mass storage device struct */
 volatile uint8_t                        g_mass_device_new_index = 0;
 
 /**************************************************************************
@@ -86,7 +86,7 @@ DSTATUS msd_disk_initialize (
     /* Allocate memory for cmd Block Wrapper and cmd Status Wrapper */
     if(NULL == cbw_ptr)
     {
-        cbw_ptr = (cbw_struct_t *) malloc(sizeof(cbw_struct_t));      
+        cbw_ptr = (cbw_struct_t *) OS_Mem_alloc_uncached(sizeof(cbw_struct_t));
     }
     
     g_pCmd.CBW_PTR = cbw_ptr;
@@ -98,7 +98,7 @@ DSTATUS msd_disk_initialize (
     
     if(NULL == csw_ptr)
     {
-        csw_ptr = (csw_struct_t *) malloc(sizeof(csw_struct_t));
+        csw_ptr = (csw_struct_t *) OS_Mem_alloc_uncached(sizeof(csw_struct_t));
     }
     
     g_pCmd.CSW_PTR = csw_ptr;

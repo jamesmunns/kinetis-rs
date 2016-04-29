@@ -38,10 +38,12 @@
 *****************************************************************************/
 #include "usb_device_config.h"
 #include "usb.h"
-#include "usb_device_stack_interface.h"	
+#include "usb_device_stack_interface.h"    
 
 #include "usb_descriptor.h"
 #include "disk.h"
+#include "virtual_com.h"
+#include "composite_app.h"
 
 #if (defined __MCF52xxx_H__)||(defined __MK_xxx_H__)
 /* Put CFV2 descriptors in RAM */
@@ -103,16 +105,16 @@ usb_ep_struct_t msd_ep[MSC_DESC_ENDPOINT_COUNT] =
 #define USB_MSD_IF_MAX 1
 #define USB_CDC_CFG_MAX 1
 #define USB_MSD_CFG_MAX 1
-#define USB_MSD_CDC_CLASS_MAX 3
+#define USB_MSD_CDC_CLASS_MAX 2
 
 /* Interfaces */
 static usb_if_struct_t usb_cdc_if[USB_CDC_IF_MAX] = {
     USB_DESC_INTERFACE(0, CIC_ENDP_COUNT, cic_ep),
-	USB_DESC_INTERFACE(1, DIC_ENDP_COUNT, dic_ep),
+    USB_DESC_INTERFACE(1, DIC_ENDP_COUNT, dic_ep),
 };
 
 static usb_if_struct_t usb_msd_if[USB_MSD_IF_MAX] = {
-	USB_DESC_INTERFACE(2, MSC_DESC_ENDPOINT_COUNT, msd_ep),
+    USB_DESC_INTERFACE(2, MSC_DESC_ENDPOINT_COUNT, msd_ep),
 };
 
 /* Configuration */
@@ -128,34 +130,30 @@ static usb_class_struct_t usb_dec_class[USB_MSD_CDC_CLASS_MAX] =
 {
     {
         USB_CLASS_CDC,
-		USB_DESC_CONFIGURATION(USB_CDC_IF_MAX, usb_cdc_if),
+        USB_DESC_CONFIGURATION(USB_CDC_IF_MAX, usb_cdc_if),
     },
     {
         USB_CLASS_MSC,
-		USB_DESC_CONFIGURATION(USB_MSD_IF_MAX, usb_msd_if),
+        USB_DESC_CONFIGURATION(USB_MSD_IF_MAX, usb_msd_if),
     },
-    {
-        USB_CLASS_INVALID,
-        USB_DESC_CONFIGURATION(0, NULL),
-    }
 };
 
 static usb_composite_info_struct_t usb_composite_info =
 {
-	2,
-	usb_dec_class	
+    2,
+    usb_dec_class,
 };
 
 uint8_t g_device_descriptor[DEVICE_DESCRIPTOR_SIZE] =
 {
-    /* "Device Dexcriptor Size */
+    /* "Device Descriptor Size */
     DEVICE_DESCRIPTOR_SIZE,
     /* "Device" Type of descriptor */
     USB_DEVICE_DESCRIPTOR,
     0x00, 0x02,                           /*  BCD USB version               */
     0xEF,                                 /*  Miscellaneous Device Class    */
     0x02,                                 /*  Common Class  */
-    0x01,                                 /*  Inteface Association Descriptor */
+    0x01,                                 /*  Interface Association Descriptor */
     /* Max Packet size */
     CONTROL_MAX_PACKET_SIZE,
     /* Vendor ID */
@@ -189,14 +187,14 @@ uint8_t g_config_descriptor[CONFIG_DESC_SIZE] =
     /* Configuration Description String Index */
     0,
     /*  Attributes.support RemoteWakeup and self power */
-	(USB_DESC_CFG_ATTRIBUTES_D7_POS) | (USBCFG_DEV_SELF_POWER << USB_DESC_CFG_ATTRIBUTES_SELF_POWERED_SHIFT) | (USBCFG_DEV_REMOTE_WAKEUP << USB_DESC_CFG_ATTRIBUTES_REMOTE_WAKEUP_SHIFT),
+    (USB_DESC_CFG_ATTRIBUTES_D7_POS) | (USBCFG_DEV_SELF_POWER << USB_DESC_CFG_ATTRIBUTES_SELF_POWERED_SHIFT) | (USBCFG_DEV_REMOTE_WAKEUP << USB_DESC_CFG_ATTRIBUTES_REMOTE_WAKEUP_SHIFT),
     /*  Current draw from bus */
     CONFIG_DESC_CURRENT_DRAWN,
 
     /* Interface Association Descriptor */
     IAD_DESC_SIZE,                       /* Size of this descriptor */
     USB_IFACE_ASSOCIATION_DESCRIPTOR,    /* INTERFACE ASSOCIATION Descriptor */
-    0x00,                                /* Interface number ofthe CDC Control
+    0x00,                                /* Interface number of the CDC Control
                                             interface that is associated with this function */
     0x02,                                /* Number of contiguous CDC interfaces
                                             that are associated with this function */
@@ -225,7 +223,7 @@ uint8_t g_config_descriptor[CONFIG_DESC_SIZE] =
     0x05,             /* Size of this descriptor */
     USB_CS_INTERFACE, /* descriptor type*/
     CALL_MANAGEMENT_FUNC_DESC,
-    0x01,/*may use 0x03 */  /* device handales call management itself(D0 set)
+    0x01,/*may use 0x03 */  /* device handles call management itself(D0 set)
             and will process commands multiplexed over the data interface */
     0x01,      /* Indicates multiplexed commands are
                 handled via data interface */
@@ -366,12 +364,12 @@ uint8_t g_other_speed_config_descriptor[OTHER_SPEED_CONFIG_DESCRIPTOR_SIZE] =
     /*  Total length of the Configuration descriptor */
     USB_uint_16_low(CONFIG_DESC_SIZE), USB_uint_16_high(CONFIG_DESC_SIZE),
     0x03,
-    /*value used to selct this configuration : Configuration Value */
+    /*value used to select this configuration : Configuration Value */
     1,
     /*  Configuration Description String Index*/
     0,
     /*Attributes.support RemoteWakeup and self power*/
-	(USB_DESC_CFG_ATTRIBUTES_D7_POS) | (USBCFG_DEV_SELF_POWER << USB_DESC_CFG_ATTRIBUTES_SELF_POWERED_SHIFT) | (USBCFG_DEV_REMOTE_WAKEUP << USB_DESC_CFG_ATTRIBUTES_REMOTE_WAKEUP_SHIFT),
+    (USB_DESC_CFG_ATTRIBUTES_D7_POS) | (USBCFG_DEV_SELF_POWER << USB_DESC_CFG_ATTRIBUTES_SELF_POWERED_SHIFT) | (USBCFG_DEV_REMOTE_WAKEUP << USB_DESC_CFG_ATTRIBUTES_REMOTE_WAKEUP_SHIFT),
     /*  Current draw from bus */
     CONFIG_DESC_CURRENT_DRAWN,
 
@@ -416,7 +414,7 @@ uint8_t USB_STR_0[USB_STR_0_SIZE+USB_STR_DESC_SIZE] =
 { sizeof(USB_STR_0),
     USB_STRING_DESCRIPTOR,
     0x09,
-    0x04/*equiavlent to 0x0409*/
+    0x04/*equivalent to 0x0409*/
 };
 
 /*  Manufacturer string */
@@ -521,14 +519,14 @@ uint32_t g_std_desc_size[USB_MAX_STD_DESCRIPTORS+1] =
     DEVICE_DESCRIPTOR_SIZE,
     CONFIG_DESC_SIZE,
     0, /* string */
-    0, /* Interfdace */
+    0, /* Interface */
     0, /* Endpoint */
     #if HIGH_SPEED_DEVICE
     DEVICE_QUALIFIER_DESCRIPTOR_SIZE,
     OTHER_SPEED_CONFIG_DESCRIPTOR_SIZE
     #else
     0, /* Device Qualifier */
-    0 /* other spped config */
+    0 /* other speed config */
     #endif
 };
 
@@ -538,14 +536,14 @@ uint8_t * g_std_descriptors[USB_MAX_STD_DESCRIPTORS+1] =
     (uint8_t *)g_device_descriptor,
     (uint8_t *)g_config_descriptor,
     NULL, /* string */
-    NULL, /* Interfdace */
+    NULL, /* Interface */
     NULL, /* Endpoint */
     #if HIGH_SPEED_DEVICE
     g_device_qualifier_descriptor,
     g_other_speed_config_descriptor
     #else
     NULL, /* Device Qualifier */
-    NULL /* other spped config*/
+    NULL /* other speed config*/
     #endif
 };
 
@@ -566,13 +564,15 @@ uint8_t * g_string_descriptors[USB_MAX_STRING_DESCRIPTORS+1] =
 };
 
 usb_language_t    usb_lang[USB_MAX_LANGUAGES_SUPPORTED] = 
-                                   { 
-                                    (uint16_t)0x0409,
-                                    g_string_descriptors,
-                                    g_string_desc_size
+                                  {
+                                      {
+                                          (uint16_t)0x0409,
+                                          g_string_descriptors,
+                                          g_string_desc_size,
+                                      },
                                   };                                                                                              
 usb_all_languages_t g_languages = { USB_STR_0, sizeof(USB_STR_0),
-								  USB_MAX_LANGUAGES_SUPPORTED,
+                                  USB_MAX_LANGUAGES_SUPPORTED,
                                   usb_lang
                                 };
 
@@ -611,79 +611,79 @@ static uint8_t g_alternate_interface[USB_MAX_SUPPORTED_INTERFACES];
  *
  * @name  USB_Desc_Get_Descriptor
  *
- * @brief The function returns the correponding descriptor
+ * @brief The function returns the corresponding descriptor
  *
- * @param handle:		 handle 	
- * @param type: 		 type of descriptor requested	  
- * @param str_num:		 string index for string descriptor 	
- * @param index:		 string descriptor language Id	   
- * @param descriptor:	 output descriptor pointer
- * @param size: 		 size of descriptor returned
+ * @param handle:         handle     
+ * @param type:          type of descriptor requested      
+ * @param str_num:         string index for string descriptor     
+ * @param index:         string descriptor language Id       
+ * @param descriptor:     output descriptor pointer
+ * @param size:          size of descriptor returned
  *
- * @return USB_OK							   When Successfull
- *		   USBERR_INVALID_REQ_TYPE			   when Error
+ * @return USB_OK                               When Success
+ *           USBERR_INVALID_REQ_TYPE               when Error
  *****************************************************************************/
 uint8_t USB_Desc_Get_Descriptor(
-	 uint32_t handle, 
-	 uint8_t type,
-	 uint8_t str_num, 
-	 uint16_t index,
-	 uint8_t * *descriptor,
-	 uint32_t *size) 
+     uint32_t handle, 
+     uint8_t type,
+     uint8_t str_num, 
+     uint16_t index,
+     uint8_t * *descriptor,
+     uint32_t *size) 
 {
-	 UNUSED_ARGUMENT(handle)
+     UNUSED_ARGUMENT(handle)
 
-	/* string descriptors are handled saperately */
-	if (type == USB_STRING_DESCRIPTOR)
-	{ 
-		if(index == 0) 
-		{  
-			/* return the string and size of all languages */	   
-			*descriptor = (uint8_t *)g_languages.languages_supported_string;
-			*size = g_languages.languages_supported_size;			 
-		} 
-		else 
-		{
-			uint8_t lang_id=0;
-			uint8_t lang_index=USB_MAX_LANGUAGES_SUPPORTED;
-			
-			for(;lang_id< USB_MAX_LANGUAGES_SUPPORTED;lang_id++) 
-			{
-				/* check whether we have a string for this language */
-				if(index == g_languages.usb_language[lang_id].language_id) 
-				{	/* check for max descriptors */
-					if(str_num < USB_MAX_STRING_DESCRIPTORS) 
-					{	/* setup index for the string to be returned */
-						lang_index=str_num; 				
-					}					 
-					break;					  
-				}				 
-			}
+    /* string descriptors are handled separately */
+    if (type == USB_STRING_DESCRIPTOR)
+    { 
+        if(index == 0) 
+        {  
+            /* return the string and size of all languages */       
+            *descriptor = (uint8_t *)g_languages.languages_supported_string;
+            *size = g_languages.languages_supported_size;             
+        } 
+        else 
+        {
+            uint8_t lang_id=0;
+            uint8_t lang_index=USB_MAX_LANGUAGES_SUPPORTED;
+            
+            for(;lang_id< USB_MAX_LANGUAGES_SUPPORTED;lang_id++) 
+            {
+                /* check whether we have a string for this language */
+                if(index == g_languages.usb_language[lang_id].language_id) 
+                {    /* check for max descriptors */
+                    if(str_num < USB_MAX_STRING_DESCRIPTORS) 
+                    {    /* setup index for the string to be returned */
+                        lang_index=str_num;                 
+                    }                     
+                    break;                      
+                }                 
+            }
 
-			/* set return val for descriptor and size */
-			*descriptor = 
-			  (uint8_t *)g_languages.usb_language[lang_id].lang_desc[str_num];
-			*size = 
-				  g_languages.usb_language[lang_id].lang_desc_size[lang_index];
-		}		 
-	}
-	else if (type < USB_MAX_STD_DESCRIPTORS+1)
-	{
-		/* set return val for descriptor and size*/
-		*descriptor = (uint8_t *)g_std_descriptors [type];
-	   
-		/* if there is no descriptor then return error */
-		if(*descriptor == NULL) 
-		{
-			return USBERR_INVALID_REQ_TYPE;
-		}		 
-		*size = g_std_desc_size[type];				  
-	}
-	else /* invalid descriptor */
-	{
-		return USBERR_INVALID_REQ_TYPE;
-	}
-	return USB_OK;	
+            /* set return val for descriptor and size */
+            *descriptor = 
+              (uint8_t *)g_languages.usb_language[lang_id].lang_desc[str_num];
+            *size = 
+                  g_languages.usb_language[lang_id].lang_desc_size[lang_index];
+        }         
+    }
+    else if (type < USB_MAX_STD_DESCRIPTORS+1)
+    {
+        /* set return val for descriptor and size*/
+        *descriptor = (uint8_t *)g_std_descriptors [type];
+       
+        /* if there is no descriptor then return error */
+        if(*descriptor == NULL) 
+        {
+            return USBERR_INVALID_REQ_TYPE;
+        }         
+        *size = g_std_desc_size[type];                  
+    }
+    else /* invalid descriptor */
+    {
+        return USBERR_INVALID_REQ_TYPE;
+    }
+    return USB_OK;    
 }
 
 /**************************************************************************//*!
@@ -692,28 +692,28 @@ uint8_t USB_Desc_Get_Descriptor(
  *
  * @brief The function returns the alternate interface
  *
- * @param handle:		  handle	 
- * @param interface:	  interface number	   
- * @param alt_interface:  output alternate interface	 
+ * @param handle:          handle     
+ * @param interface:      interface number       
+ * @param alt_interface:  output alternate interface     
  *
- * @return USB_OK							   When Successfull
- *		   USBERR_INVALID_REQ_TYPE			   when Error
+ * @return USB_OK                               When Success
+ *           USBERR_INVALID_REQ_TYPE               when Error
  *****************************************************************************/
 uint8_t USB_Desc_Get_Interface(uint32_t handle, 
-							  uint8_t interface, 
-							  uint8_t * alt_interface)
-{	
-	UNUSED_ARGUMENT(handle)
-	
-	/* if interface valid */
-	if(interface < USB_MAX_SUPPORTED_INTERFACES)
-	{
-		/* get alternate interface*/
-		*alt_interface = g_alternate_interface[interface];
-		return USB_OK;	
-	}
-	
-	return USBERR_INVALID_REQ_TYPE;
+                              uint8_t interface, 
+                              uint8_t * alt_interface)
+{    
+    UNUSED_ARGUMENT(handle)
+    
+    /* if interface valid */
+    if(interface < USB_MAX_SUPPORTED_INTERFACES)
+    {
+        /* get alternate interface*/
+        *alt_interface = g_alternate_interface[interface];
+        return USB_OK;    
+    }
+    
+    return USBERR_INVALID_REQ_TYPE;
 }
 
 /**************************************************************************//*!
@@ -722,28 +722,28 @@ uint8_t USB_Desc_Get_Interface(uint32_t handle,
  *
  * @brief The function sets the alternate interface
  *
- * @param handle:		  handle	 
- * @param interface:	  interface number	   
- * @param alt_interface:  input alternate interface 	
+ * @param handle:          handle     
+ * @param interface:      interface number       
+ * @param alt_interface:  input alternate interface     
  *
- * @return USB_OK							   When Successfull
- *		   USBERR_INVALID_REQ_TYPE			   when Error
+ * @return USB_OK                               When Success
+ *           USBERR_INVALID_REQ_TYPE               when Error
  *****************************************************************************/
 uint8_t USB_Desc_Set_Interface(uint32_t handle, 
-							  uint8_t interface, 
-							  uint8_t alt_interface)
+                              uint8_t interface, 
+                              uint8_t alt_interface)
 {
-	UNUSED_ARGUMENT(handle)
-	
-	/* if interface valid */
-	if(interface < USB_MAX_SUPPORTED_INTERFACES)
-	{
-		/* set alternate interface*/
-		g_alternate_interface[interface]=alt_interface;
-		return USB_OK;	
-	}
-	
-	return USBERR_INVALID_REQ_TYPE;
+    UNUSED_ARGUMENT(handle)
+    
+    /* if interface valid */
+    if(interface < USB_MAX_SUPPORTED_INTERFACES)
+    {
+        /* set alternate interface*/
+        g_alternate_interface[interface]=alt_interface;
+        return USB_OK;    
+    }
+    
+    return USBERR_INVALID_REQ_TYPE;
 }
 
 /**************************************************************************//*!
@@ -751,31 +751,31 @@ uint8_t USB_Desc_Set_Interface(uint32_t handle,
  * @name  USB_Desc_Valid_Configation
  *
  * @brief The function checks whether the configuration parameter 
- *		  input is valid or not
+ *          input is valid or not
  *
- * @param handle		  handle	
- * @param config_val	  configuration value	  
+ * @param handle          handle    
+ * @param config_val      configuration value      
  *
- * @return TRUE 		  When Valid
- *		   FALSE		  When Error
+ * @return TRUE           When Valid
+ *           FALSE          When Error
  *****************************************************************************/
 bool USB_Desc_Valid_Configation(uint32_t handle,
-								   uint16_t config_val)
+                                   uint16_t config_val)
 {
-	uint8_t loop_index=0;
+    uint8_t loop_index=0;
  
-	UNUSED_ARGUMENT(handle)
+    UNUSED_ARGUMENT(handle)
  
-	/* check with only supported val right now */
-	while(loop_index < (USB_MAX_CONFIG_SUPPORTED+1)) 
-	{
-		if(config_val == g_valid_config_values[loop_index]) 
-		{		   
-			return TRUE;
-		}
-		loop_index++;
-	}	 
-	return FALSE;	 
+    /* check with only supported val right now */
+    while(loop_index < (USB_MAX_CONFIG_SUPPORTED+1)) 
+    {
+        if(config_val == g_valid_config_values[loop_index]) 
+        {           
+            return TRUE;
+        }
+        loop_index++;
+    }     
+    return FALSE;     
 }
 
 /**************************************************************************//*!
@@ -784,52 +784,52 @@ bool USB_Desc_Valid_Configation(uint32_t handle,
  *
  * @brief The function checks whether the remote wakeup is supported or not
  *
- * @param handle:		 handle 	
+ * @param handle:         handle     
  *
  * @return USBCFG_DEV_REMOTE_WAKEUP (TRUE) - if remote wakeup supported
  *****************************************************************************/
 bool USB_Desc_Remote_Wakeup(uint32_t handle) 
 {
-	UNUSED_ARGUMENT(handle)
-	return USBCFG_DEV_REMOTE_WAKEUP;	
-}			
+    UNUSED_ARGUMENT(handle)
+    return USBCFG_DEV_REMOTE_WAKEUP;    
+}            
 
 /**************************************************************************//*!
  *
  * @name  USB_Set_Configation
  *
  * @brief The function checks whether the configuration parameter
- *		  input is valid or not
+ *          input is valid or not
  *
- * @param handle		  handle
- * @param config_val	  configuration value
+ * @param handle          handle
+ * @param config_val      configuration value
  *
- * @return TRUE 		  When Valid
- *		   FALSE		  When Error
+ * @return TRUE           When Valid
+ *           FALSE          When Error
  *****************************************************************************/
 uint8_t USB_Set_Configation
 (
-	cdc_handle_t handle, uint8_t config
+    cdc_handle_t handle, uint8_t config
 
 )
 {
-	UNUSED_ARGUMENT (handle)
-	uint32_t i;
-	for(i = 0; USB_CLASS_INVALID != usb_dec_class[i].type; i++)
-	{
-		switch(usb_dec_class[i].type)
-		{
-			case USB_CLASS_CDC:
-				usb_dec_class[i].interfaces = usb_cdc_configuration[config - 1];
-				break;
-			case USB_CLASS_MSC:
-				usb_dec_class[i].interfaces = usb_msd_configuration[config - 1];
-				break;
-			default:
-				break;
-		}
-	}
-	return USB_OK;
+    UNUSED_ARGUMENT (handle)
+    uint32_t i;
+    for(i = 0; i < usb_composite_info.count; i++)
+    {
+        switch(usb_composite_info.class[i].type)
+        {
+            case USB_CLASS_CDC:
+                usb_dec_class[i].interfaces = usb_cdc_configuration[config - 1];
+                break;
+            case USB_CLASS_MSC:
+                usb_dec_class[i].interfaces = usb_msd_configuration[config - 1];
+                break;
+            default:
+                break;
+        }
+    }
+    return USB_OK;
 }
 
 /**************************************************************************//*!
@@ -838,35 +838,62 @@ uint8_t USB_Set_Configation
  *
  * @brief The function retrieves the entity specified by type.
  *
- * @param handle			handle
+ * @param handle            handle
  *
  * @return USB_OK  - if success
  *****************************************************************************/
 uint8_t USB_Desc_Get_Entity(cdc_handle_t handle,entity_type type, uint32_t * object)
 {
-	UNUSED_ARGUMENT(handle)
-	switch(type)
-	{
-		case USB_CLASS_INFO:
-			*object = (uint32_t)usb_dec_class;
-			break;
-		case USB_COMPOSITE_INFO:
-			*object = (uint32_t)&usb_composite_info;
-			break;
+    switch(type)
+    {
+        case USB_CLASS_INFO:
+            break;
+        case USB_CLASS_INTERFACE_INDEX_INFO:
+            *object = 0xff;
+            for (int i = 0;i < 2;i++)
+            {
+#if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
+                if (handle == (uint32_t)g_composite_device->cdc_vcom)
+                {
+                    *object = (uint32_t)CDC_VCOM_INTERFACE_INDEX;
+                    break;
+                }
+                else if (handle == (uint32_t)g_composite_device->msc_disk.app_handle)
+                {
+                    *object = (uint32_t)MSC_DISK_INTERFACE_INDEX;
+                    break;
+                }
+#else
+                if (handle == (uint32_t)g_composite_device.cdc_vcom)
+                {
+                    *object = (uint32_t)CDC_VCOM_INTERFACE_INDEX;
+                    break;
+                }
+                else if (handle == (uint32_t)g_composite_device.msc_disk.app_handle)
+                {
+                    *object = (uint32_t)MSC_DISK_INTERFACE_INDEX;
+                    break;
+                }
+#endif
+            }
+            break;
+        case USB_COMPOSITE_INFO:
+            *object = (uint32_t)&usb_composite_info;
+            break;
         case USB_MSC_LBA_INFO:
         {
-			MSD_Event_Callback(USB_MSC_DEVICE_GET_INFO,USB_REQ_VAL_INVALID,NULL,(uint32_t *)&usb_msc_lba_info_struct,NULL);
-        	*object = (unsigned long)&usb_msc_lba_info_struct;
-        	break;
-		}
+            Disk_USB_App_Class_Callback(USB_MSC_DEVICE_GET_INFO,USB_REQ_VAL_INVALID,NULL,(uint32_t *)&usb_msc_lba_info_struct,NULL);
+            *object = (unsigned long)&usb_msc_lba_info_struct;
+            break;
+        }
 
-		default :
-			break;
-	}/* End Switch */
-	return USB_OK;
+        default :
+            break;
+    }/* End Switch */
+    return USB_OK;
 }
 
-usb_desc_request_notify_struct_t	desc_callback =
+usb_desc_request_notify_struct_t    desc_callback =
 {
    USB_Desc_Get_Descriptor,
    USB_Desc_Get_Interface,

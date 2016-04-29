@@ -32,11 +32,13 @@
 #include "fsl_gpio_driver.h"
 #include "sdhc_sdcard.h"
 
-/*******************************************************************************
- * Code
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
+
 #if defined (KL25Z4_SERIES) || defined (K64F12_SERIES) ||\
-    defined (K70F12_SERIES) || defined (K22F51212_SERIES)|| defined (KV31F51212_SERIES)
+    defined (K70F12_SERIES) || defined (K22F51212_SERIES)||\
+    defined (KV31F51212_SERIES) || defined (K60D10_SERIES)
 /*!
  * @brief gpio IRQ handler with the same name in startup code
  */
@@ -55,7 +57,9 @@ void PORTD_IRQHandler(void)
     PORT_HAL_ClearPortIntFlag(PORTD_BASE);
 }
 
-#if defined (K64F12_SERIES) || defined (K22F51212_SERIES) || defined (K70F12_SERIES)|| defined (KV31F51212_SERIES)
+#if defined (K64F12_SERIES) || defined (K22F51212_SERIES) ||\
+    defined (K70F12_SERIES)|| defined (KV31F51212_SERIES) ||\
+    defined (K60D10_SERIES)
 
 /*!
  * @brief gpio IRQ handler with the same name in startup code
@@ -86,7 +90,7 @@ void PORTC_IRQHandler(void)
  */
 void PORTE_IRQHandler(void)
 {
-#if defined (FRDM_K64F120M)
+#if defined (FRDM_K64F120M) || defined (TWR_K60D100M)
     if(PORT_HAL_GetPortIntFlag(PORTE_BASE) == (1<<SDHC0_CD_GPIO_PIN))
     {
         sdhc_cd_irqhandler();
@@ -106,14 +110,5 @@ void PORTF_IRQHandler(void)
     PORT_HAL_ClearPortIntFlag(PORTF_BASE);
 }
 #endif
-
 #endif
-
 #endif
-
-/*! @} */
-
-/*******************************************************************************
- * EOF
- ******************************************************************************/
-

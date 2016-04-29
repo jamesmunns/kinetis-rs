@@ -31,7 +31,7 @@
 *   This file Contains the implementation of IO driver for CDC devices.
 *
 *END************************************************************************/
-#include "stdio.h"
+#include "adapter.h"
 #include "usb_host_config.h"
 #include "usb.h"
 #include "usb_host_stack_interface.h"
@@ -80,7 +80,7 @@ int32_t _io_cdc_serial_open
     }
     
     if (((cdc_serial_init_t *) fd_ptr->flags)->flags & USB_UART_HW_FLOW) {
-        /* HW flow control? If yes, then from our side we dont have any problem to send
+        /* HW flow control? If yes, then from our side we don't have any problem to send
         ** data any time. Inform device that we are prepared to send.
         */
         if (USB_OK != (fd_ptr->error = usb_class_cdc_set_acm_ctrl_state(
@@ -203,7 +203,7 @@ int32_t _io_cdc_serial_read
     while (num_left) {
 		if (usb_host_get_tr(if_data_ptr->host_handle, usb_class_cdc_in_data_callback, (void *)fd_ptr, &tr_ptr) != USB_OK)
 		{
-			printf("_io_cdc_serial_read: error to get tr\n");
+			USB_PRINTF("_io_cdc_serial_read: error to get tr\n");
 			return USBERR_ERROR;
 		}
 	
@@ -255,7 +255,7 @@ int32_t _io_cdc_serial_read
             }
 			if (usb_host_release_tr(if_data_ptr->host_handle, tr_ptr) != USB_OK)
 			{
-				printf("_io_cdc_serial_read: _usb_host_release_tr failed\n");
+				USB_PRINTF("_io_cdc_serial_read: _usb_host_release_tr failed\n");
 			}
             if (num_left && !(((cdc_serial_init_t *) fd_ptr->flags)->flags & USB_UART_NO_BLOCKING)) {
                 if (event != NULL) {
@@ -275,7 +275,7 @@ int32_t _io_cdc_serial_read
                 break;
         }
         else {
-			printf("\nError in _io_cdc_serial_read: 0x%x", status);
+			USB_PRINTF("\nError in _io_cdc_serial_read: 0x%x", status);
 			usb_host_release_tr(if_data_ptr->host_handle, tr_ptr);
             break;
         }
@@ -382,7 +382,7 @@ int32_t _io_cdc_serial_read_async
 
 	if (usb_host_get_tr(if_data_ptr->host_handle, usb_class_cdc_in_data_callback, (void *)fd_ptr, &tr_ptr) != USB_OK)
 	{
-		printf("_io_cdc_serial_read: error to get tr\n");
+		USB_PRINTF("_io_cdc_serial_read: error to get tr\n");
 		return USBERR_ERROR;
 	}
 
@@ -416,10 +416,10 @@ int32_t _io_cdc_serial_read_async
     }
     else
     {
-		//printf("\nError in _io_cdc_serial_read_async: 0x%x", status);
+		//USB_PRINTF("\nError in _io_cdc_serial_read_async: 0x%x", status);
 		if(usb_host_release_tr(if_data_ptr->host_handle, tr_ptr) != USB_OK)
 		{
-			printf("_io_cdc_serial_read_async: _usb_host_release_tr failed\n");
+			USB_PRINTF("_io_cdc_serial_read_async: _usb_host_release_tr failed\n");
 		}
 		if (event != NULL) {
 			OS_Event_set(event, USB_DATA_READ_PIPE_FREE); /* mark we are not using input pipe */
@@ -580,7 +580,7 @@ int32_t _io_cdc_serial_char_avail
     
 	if (usb_host_get_tr(if_data_ptr->host_handle, usb_class_cdc_in_data_callback, (void *)fd_ptr, &tr_ptr) != USB_OK)
 	{
-		printf("_io_cdc_serial_char_avail: error to get tr\n");
+		USB_PRINTF("_io_cdc_serial_char_avail: error to get tr\n");
 		return USBERR_ERROR;
 	}
     if_data_ptr->RX_BUFFER_APP = if_data_ptr->rx_buffer;
@@ -692,7 +692,7 @@ int32_t _io_cdc_serial_write
     while (num_left) {
 		if (usb_host_get_tr(if_data_ptr->host_handle, usb_class_cdc_out_data_callback, (void *)fd_ptr, &tr_ptr) != USB_OK)
 		{
-			printf("_io_cdc_serial_write: error to get tr\n");
+			USB_PRINTF("_io_cdc_serial_write: error to get tr\n");
 			return USBERR_ERROR;
 		}
         tr_ptr->tx_buffer = (uint8_t *) data_ptr;
@@ -722,7 +722,7 @@ int32_t _io_cdc_serial_write
             
 			if (usb_host_release_tr(if_data_ptr->host_handle, tr_ptr) != USB_OK)
 			{
-				printf("_io_cdc_serial_write: _usb_host_release_tr failed\n");
+				USB_PRINTF("_io_cdc_serial_write: _usb_host_release_tr failed\n");
 			}
 
             if (num_left && !(((cdc_serial_init_t *) fd_ptr->flags)->flags & USB_UART_NO_BLOCKING)) {
@@ -741,7 +741,7 @@ int32_t _io_cdc_serial_write
                 break;
         }
         else {
-			printf("\nError in _io_cdc_serial_write: 0x%x", status);
+			USB_PRINTF("\nError in _io_cdc_serial_write: 0x%x", status);
 			usb_host_release_tr(if_data_ptr->host_handle, tr_ptr);
             break;
         }
@@ -787,7 +787,7 @@ int32_t _io_cdc_serial_write_async
 	int32_t                        ret = IO_OK;
 	if (0 == (num_left = num))
 	   return 0;
-	//printf("\n_io_cdc_serial_write_async: num: 0x%x", num);
+	//USB_PRINTF("\n_io_cdc_serial_write_async: num: 0x%x", num);
 	data_instance = (cdc_class_call_struct_t *) fd_ptr->dev_ptr->driver_init_ptr;
 
 	/* Validity checking, always needed when passing data to lower API */
@@ -832,7 +832,7 @@ int32_t _io_cdc_serial_write_async
 
 	if (usb_host_get_tr(if_data_ptr->host_handle, usb_class_cdc_out_data_callback, (void *)fd_ptr, &tr_ptr) != USB_OK)
 	{
-		printf("_io_cdc_serial_write: error to get tr\n");
+		USB_PRINTF("_io_cdc_serial_write: error to get tr\n");
 		return USBERR_ERROR;
 	}
 	tr_ptr->tx_buffer = (uint8_t *) data_ptr;
@@ -855,7 +855,7 @@ int32_t _io_cdc_serial_write_async
 	{
 		if (usb_host_release_tr(if_data_ptr->host_handle, tr_ptr) != USB_OK)
 		{
-			printf("_io_cdc_serial_write_async: _usb_host_release_tr failed\n");
+			USB_PRINTF("_io_cdc_serial_write_async: _usb_host_release_tr failed\n");
 		}
 		OS_Event_set(event, USB_DATA_SEND_PIPE_FREE); /* mark we are not using input pipe */
 		

@@ -31,6 +31,7 @@
 #include "fsl_device_registers.h"
 #include "board.h"
 #include "fsl_clock_manager.h"
+#include "fsl_mcg_hal.h"
 #include "fsl_debug_console.h"
 
 void hardware_init(void)
@@ -43,29 +44,19 @@ void hardware_init(void)
           CLOCK_SYS_EnablePortClock(i);
     }
 
+    /* Setup board clock source. */
+    g_xtal0ClkFreq = 8000000U;
+    g_xtalRtcClkFreq = 32768U;
+
     /* init the general pinmux */
     for (i = 0; i < HW_PORT_INSTANCE_COUNT; i++)
     {
         configure_gpio_pins(i);
     }
-
-    configure_i2c_pins(0);
-    configure_i2c_pins(1);
-    configure_rtc_pins(0);
-    configure_spi_pins(0);
-    configure_uart_pins(1);
 }
 
 void dbg_uart_init(void)
 {
-    uint32_t i;
-
-    /* enable clock for PORTs */
-    for (i = 0; i < HW_PORT_INSTANCE_COUNT; i++)
-    {
-          CLOCK_SYS_EnablePortClock(i);
-    }
-
     configure_uart_pins(BOARD_DEBUG_UART_INSTANCE);
 
     DbgConsole_Init(BOARD_DEBUG_UART_INSTANCE, BOARD_DEBUG_UART_BAUD, kDebugConsoleUART);

@@ -75,6 +75,7 @@
  * 1 supported
  * 0 not supported
  */
+ 
 #define USBCFG_DEV_CDC                    1
 
 /* if RNDIS  supported 
@@ -119,7 +120,7 @@
 #define USBCFG_DEV_MAX_XDS                (12)
 
 /* how many instance should be supported for one class type device */
-#define USBCFG_DEV_MAX_CLASS_OBJECT       (1)
+#define USBCFG_DEV_MAX_CLASS_OBJECT       (2)
 
 #if USBCFG_DEV_KHCI
     /* 
@@ -131,7 +132,7 @@
     /*
     ** The aligned buffer size for IN transactions, active when USBCFG_KHCI_4BYTE_ALIGN_FIX is defined
     */
-        #define USBCFG_DEV_KHCI_SWAP_BUF_MAX              (64)
+        #define USBCFG_DEV_KHCI_SWAP_BUF_MAX          (64)
     #endif
 
     #define USBCFG_DEV_KHCI_ADVANCED_ERROR_HANDLING    (0)
@@ -143,11 +144,11 @@
 */
 #define	USBCFG_BUFF_PROPERTY_CACHEABLE        0
 
+#define _DEBUG                               0
+
+
 #define USBCFG_DEV_ADVANCED_SUSPEND_RESUME    (0)
 
-#define USBCFG_DEV_ADVANCED_CANCEL_ENABLE     (0)
+#define USBCFG_DEV_ADVANCED_CANCEL_ENABLE     (1)
 
-#ifdef _DEBUG
-#undef _DEBUG
-#endif
 #endif

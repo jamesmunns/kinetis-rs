@@ -31,176 +31,88 @@
 #ifndef _FLASH_DEMO_H_
 #define _FLASH_DEMO_H_
 
-#include "user_cfg.h"
-#include "fsl_device_registers.h"
 #include "board.h"
-#include "SSD_Types.h"
-#include "SSD_FTFx_Internal.h"
-#include "SSD_FTFx_Common.h"
 #include "SSD_FTFx.h"
+/* size of array to copy__Launch_Command function to.*/
+/* It should be at least equal to actual size of __Launch_Command func */
+/* User can change this value based on RAM size availability and actual size of __Launch_Command function */
+#define LAUNCH_CMD_SIZE         0x100
 
-/************************************************************************************************/
-/************************************************************************************************/
-/*                      K64FN Setup Definitions                                                 */
-/************************************************************************************************/
-/************************************************************************************************/
-#if (defined(CPU_MK64FN1M0VMD12))
+/* Size of function used for callback.  Change this depending on the size of your function */
+#define CALLBACK_SIZE           0x80
 
-#define BUFFER_SIZE_BYTE          0x100
+#define BUFFER_SIZE_BYTE        0x80
 
-#define EE_ENABLE                 0x00
-#define RAM_ENABLE                0xFF
-#define DEBUGENABLE               0x00
+#define FTFx_REG_BASE           0x40020000
+#define P_FLASH_BASE            0x00000000
 
-#define PSECTOR_SIZE              0x00001000    /* 4 KB size */
-#define DSECTOR_SIZE              0x00001000    /* 4 KB size */
+/* Program Flash block information */
+#define P_FLASH_SIZE            (FSL_FEATURE_FLASH_PFLASH_BLOCK_SIZE * FSL_FEATURE_FLASH_PFLASH_BLOCK_COUNT)
+#define P_BLOCK_NUM             FSL_FEATURE_FLASH_PFLASH_BLOCK_COUNT
+#define P_SECTOR_SIZE           FSL_FEATURE_FLASH_PFLASH_BLOCK_SECTOR_SIZE
+/* Data Flash block information */
+#define FLEXNVM_BASE            FSL_FEATURE_FLASH_FLEX_NVM_START_ADDRESS
+#define FLEXNVM_SECTOR_SIZE     FSL_FEATURE_FLASH_FLEX_NVM_BLOCK_SECTOR_SIZE
+#define FLEXNVM_BLOCK_SIZE      FSL_FEATURE_FLASH_FLEX_NVM_BLOCK_SIZE
+#define FLEXNVM_BLOCK_NUM       FSL_FEATURE_FLASH_FLEX_NVM_BLOCK_COUNT
 
-/* FTFL module base */
-#define FTFx_REG_BASE             0x40020000
-#define PFLASH_BLOCK_BASE         0x00000000
-#define DEFLASH_BLOCK_BASE        0xFFFFFFFF
-#define EERAM_BLOCK_BASE          0x14000000
+/* Flex Ram block information */
+#define EERAM_BASE              FSL_FEATURE_FLASH_FLEX_RAM_START_ADDRESS
+#define EERAM_SIZE              FSL_FEATURE_FLASH_FLEX_RAM_SIZE
 
-#define PBLOCK_SIZE               0x00100000     /* 1024 KB size */
-#define EERAM_BLOCK_SIZE          0x00001000     /* 4 KB size */
+/* Destination to program security key back to flash location */
+#if (FSL_FEATURE_FLASH_PFLASH_BLOCK_WRITE_UNIT_SIZE == 8)
+    #define SECURITY_LOCATION         0x408
+#else /* FSL_FEATURE_FLASH_PFLASH_BLOCK_WRITE_UNIT_SIZE == 4 */
+    #define SECURITY_LOCATION         0x40C
+#endif
 
-#define PBLOCK_NUM                2             /* number of individual Pflash block */
-#define DBLOCK_NUM                0             /* number of individual Dflash block */
-
-/* destination to program security key back to flash location */
-#define SECURITY_LOCATION         0x408
 #define BACKDOOR_KEY_LOCATION     0x400
 
-#define PFLASH_IFR                0x3C0         /*Program flash IFR map*/
-#define DFLASH_IFR                0x3F8         /*Data flash IFR map*/
+/* Program flash IFR map*/
+#if (FSL_FEATURE_FLASH_IS_FTFE == 1)
+    #define PFLASH_IFR                0x3C0
+#else /* FSL_FEATURE_FLASH_IS_FTFL == 1 or FSL_FEATURE_FLASH_IS_FTFA = =1 */
+    #define PFLASH_IFR                0xC0
+#endif
 
-#define EEE_DATA_SIZE_CODE        0x22
-#define DE_PARTITION_CODE         0x03
+#if (FSL_FEATURE_FLASH_HAS_PFLASH_BLOCK_SWAP == 1)
+    #if (FSL_FEATURE_FLASH_IS_FTFE == 1)
+        #define SWAP_STATUS_BIT (REG_READ(FTFx_REG_BASE + FTFx_SSD_FCNFG_OFFSET) & FTFE_FCNFG_SWAP_MASK)
+    #endif
+    #if (FSL_FEATURE_FLASH_IS_FTFL == 1)
+        #define SWAP_STATUS_BIT (REG_READ(FTFx_REG_BASE + FTFx_SSD_FCNFG_OFFSET) & FTFL_FCNFG_SWAP_MASK)
+    #endif
+    #if (FSL_FEATURE_FLASH_IS_FTFA == 1)
+        #define SWAP_STATUS_BIT (REG_READ(FTFx_REG_BASE + FTFx_SSD_FCNFG_OFFSET) & FTFA_FCNFG_SWAP_MASK)
+    #endif
+#endif
 
-#define PASS   0x00
-#define FAIL   0xFF
+/* Has flash cache control in MCM module */
+#if (FSL_FEATURE_FLASH_HAS_MCM_FLASH_CACHE_CONTROLS == 1)
+    #define CACHE_DISABLE             BW_MCM_PLACR_DFCS(MCM_BASE, 1);
+/* Has flash cache control in FMC module */
+#elif (FSL_FEATURE_FLASH_HAS_FMC_FLASH_CACHE_CONTROLS == 1)
+    #if defined(FMC_PFB1CR) && defined(FMC_PFB1CR_B1SEBE_MASK)
+        #define CACHE_DISABLE     FMC_PFB0CR &= ~(FMC_PFB0CR_B0SEBE_MASK | FMC_PFB0CR_B0IPE_MASK | FMC_PFB0CR_B0DPE_MASK | FMC_PFB0CR_B0ICE_MASK | FMC_PFB0CR_B0DCE_MASK);\
+                                  FMC_PFB1CR &= ~(FMC_PFB1CR_B1SEBE_MASK | FMC_PFB1CR_B1IPE_MASK | FMC_PFB1CR_B1DPE_MASK | FMC_PFB1CR_B1ICE_MASK | FMC_PFB1CR_B1DCE_MASK);
+    #else
+        #define CACHE_DISABLE     FMC_PFB0CR &= ~(FMC_PFB0CR_B0SEBE_MASK | FMC_PFB0CR_B0IPE_MASK | FMC_PFB0CR_B0DPE_MASK | FMC_PFB0CR_B0ICE_MASK | FMC_PFB0CR_B0DCE_MASK);
+    #endif
+#else
+/* No cache in the device */
+    #define CACHE_DISABLE
+#endif
 
-#define READ_NORMAL_MARGIN        0x00
-#define READ_USER_MARGIN          0x01
-#define READ_FACTORY_MARGIN       0x02
-
-/****************************************************************************/
-/* Use an address towards the end of P-Flash block for the swap indicator.  */
-/* The swap indicator is managed by the swap system, but is a location in */
-/* PFlash and it gets modified (erased & programmed) throughout the swap */
-/* process, so it cannot share space with normal application code */
-/* Here, we are using the second-to-last sector, since the Lower/Upper */
-/* data blocks use the last sector are used to hold our test data to help */
-/* identify each block after the swap */
-/****************************************************************************/
-#define PSWAP_INDICATOR_ADDR      (PBLOCK_SIZE/PBLOCK_NUM - (2*FTFx_PSECTOR_SIZE))
-/* The Lower & Upper Data sectors are used to program test data into, to */
-/* help identify each block - for debug purposes.  */
-#define PSWAP_LOWERDATA_ADDR      (PSWAP_INDICATOR_ADDR + FTFx_PSECTOR_SIZE)
-#define PSWAP_UPPERDATA_ADDR      (PSWAP_LOWERDATA_ADDR + PBLOCK_SIZE/2)
-
-/* swap state in FCCOB5*/
-#define FTFx_SWAP_STATE_UNINIT       0x0
-#define FTFx_SWAP_STATE_READY        0x1
-#define FTFx_SWAP_STATE_UPDATE       0x2
-#define FTFx_SWAP_STATE_UPDATE_ERS   0x3
-#define FTFx_SWAP_STATE_COMPLETE     0x4
-
-#define CC_ISR_NUM                34
-#define RDCOL_ISR_NUM             35
-
-/* Cache disable macro */
-#define CACHE_DISABLE        	     FMC_PFB0CR &= ~(FMC_PFB0CR_B0SEBE_MASK | FMC_PFB0CR_B0IPE_MASK | FMC_PFB0CR_B0DPE_MASK | FMC_PFB0CR_B0ICE_MASK | FMC_PFB0CR_B0DCE_MASK);\
-                                     FMC_PFB1CR &= ~(FMC_PFB1CR_B1SEBE_MASK | FMC_PFB1CR_B1IPE_MASK | FMC_PFB1CR_B1DPE_MASK | FMC_PFB1CR_B1ICE_MASK | FMC_PFB1CR_B1DCE_MASK);\
-
-void ErrorTrap(UINT32 returnCode);
-
-/************************************************************************************************/
-/************************************************************************************************/
-/*                      K22F and KV31F Setup Definitions                                        */
-/************************************************************************************************/
-/************************************************************************************************/
-#elif ( defined(CPU_MK22FN512VDC12) || defined(CPU_MKV31F512VLL12)  || \
-      defined(CPU_MK22FN256VDC12) || defined(CPU_MKV31F256VLL12)    || \
-      defined(CPU_MK22FN128VDC10) || defined(CPU_MKV31F128VLL10)    || \
-      defined(CPU_MK22FN512VLH12) )
-
-#define BUFFER_SIZE_BYTE          0x100
-
-#define EE_ENABLE                 0x00
-#define RAM_ENABLE                0xFF
-#define DEBUGENABLE               0x00
-
-#define PSECTOR_SIZE              0x800
-#define DSECTOR_SIZE              0x800
-
-/* FTFA module base */
-#define FTFx_REG_BASE             0x40020000
-#define PFLASH_BLOCK_BASE         0x00000000
-#define DEFLASH_BLOCK_BASE        0xFFFFFFFF
-#define EERAM_BLOCK_BASE          0xFFFFFFFF
-
-#if (defined(CPU_MK22FN512VDC12) || defined(CPU_MKV31F512VLL12) || \
-     defined(CPU_MK22FN512VLH12) )
-#define PBLOCK_SIZE               0x00080000      /* 512 KB size */
-#elif (defined(CPU_MK22FN256VDC12) || defined(CPU_MKV31F256VLL12))
-#define PBLOCK_SIZE               0x00040000      /* 256 KB size */
-#elif (defined(CPU_MK22FN128VDC10) || defined(CPU_MKV31F128VLL10))
-#define PBLOCK_SIZE               0x00020000      /* 128 KB size */
-#endif 
-#define EERAM_BLOCK_SIZE          0x00000000      /* 0 KB size */
-
-#define PBLOCK_NUM                2 /* number of individual Pflash block */
-
-/* destination to program security key back to flash location */
-#define SECURITY_LOCATION         0x40C
-#define BACKDOOR_KEY_LOCATION     0x400
-
-#define PFLASH_IFR                0xC0
-
-/******************************************************/
-//#define DFLASH_IFR                0xFC
-
-// #define EEE_DATA_SIZE_CODE        0x22 //2048 : 2048 Byte
-// #define DE_PARTITION_CODE         0x03 //1:1
-
-// #define READ_NORMAL_MARGIN        0x00
-// #define READ_USER_MARGIN          0x01
-// #define READ_FACTORY_MARGIN       0x02
-
-// #define PFLASH_START_ADDR         PFLASH_BLOCK_BASE /* PFlash start address */
-// #define DFLASH_START_ADDR         DEFLASH_BLOCK_BASE /* DFlash start address */
-
-// #define PSWAP_INDICATOR_ADDR      0x2000
-// #define PSWAP_LOWERDATA_ADDR      (PSWAP_INDICATOR_ADDR + PSECTOR_SIZE)
-// #define PSWAP_UPPERDATA_ADDR      (PSWAP_LOWERDATA_ADDR + PBLOCK_SIZE/2 + PSECTOR_SIZE)
-
-#define PASS                       0x00
-#define FAIL                       0xFF
-
-/* swap state in FCCOB5*/
-// #define FTFx_SWAP_STATE_UNINIT       0x0
-// #define FTFx_SWAP_STATE_READY        0x1
-// #define FTFx_SWAP_STATE_UPDATE       0x2
-// #define FTFx_SWAP_STATE_UPDATE_ERS   0x3
-// #define FTFx_SWAP_STATE_COMPLETE     0x4
-
-#define CC_ISR_NUM                34
-#define RDCOL_ISR_NUM             35
-
-/* Disable cache */
-#define CACHE_DISABLE             FMC_PFB0CR &= ~(FMC_PFB0CR_B0SEBE_MASK | FMC_PFB0CR_B0IPE_MASK | FMC_PFB0CR_B0DPE_MASK |FMC_PFB0CR_B0ICE_MASK | FMC_PFB0CR_B0DCE_MASK); \
-                                  FMC_PFB1CR &= ~(FMC_PFB1CR_B1SEBE_MASK | FMC_PFB1CR_B1IPE_MASK | FMC_PFB1CR_B1DPE_MASK |FMC_PFB1CR_B1ICE_MASK | FMC_PFB1CR_B1DCE_MASK);
-
-void ErrorTrap(UINT32 ret);
-
-#endif /* if/else device definition */
-/***************************************************************************************/
-/***************************************************************************************/
 /***************************************************************************************/
 /***************************************************************************************/
 
 /* Other defines */
+#define DEBUGENABLE               0x00
+
+#define READ_NORMAL_MARGIN        0x00
+#define READ_USER_MARGIN          0x01
+#define READ_FACTORY_MARGIN       0x02
 
 #define ONE_KB                  1024                        //0x400:  10 zeros
 #define TWO_KB                  (2*ONE_KB)
@@ -215,28 +127,33 @@ void ErrorTrap(UINT32 ret);
 #define ONE_MB                  (ONE_KB*ONE_KB)             //0x100000:     20 zeros
 #define ONE_GB                  (ONE_KB*ONE_KB*ONE_KB)      //0x40000000:   30 zeros
 
-#define WORD_SIZE               4
-#define BLANK_DATA              0xFFFFFFFF
-
-#define NORMAL_MARGIN_READ      0   /* normal margin read reference */
-#define USER_MARGIN_READ        1   /* use for test scenarios for bit shifts */
-
-#define UPPER_BLOCK_START_ADDRESS   (flashSSDConfig.PFlashBlockBase + BYTE2WORD(flashSSDConfig.PFlashBlockSize/PBLOCK_NUM))
-#define LOWER_BLOCK_START_ADDRESS   (flashSSDConfig.PFlashBlockBase)
-
-#define SWAP_STATUS_BIT \
-  (REG_READ(FTFx_REG_BASE + FTFx_SSD_FCNFG_OFFSET) & FTFE_FCNFG_SWAP_MASK)
-#define DEMO_LOCATIONS_ARE_BLANK \
-  ((READ32(PSWAP_LOWERDATA_ADDR) == 0xFFFFFFFF) && (READ32(PSWAP_UPPERDATA_ADDR) == 0xFFFFFFFF))
-
+#if defined(SWAP_M)
+/****************************************************************************/
+/* Use an address towards the end of P-Flash block for the swap indicator.  */
+/* The swap indicator is managed by the swap system, but is a location in */
+/* PFlash and it gets modified (erased & programmed) throughout the swap */
+/* process, so it cannot share space with normal application code */
+/* Here, we are using the second-to-last sector, since the Lower/Upper */
+/* data blocks use the last sector are used to hold our test data to help */
+/* identify each block after the swap */
+/****************************************************************************/
+    #define PSWAP_INDICATOR_ADDR      (P_FLASH_SIZE/2 - 2*(FTFx_PSECTOR_SIZE))
+/* The Lower & Upper Data sectors are used to program test data into, to */
+/* help identify each block - for debug purposes.  */
+    #define PSWAP_LOWERDATA_ADDR      (PSWAP_INDICATOR_ADDR + FTFx_PSECTOR_SIZE + 0x100)
+    #define PSWAP_UPPERDATA_ADDR      (PSWAP_INDICATOR_ADDR + FTFx_PSECTOR_SIZE + P_FLASH_SIZE/2 + 0x100)
+/************************************************************************************************/
+#endif /* End of #if defined(SWAP_M) */
 /************************************************************/
 /* prototypes                                               */
 /************************************************************/
 void callback(void);
-extern UINT32 RelocateFunction(UINT32 dest, UINT32 size, UINT32 src);
+extern uint32_t RelocateFunction(uint32_t dest, uint32_t size, uint32_t src);
 void print_welcome_message(void);
-#if (defined(SWAP))
-UINT32 flash_swap(void);
+void ErrorTrap(uint32_t returnCode);
+
+#if (defined(SWAP_M))
+uint32_t flash_swap(void);
 void run_flash_swap(void);
 void print_swap_application_data(void);
 #endif /* #if (defined(SWAP)) */

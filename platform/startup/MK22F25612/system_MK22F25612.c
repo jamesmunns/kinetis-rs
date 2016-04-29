@@ -7,8 +7,8 @@
 **                          IAR ANSI C/C++ Compiler for ARM
 **
 **     Reference manual:    K22P121M120SF8RM, Rev. 1, March 24, 2014
-**     Version:             rev. 1.5, 2014-04-30
-**     Build:               b140611
+**     Version:             rev. 1.7, 2014-10-14
+**     Build:               b141016
 **
 **     Abstract:
 **         Provides a system configuration function and a global variable that
@@ -61,14 +61,19 @@
 **         Update of MCM and USB modules according to the RM rev. 1.
 **         Update of system and startup files.
 **         Module access macro module_BASES replaced by module_BASE_PTRS.
+**     - rev. 1.6 (2014-08-28)
+**         Update of system files - default clock configuration changed.
+**         Update of startup files - possibility to override DefaultISR added.
+**     - rev. 1.7 (2014-10-14)
+**         Interrupt INT_LPTimer renamed to INT_LPTMR0, interrupt INT_Watchdog renamed to INT_WDOG_EWM.
 **
 ** ###################################################################
 */
 
 /*!
  * @file MK22F25612
- * @version 1.5
- * @date 2014-04-30
+ * @version 1.7
+ * @date 2014-10-14
  * @brief Device specific configuration file for MK22F25612 (implementation file)
  *
  * Provides a system configuration function and a global variable that contains
@@ -250,6 +255,16 @@ void SystemInit (void) {
 #if ((MCG_MODE == MCG_MODE_FEI) || (MCG_MODE == MCG_MODE_FEE))
   while((MCG->S & MCG_S_CLKST_MASK) != 0x00U) { /* Wait until output of the FLL is selected */
   }
+  /* Use LPTMR to wait for 1ms for FLL clock stabilization */
+  SIM_SCGC5 |= SIM_SCGC5_LPTMR_MASK;   /* Alow software control of LPMTR */
+  LPTMR0->CMR = LPTMR_CMR_COMPARE(0);  /* Default 1 LPO tick */
+  LPTMR0->CSR = (LPTMR_CSR_TCF_MASK | LPTMR_CSR_TPS(0x00));
+  LPTMR0->PSR = (LPTMR_PSR_PCS(0x01) | LPTMR_PSR_PBYP_MASK); /* Clock source: LPO, Prescaler bypass enable */
+  LPTMR0->CSR = LPTMR_CSR_TEN_MASK;    /* LPMTR enable */
+  while((LPTMR0_CSR & LPTMR_CSR_TCF_MASK) == 0u) {
+  }
+  LPTMR0_CSR = 0x00;                   /* Disable LPTMR */
+  SIM_SCGC5 &= (uint32_t)~(uint32_t)SIM_SCGC5_LPTMR_MASK;
 #elif ((MCG_MODE == MCG_MODE_FBI) || (MCG_MODE == MCG_MODE_BLPI))
   while((MCG->S & MCG_S_CLKST_MASK) != 0x04U) { /* Wait until internal reference clock is selected as MCG output */
   }

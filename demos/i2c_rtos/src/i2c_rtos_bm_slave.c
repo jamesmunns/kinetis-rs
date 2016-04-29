@@ -28,8 +28,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdio.h>
+///////////////////////////////////////////////////////////////////////////////
+// Includes
+///////////////////////////////////////////////////////////////////////////////
 
+// Standard C Included Files
+#include <stdio.h>
+// SDK Included Files
 #include "fsl_clock_manager.h"
 #include "board.h"
 #include "fsl_debug_console.h"
@@ -38,30 +43,35 @@
 #include "fsl_i2c_slave_driver.h"
 #include "fsl_smc_hal.h"
 #include "i2c_rtos.h"
-#include "fsl_adc_driver.h"
+#include "fsl_adc16_driver.h"
 
 extern uint32_t gSlaveId;
 
-/*******************************************************************************
- * Definition
- ******************************************************************************/
+///////////////////////////////////////////////////////////////////////////////
+// Definitions
+///////////////////////////////////////////////////////////////////////////////
 
-/* These values are used covert temperature. DO NOT MODIFY */
+// These values are used covert temperature. DO NOT MODIFY
 #define VTEMP25_ADC             (14219)
 #define K                       (10000)
 #define M1                      (250000)
 #define M2                      (311)
-/*******************************************************************************
- * Prototypes
- ******************************************************************************/
+
+///////////////////////////////////////////////////////////////////////////////
+// Prototypes
+///////////////////////////////////////////////////////////////////////////////
+
 extern void task_slave(void *param);
 
-/********************************************************************************
- * Variables
- ******************************************************************************/
-adc_user_config_t tempSnseAdcConfig;
-/* ADC Channel Configuration */
-adc_chn_config_t tempSnseChannelConfig =
+///////////////////////////////////////////////////////////////////////////////
+// Variables
+///////////////////////////////////////////////////////////////////////////////
+static uint32_t Temperature;
+
+adc16_user_config_t tempSnseAdcConfig;
+
+// ADC Channel Configuration
+adc16_chn_config_t tempSnseChannelConfig =
 {
     .chnNum = 26,
     .chnMux = kAdcChnMuxOfA,
@@ -69,39 +79,40 @@ adc_chn_config_t tempSnseChannelConfig =
     .intEnable = false
 };
 
-/* task define */
+// task define
 OSA_TASK_DEFINE(task_slave, TASK_SLAVE_STACK_SIZE);
- /*******************************************************************************
- * Code
- ******************************************************************************/
+
+///////////////////////////////////////////////////////////////////////////////
+// Code
+///////////////////////////////////////////////////////////////////////////////
 
 /*!
- * Get the 32bits temperature in byte
+ * Get the temperature pointer
  * designed for BM version of I2C_RTOS demo
  * from the ISR context
  */
-uint8_t get_temp_in_byte(uint32_t index)
+uint8_t* get_temp_pointer(void)
 {
     uint32_t adcValue;
-    uint32_t Temperature;
-    static uint8_t *pTemp;
-    pTemp = (uint8_t*)&Temperature;
-    /* ADC starts conversion */
-    ADC_DRV_ConfigConvChn(HW_ADC1, 0U, &tempSnseChannelConfig);
-    /* poll to complete status and read back result */
-	ADC_DRV_WaitConvDone(HW_ADC1, 0U);
-	adcValue = ADC_DRV_GetConvValueRAW(HW_ADC1, 0U);
-	adcValue = ADC_DRV_ConvRAWData(adcValue, false, tempSnseAdcConfig.resolutionMode);
-    /* ADC stop conversion */
-	ADC_DRV_PauseConv(HW_ADC1, 0U);
-    /* convert to temperature */
+    // ADC starts conversion
+    ADC16_DRV_ConfigConvChn(HWADC_INSTANCE, 0U, &tempSnseChannelConfig);
+    // poll to complete status and read back result
+    ADC16_DRV_WaitConvDone(HWADC_INSTANCE, 0U);
+    adcValue = ADC16_DRV_GetConvValueRAW(HWADC_INSTANCE, 0U);
+    adcValue = ADC16_DRV_ConvRAWData(adcValue, false, tempSnseAdcConfig.resolutionMode);
+    // ADC stop conversion
+    ADC16_DRV_PauseConv(HWADC_INSTANCE, 0U);
+    // convert to temperature
     Temperature = (M1 - (adcValue - VTEMP25_ADC) * M2)/K;
-    return pTemp[index];
+    return (uint8_t*)&Temperature;
 }
 
+/*!
+ * @brief main function
+ */
 int main(void)
 {
-    /* SMC Power mode protection configurations */
+    // SMC Power mode protection configurations
     smc_power_mode_protection_config_t smc_power_prot_cfg = 
     {
         .vlpProt = true,
@@ -109,43 +120,45 @@ int main(void)
         .vllsProt = false
     };
     
-#if FSL_FEATURE_ADC_HAS_CALIBRATION
-    adc_calibration_param_t tempSnseCalibraitionParam;
+#if FSL_FEATURE_ADC16_HAS_CALIBRATION
+    adc16_calibration_param_t tempSnseCalibraitionParam;
 #endif
-    adc_state_t tempSnseAdcState;
 
     hardware_init();
     GPIO_DRV_Init(NULL, ledPins);
 
-    /* Configure the power mode protection */
+    // Configure the power mode protection
     SMC_HAL_SetProtection(SMC_BASE, &smc_power_prot_cfg);
 
-#if FSL_FEATURE_ADC_HAS_CALIBRATION
-    /* Auto calibraion. */
-    ADC_DRV_GetAutoCalibrationParam(HW_ADC1, &tempSnseCalibraitionParam);
-    ADC_DRV_SetCalibrationParam(HW_ADC1, &tempSnseCalibraitionParam);
-#endif /* FSL_FEATURE_ADC_HAS_CALIBRATION */
+#if FSL_FEATURE_ADC16_HAS_CALIBRATION
+    // Auto calibraion
+    ADC16_DRV_GetAutoCalibrationParam(HWADC_INSTANCE, &tempSnseCalibraitionParam);
+    ADC16_DRV_SetCalibrationParam(HWADC_INSTANCE, &tempSnseCalibraitionParam);
+#endif // FSL_FEATURE_ADC16_HAS_CALIBRATION
 
-    ADC_DRV_StructInitUserConfigForOneTimeTriggerMode(&tempSnseAdcConfig);
+    ADC16_DRV_StructInitUserConfigDefault(&tempSnseAdcConfig);
     tempSnseAdcConfig.clkSrcMode = kAdcClkSrcOfAsynClk;
     tempSnseAdcConfig.resolutionMode = kAdcResolutionBitOfSingleEndAs16;
-    /* Initialize ADC */
-    ADC_DRV_Init(HW_ADC1, &tempSnseAdcConfig, &tempSnseAdcState);
+    // Initialize ADC
+    ADC16_DRV_Init(HWADC_INSTANCE, &tempSnseAdcConfig);
     
-    /* get cpu uid low value for slave */
+    // get cpu uid low value for slave
     gSlaveId = HW_SIM_UIDL_RD(SIM_BASE);
     
-    /* enable printf */
+    // enable printf
     dbg_uart_init();
-    
+
+    // Configure I2C pins
+    configure_i2c_pins(I2C_RTOS_SLAVE_INSTANCE);
+
     printf("i2c_rtos_slave_bm demo\r\n");
     
-    /* task list initialize*/
+    // task list initialize
     OSA_Init();
     
-    /* create task(in BM: only the first registered task can be executed) */
+    // create task(in BM: only the first registered task can be executed)
     OSA_TaskCreate(task_slave,
-                "slave",
+                (uint8_t *)"slave",
                 512,
                 task_slave_stack,
                 0,
@@ -155,9 +168,5 @@ int main(void)
 
     OSA_Start();
 
-	return 0;
+    return 0;
 }
-
-/*******************************************************************************
- * EOF
- ******************************************************************************/

@@ -46,10 +46,9 @@
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_SDK)
 #include "fsl_device_registers.h"
 #include "fsl_clock_manager.h"
-//#include "board.h"
+#include "board.h"
 #include "fsl_debug_console.h"
 #include "fsl_port_hal.h"
-#include "fsl_gpio_common.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,8 +88,8 @@ cdc_handle_t   g_app_handle;
 /*****************************************************************************
  * Local Functions Prototypes
  *****************************************************************************/
-void USB_App_Callback(uint8_t event_type, void* val,void* arg);
-uint8_t USB_Notif_Callback(uint8_t event, uint16_t value, uint8_t ** data, uint32_t* size, void* arg); 
+void USB_App_Device_Callback(uint8_t event_type, void* val,void* arg);
+uint8_t USB_App_Class_Callback(uint8_t event, uint16_t value, uint8_t ** data, uint32_t* size, void* arg); 
 void Virtual_Com_App(void);
 /*****************************************************************************
  * Local Variables 
@@ -137,13 +136,13 @@ static uint8_t g_send_size;
  *
  * @name  USB_Get_Line_Coding
  *
- * @brief The function returns the Line Coding/Configuraion
+ * @brief The function returns the Line Coding/Configuration
  *
  * @param handle:        handle     
  * @param interface:     interface number     
  * @param coding_data:   output line coding data     
  *
- * @return USB_OK                              When Successfull
+ * @return USB_OK                              When Success
  *         USBERR_INVALID_REQ_TYPE             when Error
  *****************************************************************************/
 uint8_t USB_Get_Line_Coding(uint32_t handle, 
@@ -166,13 +165,13 @@ uint8_t USB_Get_Line_Coding(uint32_t handle,
  *
  * @name  USB_Set_Line_Coding
  *
- * @brief The function sets the Line Coding/Configuraion
+ * @brief The function sets the Line Coding/Configuration
  *
  * @param handle: handle     
  * @param interface:     interface number     
  * @param coding_data:   output line coding data     
  *
- * @return USB_OK                              When Successfull
+ * @return USB_OK                              When Success
  *         USBERR_INVALID_REQ_TYPE             when Error
  *****************************************************************************/
 uint8_t USB_Set_Line_Coding(uint32_t handle, 
@@ -207,7 +206,7 @@ uint8_t USB_Set_Line_Coding(uint32_t handle,
  * @param interface:     interface number     
  * @param feature_data:   output comm feature data     
  *
- * @return USB_OK                              When Successfull
+ * @return USB_OK                              When Success
  *         USBERR_INVALID_REQ_TYPE             when Error
  *****************************************************************************/
 uint8_t USB_Get_Abstract_State(uint32_t handle, 
@@ -236,7 +235,7 @@ uint8_t USB_Get_Abstract_State(uint32_t handle,
  * @param interface:     interface number     
  * @param feature_data:   output comm feature data     
  *
- * @return USB_OK                              When Successfull
+ * @return USB_OK                              When Success
  *         USBERR_INVALID_REQ_TYPE             when Error
  *****************************************************************************/
 uint8_t USB_Get_Country_Setting(uint32_t handle, 
@@ -265,7 +264,7 @@ uint8_t USB_Get_Country_Setting(uint32_t handle,
  * @param interface:     interface number     
  * @param feature_data:   output comm feature data     
  *
- * @return USB_OK                              When Successfull
+ * @return USB_OK                              When Success
  *         USBERR_INVALID_REQ_TYPE             when Error
  *****************************************************************************/
 uint8_t USB_Set_Abstract_State(uint32_t handle, 
@@ -298,7 +297,7 @@ uint8_t USB_Set_Abstract_State(uint32_t handle,
  * @param interface:     interface number     
  * @param feature_data:   output comm feature data     
  *
- * @return USB_OK                              When Successfull
+ * @return USB_OK                              When Success
  *         USBERR_INVALID_REQ_TYPE             when Error
  *****************************************************************************/
 uint8_t USB_Set_Country_Setting(uint32_t handle, 
@@ -334,14 +333,14 @@ uint8_t USB_Set_Country_Setting(uint32_t handle,
 void APP_init()
 {
     cdc_config_struct_t cdc_config;
-    cdc_config.cdc_application_callback.callback = USB_App_Callback;
+    cdc_config.cdc_application_callback.callback = USB_App_Device_Callback;
     cdc_config.cdc_application_callback.arg = &g_app_handle;
     cdc_config.vendor_req_callback.callback = NULL;
     cdc_config.vendor_req_callback.arg = NULL;
-    cdc_config.class_specific_callback.callback = USB_Notif_Callback;
+    cdc_config.class_specific_callback.callback = USB_App_Class_Callback;
     cdc_config.class_specific_callback.arg = &g_app_handle;
     cdc_config.desc_callback_ptr =  &desc_callback;
-    /* Always happend in control endpoint hence hard coded in Class layer*/
+    /* Always happen in control endpoint hence hard coded in Class layer*/
     
 #if (OS_ADAPTER_ACTIVE_OS == OS_ADAPTER_MQX)
 	g_curr_recv_buf = OS_Mem_alloc_uncached_align(DATA_BUFF_SIZE, 32);
@@ -399,7 +398,7 @@ void Virtual_Com_App(void)
         /* Copy Buffer to Send Buff */
         for (i = 0; i < g_recv_size; i++)
         {
-            //printf("Copied: %c\n", g_curr_recv_buf[i]);
+            //USB_PRINTF("Copied: %c\n", g_curr_recv_buf[i]);
         	g_curr_send_buf[g_send_size++] = g_curr_recv_buf[i];
         }
         g_recv_size = 0;
@@ -424,7 +423,7 @@ void Virtual_Com_App(void)
 
 /******************************************************************************
  * 
- *    @name        USB_App_Callback
+ *    @name        USB_App_Device_Callback
  *    
  *    @brief       This function handles the callback  
  *                  
@@ -435,7 +434,7 @@ void Virtual_Com_App(void)
  *    @return      None
  *
  *****************************************************************************/
-void USB_App_Callback(uint8_t event_type, void* val,void* arg) 
+void USB_App_Device_Callback(uint8_t event_type, void* val,void* arg) 
 {
     uint32_t handle;
     handle = *((uint32_t *)arg);
@@ -458,7 +457,7 @@ void USB_App_Callback(uint8_t event_type, void* val,void* arg)
 
 /******************************************************************************
  * 
- *    @name        USB_Notif_Callback
+ *    @name        USB_App_Class_Callback
  *    
  *    @brief       This function handles the callback for Get/Set report req  
  *                  
@@ -473,7 +472,7 @@ void USB_App_Callback(uint8_t event_type, void* val,void* arg)
  *
  *****************************************************************************/
  
-uint8_t USB_Notif_Callback
+uint8_t USB_App_Class_Callback
 (
     uint8_t event, 
     uint16_t value, 
@@ -483,7 +482,6 @@ uint8_t USB_Notif_Callback
 ) 
 {
     cdc_handle_t handle;
-    uint8_t index;
     uint8_t error = USB_OK;
     handle = *((cdc_handle_t *)arg);
     switch(event)
@@ -520,16 +518,14 @@ uint8_t USB_Notif_Callback
 		break;
 		case USB_DEV_EVENT_DATA_RECEIVED:
 		{
-            uint32_t BytesToBeCopied; 
             if((start_app == TRUE) && (start_transactions == TRUE))
             {
-				BytesToBeCopied = *size;
-				for(index = 0; index < BytesToBeCopied; index++) 
+				g_recv_size = *size;
+				if(!g_recv_size)
 				{
-					g_curr_recv_buf[index] = *(*data + index);
-					//printf("Received: %c\n", g_curr_recv_buf[index]);
+					 /* Schedule buffer for next receive event */
+					 USB_Class_CDC_Recv_Data(handle, DIC_BULK_OUT_ENDPOINT, g_curr_recv_buf, DIC_BULK_OUT_ENDP_PACKET_SIZE); 
 				}
-				g_recv_size = index;
 				
             }
         }
@@ -545,7 +541,7 @@ uint8_t USB_Notif_Callback
 	            USB_Class_CDC_Send_Data(g_app_handle, DIC_BULK_IN_ENDPOINT, NULL, 0);
 	        } else if((start_app == TRUE) && (start_transactions == TRUE))
             {
-				 if((size != NULL) || ((size == NULL) && (*size == 0)))
+				 if((*data != NULL) || ((*data == NULL) && (*size == 0)))
 				 {
 					 /* User: add your own code for send complete event */ 
 					 /* Schedule buffer for next receive event */
@@ -615,7 +611,13 @@ static void Task_Start(void *arg)
 #if defined(FSL_RTOS_MQX)
 void Main_Task(uint32_t param)
 #else
+
+#if defined(__CC_ARM) || defined(__GNUC__)
 int main(void)
+#else
+void main(void)
+#endif
+
 #endif
 {
     OSA_Init();
@@ -627,6 +629,9 @@ int main(void)
     OS_Task_create(Task_Start, NULL, 9L, 1000L, "task_start", NULL);
 
     OSA_Start();
+#if (!defined(FSL_RTOS_MQX))&(defined(__CC_ARM) || defined(__GNUC__))
+    return 1;
+#endif
 }
 #endif
     

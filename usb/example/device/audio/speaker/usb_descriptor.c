@@ -180,19 +180,6 @@ uint8_t g_config_descriptor[CONFIG_DESC_SIZE] =
                          clock validity control: 0b01 - host read only */
     0x00,       /* bAssocTerminal(0x00) */
     0x02,       /* iClockSource(0x01): Not requested */
-    
-#if 0
-
-    /* Clock Slected Source Descriptor(4.7.2.1) */
-    0x08,       /* bLength(0x08) */
-    0x24,       /* bDescriptorType(0x24): CS_INTERFACE */
-    0x0B,       /* bDescriptorSubType(0x0A): CLOCK_SELECTOR_SOURCE */
-    0x11,       /* bClockID(0x10): CLOCK_SELECTOR_SOURCE_ID */
-    0x01,       /* bNrInPins */
-    0x10 ,      /*baCSourceID */
-    0x00,       /* bmControls(0x00):*/
-    0x0,
-#endif
 
     /* Input Terminal Descriptor(4.7.2.4) */
     0x11,       /* bLength(0x11): 17 */
