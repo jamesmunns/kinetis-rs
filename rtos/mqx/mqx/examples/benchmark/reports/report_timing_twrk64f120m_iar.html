@@ -1,0 +1,478 @@
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <TITLE>MQX Timing Report</TITLE>
+<style type="text/css">
+body{
+ padding: 0px;
+ margin: 30px;
+ background-color: #FFF;
+ font-family: Arial,Helvetica Neue, Helvetica,  sans-serif;
+ font-size: 8pt;
+ font-weight: normal;
+ color: #51626F;
+}
+.reportname {
+ font-size: 20pt;
+ font-weight: bold;
+}
+.group {
+ font-size: 10pt;
+ font-weight: bold;
+}
+.row {
+ font-size: 9pt;
+}
+.legalese {
+ font-size: 7pt;
+}
+</style>
+</HEAD>
+<BODY>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR><TD WIDTH="100%" class="reportname">
+<CENTER>MQX Timing Report
+</CENTER></TD></TR></TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Parameters</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="15%" class="row">Board</TD>
+<TD WIDTH="35%" class="row">Freescale TWRK64F120</TD>
+<TD WIDTH="30%" class="row">Version</TD>
+<TD WIDTH="20%" class="row">5.0.1</TD>
+</TR>
+<TR>
+<TD WIDTH="15%" class="row">CPU</TD>
+<TD WIDTH="35%" class="row">MK64F120M 120 MHz</TD>
+<TD WIDTH="30%" class="row">Generic Revision</TD>
+<TD WIDTH="20%" class="row">23</TD>
+</TR>
+<TR>
+<TD WIDTH="15%" class="row">Memory</TD>
+<TD WIDTH="35%" class="row">N/A Internal RAM</TD>
+<TD WIDTH="30%" class="row">PSP Revision</TD>
+<TD WIDTH="20%" class="row">10</TD>
+</TR>
+<TR>
+<TD WIDTH="15%" class="row">Target</TD>
+<TD WIDTH="35%" class="row">Int RAM Release RegABI</TD>
+<TD WIDTH="30%" class="row">Compiler</TD>
+<TD WIDTH="20%" class="row">IAR Embedded Workbench for ARM</TD>
+</TR>
+<TR>
+<TD WIDTH="15%" class="row">PSP build date</TD>
+<TD WIDTH="35%" class="row">Nov 24 2014 at 09:52:19</TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Kernel Options</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Has Code Cache</TD>
+<TD WIDTH="20%" class="row">No</TD>
+<TD WIDTH="30%" class="row">Has Data Cache</TD>
+<TD WIDTH="20%" class="row">No</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Kernel Log Support</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">Logging Enabled</TD>
+<TD WIDTH="20%" class="row">No</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Check Errors</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">Check Memory Allocation Errors</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Check Validity</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">Component Destruction</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Default Time Slice in Ticks</TD>
+<TD WIDTH="20%" class="row">No</TD>
+<TD WIDTH="30%" class="row">Exit Enabled</TD>
+<TD WIDTH="20%" class="row">No</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Has Time Slice</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">Include Floating Point I/O</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Is Multiprocessor</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">LWLog Time Stamp in Ticks</TD>
+<TD WIDTH="20%" class="row">No</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Memory Free List Sorted</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">Monitor Stack</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Mutex has Polling</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">Profiling Enabled</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Run Time Error Check Enabled</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">Task Creation Blocks</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Task Destruction</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">Time Uses Ticks Only</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Use 32-bit Message Qids</TD>
+<TD WIDTH="20%" class="row">No</TD>
+<TD WIDTH="30%" class="row">Use 32-bit Types</TD>
+<TD WIDTH="20%" class="row">No</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Use Idle Task</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+<TD WIDTH="30%" class="row">Use Inline Macros</TD>
+<TD WIDTH="20%" class="row">Yes</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Use Lwmem Allocator</TD>
+<TD WIDTH="20%" class="row">No</TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Resource Usage</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Kernel RAM</TD>
+<TD WIDTH="20%" class="row">1064</TD>
+<TD WIDTH="30%" class="row">Memory Block</TD>
+<TD WIDTH="20%" class="row">36 + data</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Message</TD>
+<TD WIDTH="20%" class="row">28 + data</TD>
+<TD WIDTH="30%" class="row">Semaphore</TD>
+<TD WIDTH="20%" class="row">112</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">ISR</TD>
+<TD WIDTH="20%" class="row">4 * #ints</TD>
+<TD WIDTH="30%" class="row">Partition</TD>
+<TD WIDTH="20%" class="row">12 + data</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Msg Queue</TD>
+<TD WIDTH="20%" class="row">32</TD>
+<TD WIDTH="30%" class="row">Task</TD>
+<TD WIDTH="20%" class="row">212 + stack</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Task Queue</TD>
+<TD WIDTH="20%" class="row">28</TD>
+<TD WIDTH="30%" class="row">Mutex</TD>
+<TD WIDTH="20%" class="row">48</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Event</TD>
+<TD WIDTH="20%" class="row">92</TD>
+<TD WIDTH="30%" class="row">LWEvent</TD>
+<TD WIDTH="20%" class="row">36</TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">LWSem</TD>
+<TD WIDTH="20%" class="row">28</TD>
+<TD WIDTH="30%" class="row">LWMem</TD>
+<TD WIDTH="20%" class="row">12</TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>System Parameters</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Context Switch</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.01us</i></TD> <TD WIDTH="100"><i>241.20us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Service Interrupt and return to task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.19us</i></TD> <TD WIDTH="100"><i>143.05us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">System Timer/Tick Overhead</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.01us</i></TD> <TD WIDTH="100"><i>121.00us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Task Management</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Create Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i> 37.42us</i></TD> <TD WIDTH="100"><i>  4.49ms 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Delete Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i> 20.03us</i></TD> <TD WIDTH="100"><i>  2.40ms 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Block Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.01us</i></TD> <TD WIDTH="100"><i>241.20us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Ready Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.21us</i></TD> <TD WIDTH="100"><i>265.50us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Yield Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.42us</i></TD> <TD WIDTH="100"><i>410.50us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Task Queues</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Suspend Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  4.99us</i></TD> <TD WIDTH="100"><i>598.50us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Suspend Task Context Switch</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.04us</i></TD> <TD WIDTH="100"><i>364.40us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Resume Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.36us</i></TD> <TD WIDTH="100"><i>283.30us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Resume Task Context Switch</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  4.24us</i></TD> <TD WIDTH="100"><i>509.20us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Memory Management</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Allocate Memory</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.46us</i></TD> <TD WIDTH="100"><i>415.20us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Free Memory</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  4.65us</i></TD> <TD WIDTH="100"><i>558.30us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Allocate LW-Memory</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.18us</i></TD> <TD WIDTH="100"><i>381.10us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Free LW-Memory</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.12us</i></TD> <TD WIDTH="100"><i>374.80us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Partitions</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Partition Create</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.91us</i></TD> <TD WIDTH="100"><i>469.20us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Partition Allocate Block</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.09us</i></TD> <TD WIDTH="100"><i>250.80us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Partition Free Block</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.42us</i></TD> <TD WIDTH="100"><i>170.90us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Light Weight Semaphores</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Open LW-Semaphore</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  4.26us</i></TD> <TD WIDTH="100"><i>511.40us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Set LW-Semaphore</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.17us</i></TD> <TD WIDTH="100"><i>140.90us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Set LW-Semaphore Ready Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.23us</i></TD> <TD WIDTH="100"><i>267.80us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Set LW-Semaphore Context Switch</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  4.11us</i></TD> <TD WIDTH="100"><i>493.40us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Wait LW-Semaphore</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.38us</i></TD> <TD WIDTH="100"><i>165.70us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Wait LW-Semaphore Block Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.92us</i></TD> <TD WIDTH="100"><i>350.60us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Close LW-Semaphore</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.26us</i></TD> <TD WIDTH="100"><i>391.00us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Light Weight Events</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Open LW-Event</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.45us</i></TD> <TD WIDTH="100"><i>414.30us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Close LW-Event</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.09us</i></TD> <TD WIDTH="100"><i>251.10us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Wait LW-Event (ticks)</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.92us</i></TD> <TD WIDTH="100"><i>230.60us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Set LW-Event</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.72us</i></TD> <TD WIDTH="100"><i>205.80us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Set LW-Event Context Switch</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  4.82us</i></TD> <TD WIDTH="100"><i>578.90us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Set LW-Event Ready Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.76us</i></TD> <TD WIDTH="100"><i>331.00us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Wait LW-Event (ticks) Block Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.69us</i></TD> <TD WIDTH="100"><i>443.10us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Message Passing</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Open Message Queue</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.46us</i></TD> <TD WIDTH="100"><i>295.80us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Send Message</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.34us</i></TD> <TD WIDTH="100"><i>400.50us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Send Message Ready Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.20us</i></TD> <TD WIDTH="100"><i>383.80us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Send Message Context Switch</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  5.13us</i></TD> <TD WIDTH="100"><i>616.10us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Receive Message (ticks)</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.38us</i></TD> <TD WIDTH="100"><i>285.60us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Receive Message (ticks) Block Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.23us</i></TD> <TD WIDTH="100"><i>388.10us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Close Message Queue</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.21us</i></TD> <TD WIDTH="100"><i>265.60us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Message Pools</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Create Message Pool</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.46us</i></TD> <TD WIDTH="100"><i>415.00us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Delete Message Pool</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>880.00ns</i></TD> <TD WIDTH="100"><i>105.60us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Allocate Message</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.55us</i></TD> <TD WIDTH="100"><i>186.00us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Free Message</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.46us</i></TD> <TD WIDTH="100"><i>175.70us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Semaphores</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Open Semaphore</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  9.29us</i></TD> <TD WIDTH="100"><i>  1.12ms 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Open Semaphore Fast</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  7.13us</i></TD> <TD WIDTH="100"><i>855.00us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Set Semaphore</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.38us</i></TD> <TD WIDTH="100"><i>285.40us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Set Semaphore Ready Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  5.36us</i></TD> <TD WIDTH="100"><i>643.60us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Set Semaphore Context Switch</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  5.07us</i></TD> <TD WIDTH="100"><i>608.20us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Wait Semaphore (ticks)</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.76us</i></TD> <TD WIDTH="100"><i>211.00us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Wait Semaphore (ticks) Block Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.71us</i></TD> <TD WIDTH="100"><i>445.00us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Close Semaphore</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  5.65us</i></TD> <TD WIDTH="100"><i>678.40us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Events</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Open Event</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  9.71us</i></TD> <TD WIDTH="100"><i>  1.17ms 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Open Event Fast</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  7.08us</i></TD> <TD WIDTH="100"><i>849.90us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Set Event</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.30us</i></TD> <TD WIDTH="100"><i>275.50us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Set Event Ready Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.96us</i></TD> <TD WIDTH="100"><i>355.70us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Set Event Context Switch</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  5.20us</i></TD> <TD WIDTH="100"><i>623.60us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Wait Event (ticks)</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.30us</i></TD> <TD WIDTH="100"><i>275.60us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Wait Event (ticks) Block Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.69us</i></TD> <TD WIDTH="100"><i>442.80us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Close Event</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  5.61us</i></TD> <TD WIDTH="100"><i>673.20us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR>
+<TD WIDTH="100% class="group"><HR><B>Mutexes</B></TD>
+</TABLE></TR>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" >
+<TR>
+<TD WIDTH="30%" class="row">Open Mutex</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  4.27us</i></TD> <TD WIDTH="100"><i>512.40us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Unlock Mutex</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  1.34us</i></TD> <TD WIDTH="100"><i>160.90us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Unlock Mutex Ready Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.30us</i></TD> <TD WIDTH="100"><i>275.90us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Unlock Mutex Context Switch</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  4.35us</i></TD> <TD WIDTH="100"><i>521.50us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Lock Mutex</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  2.01us</i></TD> <TD WIDTH="100"><i>240.70us 1MHz</i></TD></TR></TABLE></TD>
+<TD WIDTH="30%" class="row">Lock Mutex Block Task</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  3.42us</i></TD> <TD WIDTH="100"><i>410.80us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+<TR>
+<TD WIDTH="30%" class="row">Close Mutex</TD>
+<TD WIDTH="20%" class="row"><TABLE CLASS="row"><TR><TD WIDTH="100"><i>  4.80us</i></TD> <TD WIDTH="100"><i>575.70us 1MHz</i></TD></TR></TABLE></TD>
+</TR>
+</TABLE>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><TR><TD class="legalese">
+<HR><BR>(c) 2009 Freescale Semiconductor. All rights reserved.
+Confidential Information. No part of this document may be
+copied or reproduced in any form or by any means without prior written
+consent of Freescale Semiconductor. Freescale MQX is a trademark
+of Freescale Semiconductor. All other trademarks are property
+of their respective owners.
+</TD></TR></TABLE></BODY></HTML>

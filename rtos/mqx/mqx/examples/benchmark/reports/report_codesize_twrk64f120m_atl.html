@@ -1,0 +1,144 @@
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <TITLE>MQX Code Size Report </TITLE>
+<style type="text/css">
+body{
+ padding: 0px;
+ margin: 30px;
+ background-color: #FFF;
+ font-family: Arial,Helvetica Neue, Helvetica,  sans-serif;
+ font-size: 8pt;
+ font-weight: normal;
+ color: #51626F;
+}
+.reportname {
+ font-size: 20pt;
+ font-weight: bold;
+}
+td {
+ font-size: 9pt;
+ vertical-align: bottom;
+}
+.legalese {
+ font-size: 7pt;
+}
+</style>
+</HEAD>
+<BODY>
+<TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000">
+<TR><TD WIDTH="100%" class="reportname">
+<CENTER>MQX Code Size Report
+</CENTER></TD></TR></TABLE>
+<BR><BR><TABLE CELLSPACING=0 CELLPADDING=3><TR><TD><B> Name </B></TD><TD>twrk64f120m</TD><TD>twrk64f120m</TD><TD>twrk64f120m</TD><TD>twrk64f120m</TD><TD>twrk64f120m</TD><TD>twrk64f120m</TD><TD>twrk64f120m</TD><TD>twrk64f120m</TD><TD>twrk64f120m</TD><TD>twrk64f120m</TD></TR>
+<TR><TD><B> Kernel configutation </B></TD><TD>small kernel</TD><TD>small kernel</TD><TD>small kernel</TD><TD>small kernel</TD><TD>typical kernel</TD><TD>typical kernel</TD><TD>typical kernel</TD><TD>maximum kernel</TD><TD>maximum kernel</TD><TD>maximum kernel</TD></TR>
+<TR><TD><B> Application Profile </B></TD><TD>TINIEST</TD><TD>SMALL</TD><TD>TYPICAL</TD><TD>MAX</TD><TD>SMALL</TD><TD>TYPICAL</TD><TD>MAX</TD><TD>SMALL</TD><TD>TYPICAL</TD><TD>MAX</TD></TR>
+<TR><TD><B> Compiler </B></TD><TD>atl</TD><TD>atl</TD><TD>atl</TD><TD>atl</TD><TD>atl</TD><TD>atl</TD><TD>atl</TD><TD>atl</TD><TD>atl</TD><TD>atl</TD></TR>
+<TR><TD><HR>
+<B> MQX Core Components Code (ROM) </B></TD><TD></TD></TR>
+<TR><TD>MQX Core Code</TD><TD>875</TD><TD>875</TD><TD>875</TD><TD>875</TD><TD>955</TD><TD>955</TD><TD>955</TD><TD>1173</TD><TD>1173</TD><TD>1173</TD></TR>
+<TR><TD>MQX String Code</TD><TD>-</TD><TD>18</TD><TD>18</TD><TD>18</TD><TD>18</TD><TD>18</TD><TD>18</TD><TD>111</TD><TD>111</TD><TD>111</TD></TR>
+<TR><TD>MQX Scheduler Code</TD><TD>518</TD><TD>518</TD><TD>518</TD><TD>518</TD><TD>1464</TD><TD>1464</TD><TD>1464</TD><TD>1680</TD><TD>1680</TD><TD>1680</TD></TR>
+<TR><TD>Interrupt Management Code</TD><TD>1426</TD><TD>1426</TD><TD>1426</TD><TD>1464</TD><TD>1806</TD><TD>1806</TD><TD>1844</TD><TD>1438</TD><TD>1438</TD><TD>1492</TD></TR>
+<TR><TD>Lightweight Memory Manager Code</TD><TD>2966</TD><TD>2966</TD><TD>2966</TD><TD>2966</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>4808</TD><TD>4808</TD><TD>4808</TD></TR>
+<TR><TD>Lightweight Semaphore Code</TD><TD>1102</TD><TD>1102</TD><TD>1102</TD><TD>1102</TD><TD>1926</TD><TD>1926</TD><TD>1926</TD><TD>2456</TD><TD>2456</TD><TD>2456</TD></TR>
+<TR><TD>Memory Manager Code</TD><TD>-</TD><TD>274</TD><TD>274</TD><TD>274</TD><TD>7868</TD><TD>7868</TD><TD>7868</TD><TD>9390</TD><TD>9390</TD><TD>9390</TD></TR>
+<TR><TD>Queue Management Code</TD><TD>344</TD><TD>344</TD><TD>344</TD><TD>344</TD><TD>344</TD><TD>344</TD><TD>344</TD><TD>344</TD><TD>344</TD><TD>344</TD></TR>
+<TR><TD>Task Management Code</TD><TD>3268</TD><TD>3268</TD><TD>3268</TD><TD>3268</TD><TD>5086</TD><TD>5086</TD><TD>5086</TD><TD>5928</TD><TD>5928</TD><TD>5928</TD></TR>
+<TR><TD>Time Management Code</TD><TD>2784</TD><TD>2784</TD><TD>2784</TD><TD>2784</TD><TD>3426</TD><TD>3426</TD><TD>3426</TD><TD>7957</TD><TD>7957</TD><TD>7957</TD></TR>
+<TR><TD>Task Queues Component Code</TD><TD>728</TD><TD>728</TD><TD>728</TD><TD>728</TD><TD>1516</TD><TD>1516</TD><TD>1516</TD><TD>2016</TD><TD>2016</TD><TD>2016</TD></TR>
+<TR><TD><B> MQX Optional Components </B></TD><TD></TD></TR>
+<TR><TD>Event Component Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>5928</TD><TD>5928</TD><TD>5928</TD></TR>
+<TR><TD>Idle Task Code</TD><TD>76</TD><TD>76</TD><TD>76</TD><TD>76</TD><TD>76</TD><TD>76</TD><TD>76</TD><TD>76</TD><TD>76</TD><TD>76</TD></TR>
+<TR><TD>I/O Subsystem Code</TD><TD>1284</TD><TD>1284</TD><TD>1288</TD><TD>1288</TD><TD>1284</TD><TD>1288</TD><TD>1288</TD><TD>1284</TD><TD>1288</TD><TD>1288</TD></TR>
+<TR><TD>Kernel Log Component Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>9319</TD><TD>9318</TD><TD>9318</TD><TD>9376</TD><TD>9375</TD><TD>9375</TD></TR>
+<TR><TD>Lightweight Event Component Code</TD><TD>1000</TD><TD>1000</TD><TD>1000</TD><TD>1000</TD><TD>1844</TD><TD>1844</TD><TD>1844</TD><TD>2240</TD><TD>2240</TD><TD>2240</TD></TR>
+<TR><TD>Lightweight Log Component Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>1412</TD><TD>1412</TD><TD>1412</TD><TD>1432</TD><TD>1432</TD><TD>1432</TD></TR>
+<TR><TD>Lightweight Message Component Code</TD><TD>960</TD><TD>960</TD><TD>960</TD><TD>960</TD><TD>1472</TD><TD>1472</TD><TD>1472</TD><TD>1964</TD><TD>1964</TD><TD>1964</TD></TR>
+<TR><TD>Lightweight Timer Component Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>1052</TD><TD>1052</TD><TD>1052</TD><TD>1096</TD><TD>1096</TD><TD>1096</TD></TR>
+<TR><TD>Log Component Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>1684</TD><TD>1684</TD><TD>1684</TD></TR>
+<TR><TD>Message Component Code</TD><TD>-</TD><TD>4348</TD><TD>4348</TD><TD>4348</TD><TD>7390</TD><TD>7390</TD><TD>7390</TD><TD>7926</TD><TD>7926</TD><TD>7926</TD></TR>
+<TR><TD>Mutex Component Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>3092</TD><TD>3092</TD><TD>3092</TD><TD>3840</TD><TD>3840</TD><TD>3840</TD></TR>
+<TR><TD>Semaphore Component Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>5598</TD><TD>5598</TD><TD>5598</TD></TR>
+<TR><TD>Name Component Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>2192</TD><TD>2192</TD><TD>2192</TD><TD>2192</TD><TD>2192</TD><TD>2192</TD></TR>
+<TR><TD>Partition Component Code</TD><TD>-</TD><TD>1800</TD><TD>1800</TD><TD>1800</TD><TD>3184</TD><TD>3184</TD><TD>3184</TD><TD>3332</TD><TD>3332</TD><TD>3332</TD></TR>
+<TR><TD>MPU Support Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD></TR>
+<TR><TD>Other PSP Code</TD><TD>5858</TD><TD>5858</TD><TD>11362</TD><TD>11432</TD><TD>7151</TD><TD>11432</TD><TD>11432</TD><TD>7078</TD><TD>12746</TD><TD>12816</TD></TR>
+<TR><TD><B> Total of MQX PSP Code </B></TD><TD>23189</TD><TD>29629</TD><TD>35137</TD><TD>35245</TD><TD>63877</TD><TD>68161</TD><TD>68199</TD><TD>92347</TD><TD>98018</TD><TD>98142</TD></TR>
+<TR><TD><HR>
+<B> Detailed breakdown of MFS Code (ROM) </B></TD><TD></TD></TR>
+<TR><TD>Directory Code</TD><TD>-</TD><TD>4419</TD><TD>4414</TD><TD>4414</TD><TD>4421</TD><TD>4416</TD><TD>4416</TD><TD>4421</TD><TD>4416</TD><TD>4416</TD></TR>
+<TR><TD>File Attribute Code</TD><TD>-</TD><TD>178</TD><TD>178</TD><TD>178</TD><TD>178</TD><TD>178</TD><TD>178</TD><TD>178</TD><TD>178</TD><TD>178</TD></TR>
+<TR><TD>Cluster Code</TD><TD>-</TD><TD>724</TD><TD>724</TD><TD>724</TD><TD>724</TD><TD>724</TD><TD>724</TD><TD>724</TD><TD>724</TD><TD>724</TD></TR>
+<TR><TD>Delete Code</TD><TD>-</TD><TD>190</TD><TD>190</TD><TD>190</TD><TD>190</TD><TD>190</TD><TD>190</TD><TD>190</TD><TD>190</TD><TD>190</TD></TR>
+<TR><TD>FAT Code</TD><TD>-</TD><TD>816</TD><TD>816</TD><TD>816</TD><TD>816</TD><TD>816</TD><TD>816</TD><TD>816</TD><TD>816</TD><TD>816</TD></TR>
+<TR><TD>Format Code</TD><TD>-</TD><TD>2028</TD><TD>2028</TD><TD>2028</TD><TD>2044</TD><TD>2044</TD><TD>2044</TD><TD>1996</TD><TD>1996</TD><TD>1996</TD></TR>
+<TR><TD>Handle Code</TD><TD>-</TD><TD>180</TD><TD>180</TD><TD>180</TD><TD>196</TD><TD>196</TD><TD>196</TD><TD>196</TD><TD>196</TD><TD>196</TD></TR>
+<TR><TD>Long file name Code</TD><TD>-</TD><TD>1792</TD><TD>1792</TD><TD>1792</TD><TD>1792</TD><TD>1792</TD><TD>1792</TD><TD>1792</TD><TD>1792</TD><TD>1792</TD></TR>
+<TR><TD>Rename Code</TD><TD>-</TD><TD>620</TD><TD>620</TD><TD>620</TD><TD>620</TD><TD>620</TD><TD>620</TD><TD>576</TD><TD>576</TD><TD>576</TD></TR>
+<TR><TD>Misc Code</TD><TD>-</TD><TD>2006</TD><TD>2006</TD><TD>2006</TD><TD>2024</TD><TD>2024</TD><TD>2024</TD><TD>2024</TD><TD>2024</TD><TD>2024</TD></TR>
+<TR><TD>Open Code</TD><TD>-</TD><TD>760</TD><TD>760</TD><TD>760</TD><TD>760</TD><TD>760</TD><TD>760</TD><TD>760</TD><TD>760</TD><TD>760</TD></TR>
+<TR><TD>Read/Write Code</TD><TD>-</TD><TD>1830</TD><TD>1830</TD><TD>1830</TD><TD>1824</TD><TD>1824</TD><TD>1824</TD><TD>1824</TD><TD>1824</TD><TD>1824</TD></TR>
+<TR><TD>Parse Code</TD><TD>-</TD><TD>924</TD><TD>924</TD><TD>924</TD><TD>924</TD><TD>924</TD><TD>924</TD><TD>924</TD><TD>924</TD><TD>924</TD></TR>
+<TR><TD>Search Code</TD><TD>-</TD><TD>1752</TD><TD>1752</TD><TD>1752</TD><TD>1752</TD><TD>1752</TD><TD>1752</TD><TD>1752</TD><TD>1752</TD><TD>1752</TD></TR>
+<TR><TD>Time Code</TD><TD>-</TD><TD>272</TD><TD>272</TD><TD>272</TD><TD>272</TD><TD>272</TD><TD>272</TD><TD>272</TD><TD>272</TD><TD>272</TD></TR>
+<TR><TD>Partition manager Code</TD><TD>-</TD><TD>-</TD><TD>2412</TD><TD>2412</TD><TD>-</TD><TD>2412</TD><TD>2412</TD><TD>-</TD><TD>2412</TD><TD>2412</TD></TR>
+<TR><TD>Other MFS Code</TD><TD>-</TD><TD>3764</TD><TD>3764</TD><TD>5864</TD><TD>3788</TD><TD>11799</TD><TD>30449</TD><TD>3788</TD><TD>11799</TD><TD>30441</TD></TR>
+<TR><TD><B> Total of MFS Code </B></TD><TD>-</TD><TD>22255</TD><TD>24662</TD><TD>26762</TD><TD>22325</TD><TD>32743</TD><TD>51393</TD><TD>22233</TD><TD>32651</TD><TD>51293</TD></TR>
+<TR><TD><HR>
+<B> Detailed breakdown of RTCS Code (ROM) </B></TD><TD></TD></TR>
+<TR><TD>RTCS Core Code</TD><TD>-</TD><TD>-</TD><TD>9802</TD><TD>9802</TD><TD>4713</TD><TD>9892</TD><TD>11573</TD><TD>5447</TD><TD>10626</TD><TD>12031</TD></TR>
+<TR><TD>RTCS IPv6-specific Core Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>1927</TD><TD>1927</TD><TD>1927</TD></TR>
+<TR><TD>ARP Code</TD><TD>-</TD><TD>-</TD><TD>2097</TD><TD>2097</TD><TD>2123</TD><TD>2123</TD><TD>2123</TD><TD>2445</TD><TD>2445</TD><TD>2445</TD></TR>
+<TR><TD>IP Core Code</TD><TD>-</TD><TD>-</TD><TD>7582</TD><TD>7582</TD><TD>7686</TD><TD>7686</TD><TD>10560</TD><TD>11946</TD><TD>11946</TD><TD>14726</TD></TR>
+<TR><TD>IPv6-specific Core Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>11276</TD><TD>11276</TD><TD>11676</TD></TR>
+<TR><TD>MLD-specific Core Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD></TR>
+<TR><TD>ICMP Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>1742</TD><TD>1742</TD><TD>1742</TD><TD>2324</TD><TD>2324</TD><TD>2324</TD></TR>
+<TR><TD>ICMPv6-specific Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>1646</TD><TD>1646</TD><TD>1646</TD></TR>
+<TR><TD>IGMP Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>1010</TD><TD>1010</TD><TD>1010</TD><TD>1110</TD><TD>1110</TD><TD>1110</TD></TR>
+<TR><TD>TCP Core Code</TD><TD>-</TD><TD>-</TD><TD>12622</TD><TD>12622</TD><TD>12768</TD><TD>12768</TD><TD>12768</TD><TD>14516</TD><TD>14516</TD><TD>14516</TD></TR>
+<TR><TD>UDP Core Code</TD><TD>-</TD><TD>-</TD><TD>2288</TD><TD>2288</TD><TD>2358</TD><TD>2358</TD><TD>2358</TD><TD>3438</TD><TD>3438</TD><TD>3438</TD></TR>
+<TR><TD>Socket Code</TD><TD>-</TD><TD>-</TD><TD>2230</TD><TD>2230</TD><TD>2846</TD><TD>3634</TD><TD>3634</TD><TD>3132</TD><TD>3920</TD><TD>4862</TD></TR>
+<TR><TD>IP Statistics Collection Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>82</TD><TD>82</TD><TD>82</TD></TR>
+<TR><TD><B> Application-level Protocols Code </B></TD><TD></TD></TR>
+<TR><TD>HTTPSRV Code</TD><TD>-</TD><TD>-</TD><TD>8209</TD><TD>8209</TD><TD>-</TD><TD>8382</TD><TD>8382</TD><TD>-</TD><TD>8490</TD><TD>8490</TD></TR>
+<TR><TD>FTP Code</TD><TD>-</TD><TD>-</TD><TD>9046</TD><TD>9046</TD><TD>-</TD><TD>11753</TD><TD>11748</TD><TD>-</TD><TD>11817</TD><TD>11812</TD></TR>
+<TR><TD>Telnet Code</TD><TD>-</TD><TD>-</TD><TD>2457</TD><TD>2457</TD><TD>-</TD><TD>2530</TD><TD>2530</TD><TD>-</TD><TD>2530</TD><TD>2530</TD></TR>
+<TR><TD>ECHO Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>1375</TD><TD>-</TD><TD>-</TD><TD>1527</TD><TD>-</TD><TD>-</TD><TD>1555</TD></TR>
+<TR><TD>TFTP Code</TD><TD>-</TD><TD>-</TD><TD>124</TD><TD>314</TD><TD>-</TD><TD>314</TD><TD>314</TD><TD>-</TD><TD>314</TD><TD>314</TD></TR>
+<TR><TD>DNS Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD></TR>
+<TR><TD>PPP Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD></TR>
+<TR><TD>MIB Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>2</TD><TD>-</TD><TD>17968</TD><TD>17968</TD><TD>-</TD><TD>18796</TD><TD>18796</TD></TR>
+<TR><TD>SNMP Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>17447</TD><TD>17447</TD><TD>-</TD><TD>18005</TD><TD>18005</TD></TR>
+<TR><TD>DHCP/BootP Code</TD><TD>-</TD><TD>-</TD><TD>822</TD><TD>822</TD><TD>20</TD><TD>818</TD><TD>5340</TD><TD>4714</TD><TD>5418</TD><TD>5418</TD></TR>
+<TR><TD>Other RTCS Code</TD><TD>-</TD><TD>-</TD><TD>16406</TD><TD>16408</TD><TD>12168</TD><TD>29601</TD><TD>48907</TD><TD>18897</TD><TD>36578</TD><TD>57331</TD></TR>
+<TR><TD><B> Total of RTCS Code </B></TD><TD>-</TD><TD>-</TD><TD>73685</TD><TD>75254</TD><TD>47434</TD><TD>130026</TD><TD>159931</TD><TD>82900</TD><TD>167204</TD><TD>195034</TD></TR>
+<TR><TD><HR>
+<B> MQX KSDK Code (ROM) </B></TD><TD></TD></TR>
+<TR><TD><HR>
+<B> Summary of MQX Libraries Code (ROM) </B></TD><TD></TD></TR>
+<TR><TD>Total of MQX PSP Code</TD><TD>23189</TD><TD>29629</TD><TD>35137</TD><TD>35245</TD><TD>63877</TD><TD>68161</TD><TD>68199</TD><TD>92347</TD><TD>98018</TD><TD>98142</TD></TR>
+<TR><TD>Total of BSP Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD></TR>
+<TR><TD>Total of MFS Code</TD><TD>-</TD><TD>22255</TD><TD>24662</TD><TD>26762</TD><TD>22325</TD><TD>32743</TD><TD>51393</TD><TD>22233</TD><TD>32651</TD><TD>51293</TD></TR>
+<TR><TD>Total of RTCS Code</TD><TD>-</TD><TD>-</TD><TD>73685</TD><TD>75254</TD><TD>47434</TD><TD>130026</TD><TD>159931</TD><TD>82900</TD><TD>167204</TD><TD>195034</TD></TR>
+<TR><TD>Total of USB Host Code</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD></TR>
+<TR><TD>Total of USB Device Data</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD></TR>
+<TR><TD>Total of KSDK Code</TD><TD>15780</TD><TD>15780</TD><TD>15780</TD><TD>15780</TD><TD>15780</TD><TD>15780</TD><TD>15780</TD><TD>15780</TD><TD>15780</TD><TD>15780</TD></TR>
+<TR><TD>Total of STDLIB Code</TD><TD>-</TD><TD>-</TD><TD>4284</TD><TD>4284</TD><TD>-</TD><TD>4284</TD><TD>4284</TD><TD>-</TD><TD>4284</TD><TD>4284</TD></TR>
+<TR><TD>Total of Shell Code</TD><TD>-</TD><TD>1112</TD><TD>1904</TD><TD>1904</TD><TD>1554</TD><TD>2346</TD><TD>2346</TD><TD>1554</TD><TD>2346</TD><TD>2346</TD></TR>
+<TR><TD><B> System Libraries Code (ROM) </B></TD><TD></TD></TR>
+<TR><TD>System Library Code (MSL/EWL...)</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD><TD>-</TD></TR>
+<TR><TD><B> User Application-related Code (ROM) </B></TD><TD></TD></TR>
+<TR><TD>Application-specific Code</TD><TD>6075</TD><TD>6467</TD><TD>7437</TD><TD>8671</TD><TD>7269</TD><TD>8631</TD><TD>10489</TD><TD>7674</TD><TD>9301</TD><TD>11479</TD></TR>
+<TR><TD><HR>
+<B> Overall Total </B></TD><TD></TD></TR>
+<TR><TD>All ROM Code and Initialized Data sections</TD><TD>45044</TD><TD>75243</TD><TD>158605</TD><TD>163616</TD><TD>158239</TD><TD>257687</TD><TD>308138</TD><TD>222488</TD><TD>325300</TD><TD>374074</TD></TR>
+</TD></TR></TABLE>
+<BR><TABLE CELLSPACING=0 CELLPADDING=0 WIDTH="1000" ><hr><TR><TD class="legalese">
+<BR>(c) 2008-2012 Freescale Semiconductor. All rights reserved.
+Confidential Information. No part of this document may be
+copied or reproduced in any form or by any means without prior written
+consent of Freescale Semiconductor. Freescale MQX is a trademark
+of Freescale Semiconductor. All other trademarks are property
+of their respective owners. Generated by codesize reporter v3.8.1
+</TD></TR></TABLE></BODY></HTML>
