@@ -48,6 +48,7 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -gdwarf-2")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -gstrict-dwarf")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-delete-null-pointer-checks")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g2")
 
 # common c compiler defines

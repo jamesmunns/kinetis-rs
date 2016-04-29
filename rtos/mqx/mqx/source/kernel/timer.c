@@ -320,7 +320,7 @@ _mqx_uint _timer_create_component
 #endif
 
 #if MQX_COMPONENT_DESTRUCTION
-    kernel_data->COMPONENT_CLEANUP[KERNEL_EVENTS] = _timer_cleanup;
+    kernel_data->COMPONENT_CLEANUP[KERNEL_TIMER] = _timer_cleanup;
 #endif
     _lwsem_post((LWSEM_STRUCT_PTR)&kernel_data->COMPONENT_CREATE_LWSEM);
 

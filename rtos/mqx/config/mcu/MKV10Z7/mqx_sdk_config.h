@@ -31,7 +31,7 @@
  * MQX_LITE_CONFIG       - lower memory usage, less features
  * MQX_SMALL_RAM_CONFIG  - higer memory usage, more features
 */
-#define MQX_COMMON_CONFIG    MQX_SMALL_RAM_CONFIG
+#define MQX_COMMON_CONFIG    MQX_LITE_CONFIG
 
 #define CMSIS_ENABLED                       1
 #define MQX_USE_IDLE_TASK                   1

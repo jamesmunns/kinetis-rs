@@ -2170,6 +2170,7 @@ void _usr_task_ready
  * \see _task_create_blocked
  * \see _task_create_at
  */
+
 static _mqx_uint _task_restart_func
 (
     _task_id    task_id,
@@ -2481,11 +2482,6 @@ _mqx_uint _task_restart
     bool     blocked
 )
 { /* Body */
-    /* reserve memory in stack */
-    volatile char dummy_stack_start_struct[sizeof(PSP_STACK_START_STRUCT)];
-    dummy_stack_start_struct[0] = 0x00;
-    (void)dummy_stack_start_struct; /* suppress 'unused variable' warning */
-
     /* call the right _task_restart function */
     return(_task_restart_func(task_id, param_ptr, blocked));
 }
@@ -3843,19 +3839,13 @@ _task_id create_task
         return MQX_NULL_TASK_ID;
     }
 
-    // Size of task stack is not big enough
-    status = (taskinit_p->stacksize <= (PSP_MINSTACKSIZE + sizeof(TD_STRUCT)));
-    assert(!status);
-    if (status)
-    {
-        return MQX_NULL_TASK_ID;
-    }
-
     // Convert to taskinit to template struct and
     // call old API to init task structure
     temp_template.TASK_TEMPLATE_INDEX   = 0;
     temp_template.TASK_ADDRESS          = taskinit_p->exec;
-    temp_template.TASK_STACKSIZE        = taskinit_p->stacksize;
+    /* TASK_STACKSIZE is used only in _task_restart() and contains size of stack itself (without template and TD).
+       Statically allocated stacks contain also TTL and TD. Dynamically allocated stacks do not. */
+    temp_template.TASK_STACKSIZE        = taskinit_p->stackaddr == NULL ? taskinit_p->stacksize : taskinit_p->stacksize - sizeof(TASK_TEMPLATE_STRUCT) - sizeof(TD_STRUCT);
     temp_template.TASK_PRIORITY         = taskinit_p->priority;
     temp_template.TASK_NAME             = taskinit_p->name;
     temp_template.TASK_ATTRIBUTES       = taskinit_p->attributes;
@@ -3863,8 +3853,15 @@ _task_id create_task
     temp_template.DEFAULT_TIME_SLICE    = taskinit_p->time_slice;
 
     aligned_stack_address = (void *)_ALIGN_STACK_TO_HIGHER_MEM(taskinit_p->stackaddr);
-
     reduced_stack_size = taskinit_p->stacksize - ((_mem_size)aligned_stack_address - (_mem_size)taskinit_p->stackaddr);
+
+    // Check if stack size is big enough
+    status = (reduced_stack_size <= (taskinit_p->stackaddr == NULL ? PSP_MINSTACKSIZE : PSP_MINSTACKSIZE + sizeof(TD_STRUCT)+ sizeof(TASK_TEMPLATE_STRUCT)));
+    assert(!status);
+    if (status)
+    {
+        return MQX_NULL_TASK_ID;
+    }
 
     td_ptr = _task_build_internal(
         0, (uint32_t)&(temp_template), aligned_stack_address, reduced_stack_size, FALSE

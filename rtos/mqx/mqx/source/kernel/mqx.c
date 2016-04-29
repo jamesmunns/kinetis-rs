@@ -42,7 +42,7 @@
  * extern to it is provided in MQX.H so applications
  * can use it as well.
  */
-const MQX_TICK_STRUCT _mqx_zero_tick_struct = {0};
+const MQX_TICK_STRUCT _mqx_zero_tick_struct = {{0},0};
 
 #if MQXCFG_PREALLOCATED_SYSTEM_STACKS
     /* Define preallocated stack sizes */
@@ -306,7 +306,7 @@ uint32_t _mqx_init_interrupt_stack
     _mqx_uint  stack_ptr;
     _mqx_uint  stack_limit;
 
-    stack_ptr = (_mqx_uint)*(_mqx_uint*)0x0; /* Get stack base address located on interrupt vector 0. */
+    stack_ptr = *(_mqx_uint*)_int_get_vector_table(); /* Get stack base address located on interrupt vector 0. */
     kernel_data->INTERRUPT_STACK_PTR = _GET_STACK_BASE((_mqx_uint)__HEAP_END, (_mqx_uint)stack_ptr-(_mqx_uint)__HEAP_END); /* Save interrupt stack address to KD, _psp_int_install set this walue to MSP. */
     //_mem_set_type(kernel_data->INTERRUPT_STACK_PTR, MEM_TYPE_INTERRUPT_STACK); /* For TAD. */
     stack_limit = (_mqx_uint)_GET_STACK_LIMIT((_mqx_uint)__HEAP_END, 0);

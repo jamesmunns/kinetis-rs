@@ -203,6 +203,7 @@ void _exit(int status)
 void *_sbrk(intptr_t increment)
 {
     _exit(-1);
+    return 0;
 }
 /*! \endcond */
 

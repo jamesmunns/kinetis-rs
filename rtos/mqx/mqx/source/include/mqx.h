@@ -1176,16 +1176,6 @@ typedef  struct mqx_initialization_struct
    /*! \brief The open flags to pass to the default I/O device */
    char          *IO_OPEN_MODE;
 
-   /* reserved fields for later use */
-/*   _mqx_uint       RESERVED[2];*/
-
-   /*! \brief Reserved field.
-    *
-    * Reserved for future enhancements to MQX; each element of the array must be
-    * initialized to 0.
-    */
-   /* _mqx_uint       RESERVED[1]; */
-
    /*! \brief Lowest address from which MQX allocates dynamic memory and task stacks. */
    void          *START_OF_HEAP;
    /*!
@@ -1502,7 +1492,7 @@ extern void            *_int_get_isr_data(_mqx_int);
 extern _mqx_uint        _int_get_isr_depth(void);
 extern INT_KERNEL_ISR_FPTR _int_get_kernel_isr(_mqx_int);
 extern _mqx_max_type    _int_get_previous_vector_table(void);
-extern _mqx_max_type    _int_get_vector_table(void);
+extern _psp_code_addr   _int_get_vector_table(void);
 extern _mqx_uint        _int_init(_mqx_uint, _mqx_uint);
 extern INT_ISR_FPTR     _int_install_default_isr(INT_ISR_FPTR);
 extern INT_KERNEL_ISR_FPTR _int_install_kernel_isr(_mqx_int,INT_KERNEL_ISR_FPTR);

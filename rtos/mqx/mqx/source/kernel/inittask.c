@@ -70,7 +70,7 @@ void _mqx_init_task(uint32_t parameter) {
 
     // initialize IO subsystem
 #if BSPCFG_ENABLE_IO_SUBSYSTEM
-    retval = _nio_init(MQXCFG_MAX_FD);
+    retval = _nio_init(MQXCFG_MAX_FD, NULL);
     assert(retval != -1);
 #endif
 

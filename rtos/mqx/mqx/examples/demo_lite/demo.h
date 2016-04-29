@@ -47,6 +47,10 @@
    #define MAIN_STACK 900
    #define STACK_SIZE 590
    #define SEMA_STACK 380
+#elif defined (KW40Z4_SERIES)
+   #define STACK_SIZE 750
+   #define MAIN_STACK STACK_SIZE
+   #define SEMA_STACK STACK_SIZE
 #else
    #define STACK_SIZE 1024
    #define MAIN_STACK STACK_SIZE

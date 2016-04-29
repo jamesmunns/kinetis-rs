@@ -148,7 +148,7 @@ static int nio_mem_read(void *dev_context, void *fp_context, void *buf, size_t n
         if (error) {
             *error = NIO_EFAULT;
         }
-        len = -1;
+        len = (size_t)-1;
     }
 
     return len;
@@ -205,7 +205,7 @@ static int nio_mem_write(void *dev_context, void *fp_context, const void *buf, s
         if (error) {
             *error = NIO_EFAULT;
         }
-        len = -1;
+        len = (size_t)-1;
     }
 
     return len;

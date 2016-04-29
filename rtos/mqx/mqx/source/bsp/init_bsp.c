@@ -48,7 +48,7 @@ extern void HWTIMER_SYS_SystickIsrAction(void);
     #elif defined(BOARD_USE_LPSCI)
         #define NIO_SERIAL_DEF_MODULE kNioSerialLpsci
     #else
-      #errorc Default serial module is unsupported or undefined.
+      #error Default serial module is unsupported or undefined.
     #endif
 
      /* Provide a default value */
@@ -66,9 +66,16 @@ extern void HWTIMER_SYS_SystickIsrAction(void);
         .BITCOUNT_PERCHAR    = 8,
         .RXTX_PRIOR          = 4,
         .MODULE              = NIO_SERIAL_DEF_MODULE,
-    /* Always second clock source configuration is used. It can be :kClockLpuartSrcPllFllSel, kClockLpsciSrcPllFllSel, kClockLpuartSrcIrc48M)*/
-    /* For UART this is dummy value */
+    /* Check whether individual clock source for debug peripheral is defined */
+    #if defined(BOARD_USE_UART) && defined(BOARD_UART_CLOCK_SOURCE)
+        .CLK_SOURCE          = BOARD_UART_CLOCK_SOURCE,
+    #elif defined(BOARD_USE_LPUART) && defined(BOARD_LPUART_CLOCK_SOURCE)
+        .CLK_SOURCE          = BOARD_LPUART_CLOCK_SOURCE,
+    #elif defined(BOARD_USE_LPSCI) && defined(BOARD_LPSCI_CLOCK_SOURCE)
+        .CLK_SOURCE          = BOARD_LPSCI_CLOCK_SOURCE,
+    #else
         .CLK_SOURCE          = 1,
+    #endif
         .RX_BUFF_SIZE        = NIO_SERIAL_BUFF_SIZE,
         .TX_BUFF_SIZE        = NIO_SERIAL_BUFF_SIZE,
     };
@@ -194,7 +201,7 @@ int _bsp_pre_init(void)
   #elif defined(BOARD_USE_UART)
     configure_uart_pins(BOARD_DEBUG_UART_INSTANCE);
   #else
-    #errorc Default serial module is unsupported or undefined.
+    #error Default serial module is unsupported or undefined.
   #endif
 #endif
 

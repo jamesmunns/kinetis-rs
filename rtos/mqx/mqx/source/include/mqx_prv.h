@@ -863,7 +863,7 @@ typedef struct {
 #define KERNEL_LWLOG                  (11)
 
 /* The maximum number of components */
-#define MAX_KERNEL_COMPONENTS         (16)
+#define MAX_KERNEL_COMPONENTS         (12)
 
 
 /*--------------------------------------------------------------------------*/
