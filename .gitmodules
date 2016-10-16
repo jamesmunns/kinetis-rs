@@ -1,0 +1,6 @@
+[submodule "rust/rust-bindgen"]
+	path = rust/rust-bindgen
+	url = https://github.com/Yamakaky/rust-bindgen
+[submodule "servo-bindgen"]
+	path = rust/servo-bindgen
+	url = https://github.com/servo/rust-bindgen
